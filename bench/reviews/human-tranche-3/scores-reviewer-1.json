@@ -1,0 +1,23 @@
+{
+  "format": "V64-CANDIDATE-4-BLIND-SCORES-1",
+  "reviewer": "reviewer-1",
+  "reviewedBeforeKeyDisclosure": true,
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-3",
+  "method": "Anonymous midpoint stills and 24-frame motion clips were scored before key disclosure. Objective changed-pixel and one-frame-reversion measures were inspected as context but not mechanically converted into ratings.",
+  "rows": [
+    {"group":"depth-40","code":"87B9C525","recognizability":4,"colorOrGrayscaleSeparation":4,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Cube and orb remain coherent; minor edge-token shimmer."},
+    {"group":"depth-40","code":"80B15852","recognizability":5,"colorOrGrayscaleSeparation":5,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Strong floor perspective and object separation; vivid chromatic identity."},
+    {"group":"monochrome-40","code":"67A465E1","recognizability":5,"colorOrGrayscaleSeparation":5,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Neutral hierarchy, silhouette, windows, and lamp remain distinct."},
+    {"group":"monochrome-40","code":"1B894226","recognizability":4,"colorOrGrayscaleSeparation":3,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Light neutral helps highlights, but dark regions remain navy and tonal hierarchy compresses."},
+    {"group":"screen-40","code":"41A1DA06","recognizability":4,"colorOrGrayscaleSeparation":4,"temporalStability":3,"subtitleTranscription":"","exactTranscription":false,"notes":"Interface layout remains identifiable; fine lines and cursor detail shimmer."},
+    {"group":"screen-40","code":"E54D2CAF","recognizability":4,"colorOrGrayscaleSeparation":5,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Panes and status regions remain distinct with stronger chromatic separation."},
+    {"group":"lecture-subtitle-60","code":"9F5675E1","recognizability":3,"colorOrGrayscaleSeparation":3,"temporalStability":3,"subtitleTranscription":"","exactTranscription":false,"notes":"Face and lamp remain recognizable; subtitle is unreadable."},
+    {"group":"lecture-subtitle-60","code":"D2099212","recognizability":4,"colorOrGrayscaleSeparation":4,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Stronger scene separation; subtitle remains unreadable."},
+    {"group":"animation-subtitle-60","code":"6D8AB7FC","recognizability":4,"colorOrGrayscaleSeparation":3,"temporalStability":3,"subtitleTranscription":"","exactTranscription":false,"notes":"Profiles remain recognizable; subtitle is unreadable and detail shimmers."},
+    {"group":"animation-subtitle-60","code":"75A9843D","recognizability":5,"colorOrGrayscaleSeparation":4,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Strong profile and staging separation; subtitle remains unreadable."},
+    {"group":"lecture-subtitle-80","code":"C95B1D23","recognizability":4,"colorOrGrayscaleSeparation":3,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Face and gesture remain stable; no exact transcription at established scale."},
+    {"group":"lecture-subtitle-80","code":"CC5F5A10","recognizability":4,"colorOrGrayscaleSeparation":4,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Improved chromatic separation; no exact transcription at established scale."},
+    {"group":"animation-subtitle-80","code":"06A257D4","recognizability":4,"colorOrGrayscaleSeparation":3,"temporalStability":3,"subtitleTranscription":"","exactTranscription":false,"notes":"Staging is recognizable; dense detail and subtitle strokes jitter."},
+    {"group":"animation-subtitle-80","code":"7E44592E","recognizability":5,"colorOrGrayscaleSeparation":4,"temporalStability":4,"subtitleTranscription":"","exactTranscription":false,"notes":"Strong profile separation and stable staging; no exact transcription."}
+  ]
+}

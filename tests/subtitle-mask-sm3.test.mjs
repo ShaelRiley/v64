@@ -60,6 +60,39 @@ test("temporal aggregation joins persistent subtitle fragments that static SM2 m
   }
 });
 
+test("horizontal projection recovers a persistent line split beyond component range", () => {
+  const columns = 24;
+  const rows = 8;
+  const line = cellsAt(columns, 6, [2, 3, 10, 11, 19, 20]);
+  const noise = cellsAt(columns, 7, [0, 23]);
+  const frames = Array.from({ length: 6 }, () =>
+    [...line, ...noise].sort((a, b) => a.cellIndex - b.cellIndex));
+  const options = {
+    palette: PALETTE,
+    paletteDepth: 2,
+    bandStart: 0.5,
+    minWidthCells: 10,
+    minPersistentColumns: 6,
+    maxHeightCells: 1,
+    maxGap: 1,
+    temporalGap: 1,
+    persistenceFrames: 2,
+    sparseFloor: 6,
+    maxCellsPerFrame: 12,
+    maxComponents: 1,
+    expansionX: 0
+  };
+  assert.equal(selectSubtitleRegions(frames[0], columns, rows, options).length, 0);
+  const result = selectSubtitleRegionsTemporally(frames, columns, rows, options);
+  assert.equal(result.diagnostics.connectedCandidates, 0);
+  assert.ok(result.diagnostics.projectedCandidates >= 1);
+  assert.equal(result.diagnostics.boxes[0].discovery, "horizontal-projection");
+  assert.equal(result.diagnostics.fallbackFrames, frames.length);
+  for (const frame of result.frames) {
+    assert.deepEqual(frame.map((item) => item.cellIndex), line.map((item) => item.cellIndex));
+  }
+});
+
 test("temporal fallback leaves an already sufficient static line unchanged", () => {
   const columns = 20;
   const rows = 8;

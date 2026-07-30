@@ -156,7 +156,7 @@ function benchmarkFixture(entry, frames, options = {}) {
     grid: entry.grid,
     paletteDepth: entry.paletteDepth,
     cadence: entry.cadence,
-    frames: entry.frames,
+    frames: frames.length,
     packed: publicMetrics(packed),
     entropyPass1: publicMetrics(entropyPass1),
     entropyPass2: publicMetrics(entropyPass2),
@@ -171,9 +171,13 @@ function benchmarkFixture(entry, frames, options = {}) {
   };
 }
 
-export function benchmarkEntropyCorpus(manifestInput, options = {}) {
-  const manifest = validateCorpusManifest(manifestInput);
-  const { fixtures } = generateCorpus(manifest);
+export function benchmarkEntropyFixtures(corpus, fixtures, options = {}) {
+  if (!corpus || typeof corpus !== "object" || !corpus.id || !corpus.title || !corpus.scope) {
+    throw new TypeError("Entropy corpus metadata is incomplete");
+  }
+  if (!Array.isArray(fixtures) || !fixtures.length) {
+    throw new TypeError("Entropy corpus requires analyzed fixtures");
+  }
   const fixtureReports = fixtures.map(({ entry, frames }) =>
     benchmarkFixture(entry, frames, options)
   );
@@ -200,9 +204,9 @@ export function benchmarkEntropyCorpus(manifestInput, options = {}) {
   return {
     format: ENTROPY_REPORT_VERSION,
     corpus: {
-      id: manifest.id,
-      title: manifest.title,
-      scope: manifest.scope,
+      id: corpus.id,
+      title: corpus.title,
+      scope: corpus.scope,
       entries: fixtureReports.length,
       structuralClasses: [...new Set(fixtureReports.map((fixture) => fixture.structuralClass))]
     },
@@ -229,4 +233,14 @@ export function benchmarkEntropyCorpus(manifestInput, options = {}) {
     },
     fixtures: fixtureReports
   };
+}
+
+export function benchmarkEntropyCorpus(manifestInput, options = {}) {
+  const manifest = validateCorpusManifest(manifestInput);
+  const { fixtures } = generateCorpus(manifest);
+  return benchmarkEntropyFixtures({
+    id: manifest.id,
+    title: manifest.title,
+    scope: manifest.scope
+  }, fixtures, options);
 }

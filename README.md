@@ -30,6 +30,9 @@ real binary `.v64` implementation, not a mock UI:
 - a provenance-validated, deterministic structural seed corpus spanning eleven
   visual classes and a two-pass static-byte entropy parser with actual-DEFLATE
   candidate selection;
+- a hash-validated FFmpeg raster-corpus path and a reproducible Hyper
+  Real-derived 256-color palette candidate preserving ANSI Tube's exact
+  saturated anchors;
 - Node conformance tests and golden hashes.
 
 Audio Opus, Rust, ANSI Drop's desktop shell, the native player, and VLC modules
@@ -52,6 +55,8 @@ node prototype/js/cli.mjs inspect tests/golden/procedural.v64
 node prototype/js/cli.mjs verify tests/golden/procedural.v64
 npm run bench:commands
 npm run bench:corpus
+npm run bench:raster
+npm run palette:hyperreal
 ```
 
 Encode any FFmpeg-readable video:
@@ -89,6 +94,11 @@ files. See
 [`bench/ENTROPY_SHOOTOUT_1.md`](bench/ENTROPY_SHOOTOUT_1.md) for its exact
 syntax, validation rules, and measured iterations. The seed-corpus manifest is
 [`bench/corpus/seed-manifest.json`](bench/corpus/seed-manifest.json).
+
+The first file-backed raster-ingest result is
+[`bench/RASTER_TRANCHE_0.md`](bench/RASTER_TRANCHE_0.md). Palette direction,
+provenance, and the experimental Hyper Real-derived candidate are documented in
+[`spec/V64-palette-research.md`](spec/V64-palette-research.md).
 
 See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for verified status,
 blockers, and the next concrete step. See

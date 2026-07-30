@@ -1,0 +1,24 @@
+{
+  "format": "V64-RASTER-CORPUS-MANIFEST-1",
+  "id": "V64-RASTER-TRANCHE-0",
+  "title": "V64 provenance-checked raster ingest tranche 0",
+  "scope": "Self-authored raster-video ingest proof; not a licensed human-content fidelity corpus.",
+  "entries": [
+    {
+      "id": "procedural-raster-motion-1",
+      "structuralClass": "rapid-motion",
+      "source": {
+        "kind": "local-file",
+        "path": "tests/golden/procedural-source.mp4",
+        "sha256": "50c9f5a1a24bd12446eb953ee08625f8bc8dad49bf437e8ffa93d7ec0d383f3e",
+        "origin": "V64 deterministic FFmpeg testsrc2 sample",
+        "license": "CC0-1.0"
+      },
+      "grid": { "columns": 40, "rows": 11 },
+      "paletteDepth": 16,
+      "cadence": "24",
+      "maximumSeconds": 2,
+      "temporalStability": 0.48
+    }
+  ]
+}

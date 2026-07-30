@@ -21,12 +21,17 @@ command.
 - [x] Preserve 64 names, 64 × 16 bytes, MSB-left ordering, and `8×16` geometry.
 - [x] Emit SHA-256 asset identities and a PPM atlas.
 - [x] Add a reproducible ordered 256-color candidate-palette generator.
+- [x] Preserve ANSI Tube's exact twelve-color Hyper Real anchors and grading
+  parameters as versioned palette-research provenance.
+- [x] Generate `V64-P256-HYPERREAL-CANDIDATE-2`, whose lower prefixes preserve
+  the ultra-saturated Hyper Real direction.
 - [ ] Freeze the palette as normative `V64-P256-1`.
 
 Palette blocker: the design document requires empirical corpus comparison before
-the final palette is frozen. The executable uses
-`V64-P256-CANDIDATE-1`; its hash is enforced, but the identifier deliberately
-does not falsely imply the corpus-selection decision is complete.
+the final palette is frozen. The executable still uses
+`V64-P256-CANDIDATE-1`; the Hyper Real-derived candidate is now the preferred
+design direction, but it requires licensed-raster comparison before replacing
+the enforced runtime asset.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -71,6 +76,9 @@ does not falsely imply the corpus-selection decision is complete.
 - [x] Publish the first multi-fixture entropy report: 6,807 selected DEFLATE
   bytes versus 7,897 for packed-only parsing, with entropy selected on 5 of 11
   fixtures.
+- [x] Add provenance- and SHA-256-validated FFmpeg raster-video ingest.
+- [x] Run raster tranche 0 from the self-authored CC0 procedural MP4: entropy
+  pass 2 reduced DEFLATE from 9,402 to 8,696 bytes (7.509%).
 - [ ] Replace or augment the synthetic seed fixtures with licensed raster-video
   clips before drawing recognizable-fidelity or normative syntax conclusions.
 
@@ -121,7 +129,8 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Ingest the first licensed raster-video tranche into the corpus manifest.
+Ingest the first redistributed human-content raster-video tranche into the
+corpus manifest.
 Preserve the 0.5-, 1-, and 2-second group sweep while comparing packed-byte and
 entropy-aware parser objectives on identical decoded states. Add encode time,
 peak memory, seek latency, and recognizable-fidelity notes before freezing the

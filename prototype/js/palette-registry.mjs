@@ -4,36 +4,22 @@ import {
   generateHyperRealCandidate5APalette,
   generateHyperRealCandidate5BPalette
 } from "../../tools/hyperreal-candidate-5-generator.mjs";
+import {
+  generateHyperRealCandidate6APalette,
+  generateHyperRealCandidate6BPalette,
+  generateHyperRealCandidate6CPalette
+} from "../../tools/hyperreal-candidate-6-generator.mjs";
 
 const DEFINITIONS = Object.freeze([
-  {
-    id: "V64-P256-CANDIDATE-1",
-    rgb: "../../assets/palettes/v64-p256-candidate-1.rgb",
-    json: "../../assets/palettes/v64-p256-candidate-1.json"
-  },
-  {
-    id: "V64-P256-HYPERREAL-CANDIDATE-2",
-    rgb: "../../assets/palettes/v64-p256-hyperreal-candidate-2.rgb",
-    json: "../../assets/palettes/v64-p256-hyperreal-candidate-2.json"
-  },
-  {
-    id: "V64-P256-HYPERREAL-CANDIDATE-3",
-    json: "../../assets/palettes/v64-p256-hyperreal-candidate-3.json"
-  },
-  {
-    id: "V64-P256-HYPERREAL-CANDIDATE-4",
-    json: "../../assets/palettes/v64-p256-hyperreal-candidate-4.json"
-  },
-  {
-    id: "V64-P256-HYPERREAL-CANDIDATE-5A",
-    json: "../../assets/palettes/v64-p256-hyperreal-candidate-5a.json",
-    generate: generateHyperRealCandidate5APalette
-  },
-  {
-    id: "V64-P256-HYPERREAL-CANDIDATE-5B",
-    json: "../../assets/palettes/v64-p256-hyperreal-candidate-5b.json",
-    generate: generateHyperRealCandidate5BPalette
-  }
+  { id: "V64-P256-CANDIDATE-1", rgb: "../../assets/palettes/v64-p256-candidate-1.rgb", json: "../../assets/palettes/v64-p256-candidate-1.json" },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-2", rgb: "../../assets/palettes/v64-p256-hyperreal-candidate-2.rgb", json: "../../assets/palettes/v64-p256-hyperreal-candidate-2.json" },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-3", json: "../../assets/palettes/v64-p256-hyperreal-candidate-3.json" },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-4", json: "../../assets/palettes/v64-p256-hyperreal-candidate-4.json" },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-5A", json: "../../assets/palettes/v64-p256-hyperreal-candidate-5a.json", generate: generateHyperRealCandidate5APalette },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-5B", json: "../../assets/palettes/v64-p256-hyperreal-candidate-5b.json", generate: generateHyperRealCandidate5BPalette },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-6A", json: "../../assets/palettes/v64-p256-hyperreal-candidate-6a.json", generate: generateHyperRealCandidate6APalette },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-6B", json: "../../assets/palettes/v64-p256-hyperreal-candidate-6b.json", generate: generateHyperRealCandidate6BPalette },
+  { id: "V64-P256-HYPERREAL-CANDIDATE-6C", json: "../../assets/palettes/v64-p256-hyperreal-candidate-6c.json", generate: generateHyperRealCandidate6CPalette }
 ]);
 
 function paletteBytesFromColors(colors, definition) {

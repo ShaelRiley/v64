@@ -23,56 +23,39 @@ command.
 - [x] Add a reproducible ordered 256-color candidate-palette generator.
 - [x] Preserve ANSI Tube's exact twelve-color Hyper Real anchors and grading
   parameters as versioned palette-research provenance.
-- [x] Generate `V64-P256-HYPERREAL-CANDIDATE-2`, whose lower prefixes preserve
-  the ultra-saturated Hyper Real direction.
-- [x] Generate `V64-P256-HYPERREAL-CANDIDATE-3`, retaining the twelve anchors
-  while adding dark navy, dark teal, warm skin, and neutral midtone utility
-  colors to the 16-color prefix.
-- [x] Run the Candidate-3 missing-class, subtitle, compression, and blind-still
-  decision gate.
-- [x] Reject Candidate 3 as the frozen prefix while retaining it as the
-  chromatic benchmark for Candidate 4.
-- [x] Generate and register `V64-P256-HYPERREAL-CANDIDATE-4`, replacing
-  Candidate 3's redundant extra warm-skin utility with light neutral
-  `[224,224,224]`.
-- [x] Run the matched Candidate-1/Candidate-4 visual and compression gate.
-- [x] Reject Candidate 4 as the frozen prefix while retaining it as the strongest
-  chromatic and temporal benchmark.
-- [x] Generate and register Candidate 5A/5B with dark neutral `[32,32,32]`,
-  separately sacrificing dark navy and dark teal.
-- [x] Run the compact twelve-lane Candidate-5 depth, monochrome, and
-  screen-capture ablation with pre-key still and motion review.
-- [x] Reject Candidate 5A as the frozen prefix while retaining it as the depth
-  and dark-teal reference.
-- [x] Advance Candidate 5B as the sole palette finalist because it produced the
-  smallest selected stream, lowest automated flicker proxy, and near-baseline
-  monochrome hierarchy.
-- [ ] Run one final constrained dark-chroma utility search between Candidate 5A
-  and Candidate 5B while retaining dark, middle, and light neutral rungs.
-- [ ] Freeze the palette as normative `V64-P256-1`.
+- [x] Generate and check Hyper Real Candidates 2–4.
+- [x] Reject Candidate 3 after its black-and-white separation fell from 5/5 to
+  2/5 despite stronger chromatic recognizability.
+- [x] Reject Candidate 4 after its black-and-white separation recovered only to
+  3/5 despite stronger recognizability, temporal stability, and compression.
+- [x] Generate Candidate 5A/5B with fixed dark `[32,32,32]`, middle
+  `[112,112,112]`, and light `[224,224,224]` neutrals while separately retaining
+  dark teal or dark navy.
+- [x] Run the twelve-lane Candidate-5 depth, monochrome, and screen-capture
+  ablation with pre-key still and motion review.
+- [x] Retain Candidate 5A as the dark-teal/depth endpoint and Candidate 5B as the
+  dark-navy/monochrome endpoint.
+- [x] Generate Candidate 6A/6B/6C as exact 25%, 50%, and 75% sRGB interpolation
+  points between Candidate 5A's dark teal `[0,92,96]` and Candidate 5B's dark
+  navy `[16,32,72]`, with every other prefix entry fixed.
+- [x] Run the eighteen-lane Candidate-6 finalist gate with pre-key still and
+  motion review.
+- [x] Freeze Candidate 6A as normative `V64-P256-1`.
+- [x] Switch the executable palette default to normative `V64-P256-1`.
 
-Candidate 4 is deterministic: its 16-color prefix SHA-256 is
-`1e8997b6c6abb748df607bfe3156898a4fd6df547554b31cb150ce31c410bfd6`
-and its complete palette SHA-256 is
-`f683d64d46f95d5cd49638302eb18aeee7ac1684b2ad22b61ff7b4984c3ffd37`.
-It improved mean recognizability from 4.000 to 4.429, separation from 3.571 to
-4.143, temporal stability from 3.429 to 4.000, and selected DEFLATE by 504 bytes
-(0.681%). Its monochrome separation improved over Candidate 3 from 2/5 to 3/5,
-but remained below Candidate 1's 5/5.
+Normative `V64-P256-1` uses dark chroma `[4,77,90]`, the checked 25%
+teal-to-navy interpolation. Its 16-color prefix SHA-256 is
+`e8d7b7de275b79acb403d17a97c4e7ef72ca16600a8f4f3ebdcba86099ce41cf`
+and its complete 256-color palette SHA-256 is
+`c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105`.
+Any byte change requires a new normative palette identifier.
 
-Candidate 5A's prefix SHA-256 is
-`441826817e2103b533a89b7162043158911e9d19dc4f745399cd0b5076ef7d71`
-and its complete palette SHA-256 is
-`0882df7996bfa9637273b18ff50bd0f86de95524c6098754a8be3227d64e2301`.
-Candidate 5B's prefix SHA-256 is
-`57b004a2d0038b032596d12d5faf6e69688b176bf9148a5aaad9cfe15ac9f827`
-and its complete palette SHA-256 is
-`dcab57b7098a23674555453a1db3183b00189ee44a7feffe7d40dd212c76b61a`.
-Candidate 5B used 10,558 selected DEFLATE bytes in tranche 4, 202 bytes or
-1.877% below Candidate 1, and reduced the mean flicker proxy to 1.243%.
-Candidate 5A retained the strongest depth score at 5/5; Candidate 5B improved
-monochrome separation to 4.5/5 but scored 4/5 for depth. Candidate 1 remains the
-executable default until the constrained finalist gate closes.
+In checked tranche 5, Candidate 6A used 10,580 selected DEFLATE bytes, 180 bytes
+or 1.673% below legacy Candidate 1. It also recorded the lowest selected command
+bytes (17,154), changed-cell rate (16.861%), and one-frame-reversion proxy
+(1.222%) among the six compared palettes. Pre-key review scored it 5/5 for
+depth, 4.5/5 for monochrome hierarchy, and 5/5 for screen capture, matching the
+best endpoint scores without their opposing regressions.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -128,62 +111,69 @@ executable default until the constrained finalist gate closes.
   one-frame-reversion flicker proxy to the raster harness.
 - [x] Measure entropy pass 2 on all six human-content lanes: 29,749 selected
   DEFLATE bytes versus 34,834 for packed parsing (14.598% reduction).
-- [x] Compare palette candidates at the 16-color prefix. Hyper Real candidate 2
-  was 99 bytes (0.66%) smaller overall but showed mixed low-depth color fidelity.
-- [x] Add original deterministic CC0 3D-animation, black-and-white-film, and
-  screen-capture source plates, completing raster coverage of all eleven
-  classes.
-- [x] Add hash-validated deterministic still-to-motion treatments without
-  requiring opaque derived-video fixtures.
-- [x] Add matched candidate-1 / candidate-3 subtitle lanes at 60 and 80 columns.
-- [x] Add deterministic blind-code previews, public worksheets, and a concealed
-  palette key.
-- [x] Run and publish tranche-2 codec measurements: entropy pass 2 was selected
-  on all fourteen lanes and reduced raw DEFLATE from 174,666 to 147,912 bytes,
-  a 15.317% reduction.
-- [x] Publish the pre-key blind-still worksheet and decision report. Candidate 3
-  improved mean recognizability from 3.571 to 4.000 but failed the monochrome
-  hierarchy and produced no exact subtitle transcription at 60 or 80 columns.
-- [x] Retain two-second independent groups as the prototype default: 10.034%
-  smaller than one-second groups and 20.730% smaller than half-second groups.
+- [x] Complete raster coverage of all eleven required classes, including
+  deterministic CC0 3D-animation, black-and-white-film, and screen-capture
+  fixtures.
+- [x] Add hash-validated still-to-motion treatments without opaque derived-video
+  fixtures.
+- [x] Add matched subtitle lanes at 60 and 80 columns.
+- [x] Add deterministic blind-code previews, public worksheets, and separately
+  uploaded concealed keys.
+- [x] Run tranche-2 codec measurements: entropy pass 2 selected on all fourteen
+  lanes and reduced raw DEFLATE from 174,666 to 147,912 bytes (15.317%).
+- [x] Collect pre-key still and motion scores before every palette-key disclosure.
+- [x] Retain two-second independent groups as the prototype default. In the
+  Candidate-6 finalist tranche they were 11.396% smaller than one-second groups
+  and 24.832% smaller than half-second groups, with 1.996 ms median and 3.143 ms
+  p95 hosted-runner seek reconstruction.
 - [ ] Validate two-second seek behavior in the browser before freezing the group
-  duration; tranche 3 measured 6.008 ms median and 16.150 ms p95 on the hosted
-  runner.
-- [x] Emit fourteen anonymous motion clips under the established blind codes,
-  plus a temporal worksheet and public motion manifest.
-- [x] Collect and publish pre-key human temporal-stability scores. Candidate 3
-  scored 4.000/5 versus Candidate 1's 3.429/5 despite a slightly worse automated
-  one-frame-reversion proxy.
-- [x] Prototype a bounded sparse `SM1` subtitle-mask plane with arbitrary 8×16
-  masks, row-major delta positions, palette indices, strict progress, exact
-  rasterization, and damaged-stream rejection.
-- [x] Integrate SM1 into decoded previews and byte accounting, then perform a
-  segregated blind base-versus-SM1 motion review.
-- [x] Demonstrate exact 60-column transcription: base 0/4 versus SM1 4/4.
-- [x] Measure the current SM1 side-plane cost: 108,823 raw-DEFLATE bytes across
-  sixteen lane-seconds, or 54.412 kbit/s.
-- [x] Reject the broad SM1 extractor and per-frame framing as normative while
-  retaining exact arbitrary-mask semantics as a research primitive.
-- [x] Build SM2 with subtitle-region selectivity, repeat-plane spans,
-  cell-removal/upsert deltas, strict decoding, and total-V64-byte accounting.
-- [x] Reduce selected mask cells from 28,632 to 10,362 and side-plane rate from
-  54.412 to 4.785 kbit/s, a 91.206% rate reduction from SM1.
-- [x] Improve exact subtitle transcription from base 2/8 to SM2 6/8 while
-  retaining mean scene preservation at 4/5.
-- [x] Measure total base V64 plus SM2 at 135,649 bytes, a 7.590% overhead over
-  the 126,080-byte selected base stream.
-- [x] Advance SM2 full/repeat/delta semantics while rejecting the current static
-  selector as complete because both 60-column lecture variants remain unreadable.
-- [ ] Add temporal subtitle-line aggregation and bounded fallback expansion for
-  the under-selected 60-column lecture lane without materially exceeding 10%
-  total-stream overhead.
+  duration.
 
-Clean GitHub Actions run `30587498438` at code head
-`8b0f80dda9da650e40b75edfbef16c91cea28df7` passed all 53 conformance tests,
-regenerated Candidates 2–5B, completed the Candidate-5 ablation and SM2
-experiment, and uploaded four segregated blind/key artifacts. Tranche 4 reduced
-raw DEFLATE from 48,705 to 42,728 bytes (12.272%) with entropy selected on all
-twelve lanes.
+### Subtitle side-plane research
+
+- [x] Prototype bounded sparse `SM1` arbitrary 8×16 masks with row-major delta
+  positions, palette indices, strict progress, exact rasterization, and
+  damaged-stream rejection.
+- [x] Demonstrate exact 60-column transcription with SM1: base 0/4 versus SM1
+  4/4.
+- [x] Reject SM1's broad extractor and per-frame framing after measuring 108,823
+  compressed bytes across sixteen lane-seconds, or 54.412 kbit/s.
+- [x] Build SM2 connected-region selection with full planes, repeat-plane spans,
+  sparse removal/upsert deltas, strict canonical decoding, and total-V64-byte
+  accounting.
+- [x] Reduce selected mask cells from 28,632 to 10,362 and side-plane rate from
+  54.412 to 4.785 kbit/s, a 91.206% reduction from SM1.
+- [x] Improve exact transcription from base 2/8 to SM2 6/8 at 7.590% total-stream
+  overhead.
+- [x] Diagnose SM2's two failures as under-selection on the 60-column lecture
+  lane.
+- [x] Build SM3 temporal subtitle-line discovery with connected components,
+  horizontal lower-band projection, ranked boxes, and bounded fallback.
+- [x] Restore exact 60-column lecture transcription from 0/2 to 2/2 with SM3,
+  while identifying broad per-frame projection as a 62.327% overhead failure.
+- [x] Build SM4 canonical persistent planes using recurrence thresholds, modal
+  palette pairs, consensus masks, and the existing repeat-span syntax.
+- [x] Preserve SM3's exact 2/2 lecture transcription and 5/5 edge/stability
+  scores while reducing compressed bytes from 12,284 to 1,806.
+- [x] Reduce focused total-stream overhead from 62.327% to 9.163%, clearing the
+  focused 10% ceiling without adding a decoder opcode.
+- [ ] Run a complete eight-lane SM4 regression across lecture and animated
+  dialogue at 60 and 80 columns.
+- [ ] Require 8/8 exact transcription and total-stream overhead at or below 10%
+  before registering the subtitle side plane in the normative V64 container.
+- [ ] Add stable-span boundaries and frame-local delta fallback for changing
+  subtitle text.
+
+Clean GitHub Actions run `30589727547` at code head
+`35b75024e0d62df8afad472f726defd129802047` passed the normative palette finalist
+gate. It reduced raw DEFLATE from 73,634 to 64,612 bytes (12.252%) with entropy
+selected on all eighteen lanes and produced segregated blind/key artifacts.
+
+Clean GitHub Actions run `30591665741` at code head
+`b96f45d3abed42d9da25bf55c7e29a5e12a10305` passed conformance and the focused
+SM4 gate. Candidate 6 was correctly skipped by path-specific CI. SM4 retained
+exact 2/2 lecture transcription while reducing focused side-plane rate to 3.612
+kbit/s and total-stream overhead to 9.163%.
 
 ## Phase 2 — audio and finished container profile
 
@@ -218,8 +208,9 @@ blocker, not a codec-design blocker.
 - [x] Specify a shared playback-effects profile whose CRT scanline option is
   enabled by default, live-toggleable, persisted after user changes, and applied
   only after deterministic rasterization.
-- [x] Add renderer-neutral default-on scanline compositing with bounded strength,
-  viewport-anchored phase, non-mutation guarantees, and conformance tests.
+- [x] Add renderer-neutral default-on scanline compositing with strength 0.18,
+  period 2, phase 1, bounded validation, viewport-anchored phase, non-mutation
+  guarantees, and conformance tests.
 - [ ] Wire the native player's **View → CRT Scanlines** action, keyboard toggle,
   and persisted preference to the shared playback profile.
 - [ ] WebAssembly decoder.
@@ -242,11 +233,11 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Run a constrained single-dark-chroma utility search between Candidate 5A's teal
-and Candidate 5B's navy while retaining dark, middle, and light neutrals. In
-parallel, add temporal line aggregation and bounded fallback expansion to SM2's
-selector, preserving the already-successful full/repeat/delta sequence syntax.
+Run the complete eight-lane SM4 subtitle regression and add stable-span
+boundaries for changing subtitle text. If it passes 8/8 exact transcription at
+no more than 10% total-stream overhead, register the existing full/repeat/delta
+side-plane grammar in the V64 container profile.
 
-After those visual gates, resume AM1 as a separately testable audio pipeline:
-deterministic WAV fixtures, hysteretic silence segmentation, standard Opus
-packets, exact `SILN` spans, and sample-exact A/V synchronization.
+Then resume AM1 as a separately testable audio pipeline: deterministic WAV
+fixtures, hysteretic silence segmentation, standard Opus packets, exact `SILN`
+spans, and sample-exact A/V synchronization.

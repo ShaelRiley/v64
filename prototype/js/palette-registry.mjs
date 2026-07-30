@@ -11,6 +11,7 @@ import {
 } from "../../tools/hyperreal-candidate-6-generator.mjs";
 
 const DEFINITIONS = Object.freeze([
+  { id: "V64-P256-1", json: "../../assets/palettes/v64-p256-1.json", generate: generateHyperRealCandidate6APalette },
   { id: "V64-P256-CANDIDATE-1", rgb: "../../assets/palettes/v64-p256-candidate-1.rgb", json: "../../assets/palettes/v64-p256-candidate-1.json" },
   { id: "V64-P256-HYPERREAL-CANDIDATE-2", rgb: "../../assets/palettes/v64-p256-hyperreal-candidate-2.rgb", json: "../../assets/palettes/v64-p256-hyperreal-candidate-2.json" },
   { id: "V64-P256-HYPERREAL-CANDIDATE-3", json: "../../assets/palettes/v64-p256-hyperreal-candidate-3.json" },
@@ -69,7 +70,7 @@ const PALETTES = Object.freeze(Object.fromEntries(
 
 export const PALETTE_ASSET_IDS = Object.freeze(Object.keys(PALETTES));
 
-export function paletteAssetFromId(id = "V64-P256-CANDIDATE-1") {
+export function paletteAssetFromId(id = "V64-P256-1") {
   const palette = PALETTES[id];
   if (!palette) throw new RangeError(`Unknown V64 palette asset ${id}`);
   return palette;

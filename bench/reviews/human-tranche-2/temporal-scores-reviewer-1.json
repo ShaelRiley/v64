@@ -1,0 +1,23 @@
+{
+  "format": "V64-BLIND-MOTION-SCORES-1",
+  "reviewer": "reviewer-1",
+  "reviewedBeforeKeyDisclosure": true,
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-2",
+  "method": "Code-only motion clips were reviewed without opening key.json. Twelve evenly spaced frames per clip were inspected at 200% nearest-neighbor scale, with the full 24-frame streams additionally measured for changed-pixel and one-frame-reversion context. Scores remain human judgments; objective measures were not converted mechanically into ratings.",
+  "rows": [
+    {"group":"depth-40","code":"65FBF92D","temporalStability":4,"motionRecognizability":4,"changedPixelPercent":6.964,"oneFrameReversionPercent":1.359,"notes":"Cube and orb remain coherent; minor edge-token shimmer in motion."},
+    {"group":"depth-40","code":"0C94E7AF","temporalStability":4,"motionRecognizability":5,"changedPixelPercent":7.961,"oneFrameReversionPercent":1.517,"notes":"Strong floor perspective and object separation; mild low-level floor shimmer."},
+    {"group":"monochrome-40","code":"1626F62B","temporalStability":4,"motionRecognizability":4,"changedPixelPercent":4.740,"oneFrameReversionPercent":0.732,"notes":"Silhouette, lamp, windows, and platform remain coherent with minor edge jitter."},
+    {"group":"monochrome-40","code":"EBC71F4B","temporalStability":4,"motionRecognizability":3,"changedPixelPercent":5.123,"oneFrameReversionPercent":0.888,"notes":"Motion is stable, but dark tonal regions collapse and weaken the film hierarchy."},
+    {"group":"screen-40","code":"6363B9BC","temporalStability":3,"motionRecognizability":4,"changedPixelPercent":8.394,"oneFrameReversionPercent":1.075,"notes":"Interface layout remains identifiable; fine lines, cursor detail, and terminal texture shimmer."},
+    {"group":"screen-40","code":"4A231D9A","temporalStability":4,"motionRecognizability":4,"changedPixelPercent":7.853,"oneFrameReversionPercent":0.970,"notes":"Panes and status regions remain distinct; moderate texture jitter does not disrupt the layout."},
+    {"group":"lecture-subtitle-60","code":"9CB79E5B","temporalStability":3,"motionRecognizability":4,"changedPixelPercent":6.335,"oneFrameReversionPercent":1.721,"notes":"Face, gesture, and lamp remain recognizable; subtitle strokes visibly fluctuate and remain unreadable."},
+    {"group":"lecture-subtitle-60","code":"645DCB91","temporalStability":4,"motionRecognizability":4,"changedPixelPercent":6.185,"oneFrameReversionPercent":1.557,"notes":"Composition is stable; subtitle strokes remain unreadable but show less conspicuous shimmer."},
+    {"group":"animation-subtitle-60","code":"59462E8F","temporalStability":3,"motionRecognizability":4,"changedPixelPercent":7.690,"oneFrameReversionPercent":2.223,"notes":"Profiles and gesture remain clear; rain, table detail, and subtitle strokes show high-frequency shimmer."},
+    {"group":"animation-subtitle-60","code":"A97A2F0F","temporalStability":4,"motionRecognizability":4,"changedPixelPercent":7.729,"oneFrameReversionPercent":2.072,"notes":"Profiles and staging remain stable; subtitle text remains unreadable."},
+    {"group":"lecture-subtitle-80","code":"B060A43D","temporalStability":4,"motionRecognizability":4,"changedPixelPercent":5.812,"oneFrameReversionPercent":1.464,"notes":"Face and gesture remain stable; subtitle shapes become partly coherent but not exactly transcribable."},
+    {"group":"lecture-subtitle-80","code":"40888A36","temporalStability":4,"motionRecognizability":4,"changedPixelPercent":6.088,"oneFrameReversionPercent":1.469,"notes":"Stable facial and gesture motion; subtitle shapes remain only partly legible."},
+    {"group":"animation-subtitle-80","code":"ED9582FD","temporalStability":3,"motionRecognizability":4,"changedPixelPercent":8.713,"oneFrameReversionPercent":2.569,"notes":"Staging remains recognizable; dense rain and subtitle detail exhibit conspicuous temporal jitter."},
+    {"group":"animation-subtitle-80","code":"425F8815","temporalStability":4,"motionRecognizability":5,"changedPixelPercent":8.637,"oneFrameReversionPercent":2.397,"notes":"Strong profile separation and stable staging; subtitle remains not exactly transcribable."}
+  ]
+}

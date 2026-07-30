@@ -1,0 +1,35 @@
+{
+  "format": "V64-SUBTITLE-MASK-TRANCHE-3-RESULTS-1",
+  "workflowRun": 30590945528,
+  "codeHead": "fd892b487d3419009724a866fd9b4f40a0b15fce",
+  "focus": "60-column lecture subtitle",
+  "aggregate": {
+    "lanes": 2,
+    "frames": 48,
+    "broadCells": 4856,
+    "sm2Cells": 188,
+    "sm3Cells": 3511,
+    "sm2DeflateBytes": 1067,
+    "sm3DeflateBytes": 12284,
+    "baseV64SelectedDeflateBytes": 19709,
+    "sm2TotalBytes": 20776,
+    "sm3TotalBytes": 31993,
+    "sm2OverheadPercent": 5.414,
+    "sm3OverheadPercent": 62.327
+  },
+  "blindReview": {
+    "base": {"exact":0,"lanes":2,"meanEdgeClarity":1.5,"meanTemporalStability":2.5,"meanScenePreservation":4},
+    "sm2": {"exact":0,"lanes":2,"meanEdgeClarity":1.5,"meanTemporalStability":2.5,"meanScenePreservation":4},
+    "sm3": {"exact":2,"lanes":2,"meanEdgeClarity":5,"meanTemporalStability":5,"meanScenePreservation":4}
+  },
+  "decision": {
+    "advanceProjectionDiscovery": true,
+    "freezePerFrameFallback": false,
+    "advanceSequenceGrammar": true,
+    "nextGate": "Canonical persistent subtitle plane with repeat spans and frame-local deltas only when the subtitle changes; exact 2/2 transcription and total-stream overhead at or below 10%."
+  },
+  "artifacts": {
+    "blindDigest": "sha256:53ec6a6573051ecfac4ce9b07812965f35cc163e950b76d64873f5d7231e3d53",
+    "keyDigest": "sha256:f90c1c3d5daee8ce65d54bc76a0641f2bc4ad0e213bc45ef2dffdaf095d20bbd"
+  }
+}

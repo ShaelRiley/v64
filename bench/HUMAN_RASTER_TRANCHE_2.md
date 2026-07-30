@@ -2,9 +2,9 @@
 
 Date: 2026-07-30
 
-Status: corpus, palette candidate, preview path, and blinded-review apparatus are
-implemented. Codec measurements and human scores are intentionally pending a
-checked full-repository run.
+Status: corpus, palette candidate, preview path, blinded-review apparatus, and
+clean-checkout CI execution are implemented. Codec measurements and blinded
+scores remain pending the first successful artifact-bearing run.
 
 ## Purpose
 
@@ -95,6 +95,23 @@ ID and entry ID, copies previews under code-only filenames, and emits:
 
 Reviewers score recognizability, chromatic or grayscale separation, temporal
 stability, and subtitle transcription without seeing palette names.
+
+## Clean-checkout execution
+
+The base branch now contains `.github/workflows/ci.yml`. Pull requests run the
+Node conformance suite under Node 22 with FFmpeg, regenerate the Hyper Real
+assets and missing-class plates, render the fourteen previews, build the blind
+package, and execute `bench:human2`.
+
+The workflow publishes two 30-day artifacts:
+
+- `human-tranche-2-blind`, containing the benchmark JSON, logs, previews,
+  worksheet, public manifest, and checksums without `key.json`;
+- `human-tranche-2-key`, containing only the concealed mapping.
+
+This separation permits scoring before palette identity is disclosed. A
+branch-scoped push workflow provides the same execution path for direct branch
+runs, while the base workflow supplies the PR-visible check and artifact index.
 
 ## Decision gate
 

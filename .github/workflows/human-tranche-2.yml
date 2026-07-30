@@ -1,0 +1,105 @@
+name: Human raster tranche 2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/phase2-entropy-aware
+    paths-ignore:
+      - "bench/results/**"
+      - "bench/reviews/**"
+      - "bench/previews/**"
+      - "**/*.md"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Record toolchain
+        run: |
+          mkdir -p bench/results/human-tranche-2
+          {
+            node --version
+            npm --version
+            ffmpeg -version | head -n 1
+            ffprobe -version | head -n 1
+            uname -a
+          } | tee bench/results/human-tranche-2/toolchain.txt
+
+      - name: Run conformance suite
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee bench/results/human-tranche-2/tests.log
+
+      - name: Regenerate deterministic assets
+        run: |
+          set -o pipefail
+          npm run palette:hyperreal 2>&1 | tee bench/results/human-tranche-2/palette.log
+          npm run corpus:missing-classes 2>&1 | tee bench/results/human-tranche-2/corpus.log
+
+      - name: Render tranche previews
+        run: |
+          set -o pipefail
+          npm run preview:human2 2>&1 | tee bench/results/human-tranche-2/previews.log
+
+      - name: Build blinded review package
+        run: |
+          set -o pipefail
+          npm run review:human2 2>&1 | tee bench/results/human-tranche-2/review.log
+
+      - name: Run codec benchmark
+        run: |
+          npm run --silent bench:human2 > bench/results/human-tranche-2/benchmark.json
+          node -e 'JSON.parse(require("node:fs").readFileSync("bench/results/human-tranche-2/benchmark.json", "utf8")); console.log("benchmark JSON valid")'
+
+      - name: Verify deterministic regeneration
+        run: |
+          git diff --exit-code -- \
+            assets/palettes/v64-p256-hyperreal-candidate-2.json \
+            assets/palettes/v64-p256-hyperreal-candidate-2.rgb \
+            assets/palettes/v64-p256-hyperreal-candidate-3.json
+
+      - name: Record artifact checksums
+        run: |
+          find bench/results/human-tranche-2 bench/previews/human-tranche-2 bench/reviews/human-tranche-2 \
+            -type f -print0 | sort -z | xargs -0 sha256sum \
+            > bench/results/human-tranche-2/SHA256SUMS
+
+      - name: Upload blind review and benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: human-tranche-2-blind
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            bench/results/human-tranche-2
+            bench/previews/human-tranche-2
+            bench/reviews/human-tranche-2
+            !bench/reviews/human-tranche-2/key.json
+
+      - name: Upload concealed review key
+        uses: actions/upload-artifact@v4
+        with:
+          name: human-tranche-2-key
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/reviews/human-tranche-2/key.json

@@ -2,9 +2,10 @@
 
 Date: 2026-07-30
 
-Status: corpus, palette candidate, preview path, blinded-review apparatus, and
-clean-checkout CI execution are implemented. Codec measurements and blinded
-scores remain pending the first successful artifact-bearing run.
+Status: complete. The corpus, deterministic palette candidate, preview path,
+clean-checkout benchmark, blind still review, and candidate decision have been
+published. Candidate 3 is rejected as the frozen 16-color base and retained as
+the chromatic benchmark for Candidate 4.
 
 ## Purpose
 
@@ -93,35 +94,62 @@ ID and entry ID, copies previews under code-only filenames, and emits:
 - `public-manifest.json` without palette identities;
 - `key.json` with the concealed code-to-palette mapping.
 
-Reviewers score recognizability, chromatic or grayscale separation, temporal
-stability, and subtitle transcription without seeing palette names.
+The completed review preserved the key until the code-only midpoint stills were
+scored. Human temporal stability could not be rated because the package contains
+stills rather than motion; this is now a recorded protocol defect, not a filled
+or inferred score.
 
 ## Clean-checkout execution
 
-The base branch now contains `.github/workflows/ci.yml`. Pull requests run the
-Node conformance suite under Node 22 with FFmpeg, regenerate the Hyper Real
-assets and missing-class plates, render the fourteen previews, build the blind
-package, and execute `bench:human2`.
+The repository workflow runs the Node conformance suite under Node 22 with
+FFmpeg, regenerates the Hyper Real assets and missing-class plates, renders the
+fourteen previews, builds the blind package, executes `bench:human2`, and
+publishes blind and key artifacts separately.
 
-The workflow publishes two 30-day artifacts:
+GitHub Actions run `30569348195` completed successfully at head
+`5e326e406e02d6750389b28c4e3dffbf4e604a20`.
 
-- `human-tranche-2-blind`, containing the benchmark JSON, logs, previews,
-  worksheet, public manifest, and checksums without `key.json`;
-- `human-tranche-2-key`, containing only the concealed mapping.
+- blind artifact SHA-256:
+  `71363cf85af1dfe774e07109c6456e3d4b33a315eb9bac8449547eab3bb43610`;
+- concealed-key artifact SHA-256:
+  `5185290b01293ad85710cbe57fcc2a752aaecd141ab44fe30ed3590e8ca168ed`.
 
-This separation permits scoring before palette identity is disclosed. A
-branch-scoped push workflow provides the same execution path for direct branch
-runs, while the base workflow supplies the PR-visible check and artifact index.
+## Measured result
 
-## Decision gate
+The selected static-byte entropy parser won all fourteen lanes and reduced raw
+DEFLATE from 174,666 to 147,912 bytes, a 26,754-byte or 15.317% reduction.
+Candidate 3 used 73,869 selected-DEFLATE bytes versus 74,043 for candidate 1,
+a marginal 174-byte or 0.235% advantage.
 
-This commit does not assert that candidate 3 is superior. The palette, visual
-command grammar, and independent-group duration remain unfrozen until the full
-benchmark report and blinded scores are appended here. The next checked run
-must record:
+The blinded still review produced these palette means:
 
-- packed and selected command bytes;
-- raw-DEFLATE bytes by lane and palette;
-- changed-cell and one-frame-reversion metrics;
-- 0.5-, 1-, and 2-second group-size and seek trade-offs;
-- blinded median scores and subtitle transcription success by grid width.
+| Metric | Candidate 1 | Candidate 3 |
+|---|---:|---:|
+| recognizability | 3.571/5 | 4.000/5 |
+| color or grayscale separation | 3.571/5 | 3.857/5 |
+| exact subtitle transcriptions | 0/4 | 0/4 |
+
+Candidate 3's monochrome separation fell from the baseline's 5/5 to 2/5. Its
+mean one-frame-reversion proxy was also 0.090 percentage points worse. The
+complete per-lane report and structured metrics are in:
+
+- `bench/results/human-tranche-2/RESULTS.md`;
+- `bench/results/human-tranche-2/summary.json`;
+- `bench/reviews/human-tranche-2/scores-reviewer-1.json`;
+- `bench/reviews/human-tranche-2/worksheet-scored-reviewer-1.csv`.
+
+## Decision
+
+- Reject Candidate 3 as the frozen 16-color base.
+- Keep Candidate 1 as the executable default.
+- Retain Candidate 3 as the chromatic reference for Candidate 4.
+- Keep two-second groups as the prototype default; defer normative freeze until
+  browser seek validation because the worst 80-column lane reached 19.402 ms
+  p95 on the hosted runner.
+- Build Candidate 4 by replacing Candidate 3's redundant warm-skin utility with
+  a light neutral while preserving the twelve Hyper Real anchors, dark navy,
+  dark teal, and mid-gray.
+- Extend blind review to anonymous motion clips before asking reviewers to score
+  temporal stability.
+- Treat subtitle readability as a renderer or grammar problem: neither palette
+  produced an exact transcription at 60 or 80 columns.

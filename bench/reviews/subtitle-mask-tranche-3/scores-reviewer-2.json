@@ -1,0 +1,14 @@
+{
+  "format": "V64-SUBTITLE-MASK-BLIND-SCORES-3",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-3",
+  "reviewer": "reviewer-2-projection-rerun",
+  "keyOpened": false,
+  "rows": [
+    {"group":"lecture-subtitle-60-sm3","code":"2C44AA19","transcription":"","exact":false,"edgeClarity":2,"temporalStability":3,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm3","code":"52F72852","transcription":"","exact":false,"edgeClarity":2,"temporalStability":3,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm3","code":"5473E839","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm3","code":"A4AFEA4B","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm3","code":"C3576490","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm3","code":"C78C27D7","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4}
+  ]
+}

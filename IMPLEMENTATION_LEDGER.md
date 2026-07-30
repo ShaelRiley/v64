@@ -38,8 +38,17 @@ command.
 - [x] Run the matched Candidate-1/Candidate-4 visual and compression gate.
 - [x] Reject Candidate 4 as the frozen prefix while retaining it as the strongest
   chromatic and temporal benchmark.
-- [ ] Generate Candidate 5A/5B with dark neutral `[32,32,32]`, separately
-  sacrificing dark navy and dark teal.
+- [x] Generate and register Candidate 5A/5B with dark neutral `[32,32,32]`,
+  separately sacrificing dark navy and dark teal.
+- [x] Run the compact twelve-lane Candidate-5 depth, monochrome, and
+  screen-capture ablation with pre-key still and motion review.
+- [x] Reject Candidate 5A as the frozen prefix while retaining it as the depth
+  and dark-teal reference.
+- [x] Advance Candidate 5B as the sole palette finalist because it produced the
+  smallest selected stream, lowest automated flicker proxy, and near-baseline
+  monochrome hierarchy.
+- [ ] Run one final constrained dark-chroma utility search between Candidate 5A
+  and Candidate 5B while retaining dark, middle, and light neutral rungs.
 - [ ] Freeze the palette as normative `V64-P256-1`.
 
 Candidate 4 is deterministic: its 16-color prefix SHA-256 is
@@ -49,8 +58,21 @@ and its complete palette SHA-256 is
 It improved mean recognizability from 4.000 to 4.429, separation from 3.571 to
 4.143, temporal stability from 3.429 to 4.000, and selected DEFLATE by 504 bytes
 (0.681%). Its monochrome separation improved over Candidate 3 from 2/5 to 3/5,
-but remained below Candidate 1's 5/5. Candidate 1 therefore remains the
-executable default.
+but remained below Candidate 1's 5/5.
+
+Candidate 5A's prefix SHA-256 is
+`441826817e2103b533a89b7162043158911e9d19dc4f745399cd0b5076ef7d71`
+and its complete palette SHA-256 is
+`0882df7996bfa9637273b18ff50bd0f86de95524c6098754a8be3227d64e2301`.
+Candidate 5B's prefix SHA-256 is
+`57b004a2d0038b032596d12d5faf6e69688b176bf9148a5aaad9cfe15ac9f827`
+and its complete palette SHA-256 is
+`dcab57b7098a23674555453a1db3183b00189ee44a7feffe7d40dd212c76b61a`.
+Candidate 5B used 10,558 selected DEFLATE bytes in tranche 4, 202 bytes or
+1.877% below Candidate 1, and reduced the mean flicker proxy to 1.243%.
+Candidate 5A retained the strongest depth score at 5/5; Candidate 5B improved
+monochrome separation to 4.5/5 but scored 4/5 for depth. Candidate 1 remains the
+executable default until the constrained finalist gate closes.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -142,15 +164,26 @@ executable default.
   sixteen lane-seconds, or 54.412 kbit/s.
 - [x] Reject the broad SM1 extractor and per-frame framing as normative while
   retaining exact arbitrary-mask semantics as a research primitive.
-- [ ] Build SM2 with subtitle-region selectivity, repeat-plane spans, cell-delta
-  coding, and total-V64-byte accounting.
+- [x] Build SM2 with subtitle-region selectivity, repeat-plane spans,
+  cell-removal/upsert deltas, strict decoding, and total-V64-byte accounting.
+- [x] Reduce selected mask cells from 28,632 to 10,362 and side-plane rate from
+  54.412 to 4.785 kbit/s, a 91.206% rate reduction from SM1.
+- [x] Improve exact subtitle transcription from base 2/8 to SM2 6/8 while
+  retaining mean scene preservation at 4/5.
+- [x] Measure total base V64 plus SM2 at 135,649 bytes, a 7.590% overhead over
+  the 126,080-byte selected base stream.
+- [x] Advance SM2 full/repeat/delta semantics while rejecting the current static
+  selector as complete because both 60-column lecture variants remain unreadable.
+- [ ] Add temporal subtitle-line aggregation and bounded fallback expansion for
+  the under-selected 60-column lecture lane without materially exceeding 10%
+  total-stream overhead.
 
-Clean GitHub Actions run `30584192835` at code head
-`7b7b9779c4280d1618186dea01336bca85f76649` passed all conformance tests,
-regenerated Candidates 2–4, completed the Candidate-4 matched benchmark, built
-both blinded review packages, and uploaded all four blind/key artifacts
-separately. Candidate-4 entropy selection reduced raw DEFLATE from 174,202 to
-147,582 bytes (15.281%) and selected entropy pass 2 on all fourteen lanes.
+Clean GitHub Actions run `30587498438` at code head
+`8b0f80dda9da650e40b75edfbef16c91cea28df7` passed all 53 conformance tests,
+regenerated Candidates 2–5B, completed the Candidate-5 ablation and SM2
+experiment, and uploaded four segregated blind/key artifacts. Tranche 4 reduced
+raw DEFLATE from 48,705 to 42,728 bytes (12.272%) with entropy selected on all
+twelve lanes.
 
 ## Phase 2 — audio and finished container profile
 
@@ -182,6 +215,13 @@ blocker, not a codec-design blocker.
 - [ ] Per-file overrides and six-stage progress reporting.
 - [ ] Keyboard and reduced-motion audit.
 - [ ] `apps/v64-player`: native standalone player.
+- [x] Specify a shared playback-effects profile whose CRT scanline option is
+  enabled by default, live-toggleable, persisted after user changes, and applied
+  only after deterministic rasterization.
+- [x] Add renderer-neutral default-on scanline compositing with bounded strength,
+  viewport-anchored phase, non-mutation guarantees, and conformance tests.
+- [ ] Wire the native player's **View → CRT Scanlines** action, keyboard toggle,
+  and persisted preference to the shared playback profile.
 - [ ] WebAssembly decoder.
 
 ## Phase 5 — VLC
@@ -191,7 +231,10 @@ blocker, not a codec-design blocker.
 - [ ] Build the glyph-video decoder module.
 - [ ] Route Opus elementary packets through VLC's Opus decoder.
 - [ ] Synthesize exact silence blocks.
-- [ ] Test duration, pause, seek, rate, EOF, and repeated seeks.
+- [ ] Expose the persisted `v64-crt-scanlines` module option enabled by default,
+  using the same non-normative presentation profile as the standalone player.
+- [ ] Test duration, pause, seek, rate, EOF, repeated seeks, scanline default,
+  live toggle, persistence, and viewport-phase stability.
 - [ ] Document Windows and macOS build routes.
 
 VLC development headers are absent in the current environment. Integration is
@@ -199,11 +242,10 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Generate Candidate 5A and 5B by adding dark neutral `[32,32,32]` while
-separately sacrificing dark navy and dark teal; run a compact matched
-monochrome/depth/screen ablation against Candidate 1 and Candidate 4. In
-parallel, build SM2 around subtitle-region selectivity before adding temporal
-repeat and cell-delta syntax.
+Run a constrained single-dark-chroma utility search between Candidate 5A's teal
+and Candidate 5B's navy while retaining dark, middle, and light neutrals. In
+parallel, add temporal line aggregation and bounded fallback expansion to SM2's
+selector, preserving the already-successful full/repeat/delta sequence syntax.
 
 After those visual gates, resume AM1 as a separately testable audio pipeline:
 deterministic WAV fixtures, hysteretic silence segmentation, standard Opus

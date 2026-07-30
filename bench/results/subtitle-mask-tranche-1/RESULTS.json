@@ -1,0 +1,42 @@
+{
+  "format": "V64-SUBTITLE-MASK-TRANCHE-1-RESULTS",
+  "date": "2026-07-30",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-3",
+  "decision": "retain-experimental-reject-normative-rate",
+  "workflow": {
+    "runId": 30584192835,
+    "codeHead": "7b7b9779c4280d1618186dea01336bca85f76649",
+    "blindDigest": "sha256:bd03861546e50141170053ebce7b422c9ed8f56042c688947a7b6dde640bfef6",
+    "keyDigest": "sha256:4d0c64530c63e3145edee650a8ec72f4b5de88770a68759e5b2c8e14b35a12d5"
+  },
+  "blindReview": {
+    "reviewedBeforeKeyDisclosure": true,
+    "base": {"exactTranscriptions":4,"lanes":8,"meanEdgeClarity":2.0,"meanTemporalStability":2.5,"meanScenePreservation":4.0},
+    "sm1": {"exactTranscriptions":8,"lanes":8,"meanEdgeClarity":4.5,"meanTemporalStability":4.5,"meanScenePreservation":4.25},
+    "byGrid": {
+      "60": {
+        "base": {"exact":0,"lanes":4,"edge":1.0,"temporal":2.0,"scene":4.0},
+        "sm1": {"exact":4,"lanes":4,"edge":5.0,"temporal":5.0,"scene":4.0}
+      },
+      "80": {
+        "base": {"exact":4,"lanes":4,"edge":3.0,"temporal":3.0,"scene":4.0},
+        "sm1": {"exact":4,"lanes":4,"edge":4.0,"temporal":4.0,"scene":4.5}
+      }
+    }
+  },
+  "byteCost": {
+    "frames": 192,
+    "laneSeconds": 16,
+    "activeCells": 28632,
+    "meanActiveCellsPerFrame": 149.125,
+    "payloadBytes": 547272,
+    "framingBytes": 768,
+    "framedBytes": 548040,
+    "rawDeflateBytes": 108823,
+    "deflateSavingsPercent": 80.143,
+    "bytesPerFrame": 566.786,
+    "compressedKilobitsPerSecond": 54.412,
+    "meanCompressedBytesPerTwoSecondLane": 13602.875
+  },
+  "nextGate": "SM2 selective subtitle-region extraction plus repeat-plane and cell-delta coding measured against total V64 bytes"
+}

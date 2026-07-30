@@ -1,4 +1,4 @@
-name: V64 conformance and benchmarks
+name: V64 conformance and visual gates
 
 on:
   pull_request:
@@ -6,16 +6,21 @@ on:
       - "bench/results/**"
       - "bench/reviews/**"
       - "bench/HUMAN_RASTER_TRANCHE_2.md"
+      - "bench/HUMAN_RASTER_TRANCHE_3.md"
       - "IMPLEMENTATION_LEDGER.md"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: v64-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   conformance:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - name: Check out revision
@@ -34,26 +39,18 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Run human raster tranche 2 when present
-        if: ${{ hashFiles('bench/corpus/human-raster-tranche-2-manifest.json') != '' }}
+      - name: Verify deterministic Hyper Real assets
         run: |
           set -euo pipefail
-          mkdir -p bench/results/human-tranche-2 /tmp/v64-palettes
-          {
-            node --version
-            npm --version
-            ffmpeg -version | head -n 1
-            ffprobe -version | head -n 1
-            uname -a
-          } > bench/results/human-tranche-2/toolchain.txt
-          node tools/hyperreal-palette-generator.mjs /tmp/v64-palettes \
-            > bench/results/human-tranche-2/palette.log
+          rm -rf /tmp/v64-palettes
+          node tools/hyperreal-palette-generator.mjs /tmp/v64-palettes > /tmp/v64-palette-build.json
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
           const stems = [
             "v64-p256-hyperreal-candidate-2",
-            "v64-p256-hyperreal-candidate-3"
+            "v64-p256-hyperreal-candidate-3",
+            "v64-p256-hyperreal-candidate-4"
           ];
           for (const stem of stems) {
             const tracked = JSON.parse(readFileSync(`assets/palettes/${stem}.json`, "utf8"));
@@ -66,33 +63,107 @@ jobs:
             "candidate-2 RGB bytes differ"
           );
           NODE
-          npm run corpus:missing-classes > bench/results/human-tranche-2/corpus.log
-          npm run preview:human2 > bench/results/human-tranche-2/previews.log
-          npm run review:human2 > bench/results/human-tranche-2/review.log
-          npm run --silent bench:human2 > bench/results/human-tranche-2/benchmark.json
-          node -e 'JSON.parse(require("node:fs").readFileSync("bench/results/human-tranche-2/benchmark.json", "utf8"))'
-          find bench/results/human-tranche-2 bench/previews/human-tranche-2 bench/reviews/human-tranche-2 \
-            -type f -print0 | sort -z | xargs -0 sha256sum \
-            > bench/results/human-tranche-2/SHA256SUMS
 
-      - name: Upload blind review and benchmark
-        if: ${{ always() && hashFiles('bench/results/human-tranche-2/benchmark.json') != '' }}
+  candidate-4:
+    needs: conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out revision
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run matched Candidate-1 and Candidate-4 gate
+        run: |
+          set -euo pipefail
+          mkdir -p bench/results/human-tranche-3
+          {
+            node --version
+            npm --version
+            ffmpeg -version | head -n 1
+            ffprobe -version | head -n 1
+            uname -a
+          } > bench/results/human-tranche-3/toolchain.txt
+          npm run --silent corpus:missing-classes > bench/results/human-tranche-3/corpus.log
+          npm run --silent preview:human3 > bench/results/human-tranche-3/previews.log
+          npm run --silent review:human3 > bench/results/human-tranche-3/review.log
+          npm run --silent bench:human3 > bench/results/human-tranche-3/benchmark.json
+          node -e 'JSON.parse(require("node:fs").readFileSync("bench/results/human-tranche-3/benchmark.json", "utf8"))'
+          find bench/results/human-tranche-3 bench/previews/human-tranche-3 bench/reviews/human-tranche-3 \
+            -type f -print0 | sort -z | xargs -0 sha256sum \
+            > bench/results/human-tranche-3/SHA256SUMS
+
+      - name: Upload Candidate-4 blind review and benchmark
+        if: ${{ always() && hashFiles('bench/results/human-tranche-3/benchmark.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: human-tranche-2-blind
+          name: human-tranche-3-blind
           if-no-files-found: error
           retention-days: 30
           path: |
-            bench/results/human-tranche-2
-            bench/previews/human-tranche-2
-            bench/reviews/human-tranche-2
-            !bench/reviews/human-tranche-2/key.json
+            bench/corpus/human-raster-tranche-3-manifest.json
+            bench/results/human-tranche-3
+            bench/previews/human-tranche-3
+            bench/reviews/human-tranche-3
+            !bench/reviews/human-tranche-3/key.json
 
-      - name: Upload concealed review key
-        if: ${{ always() && hashFiles('bench/reviews/human-tranche-2/key.json') != '' }}
+      - name: Upload Candidate-4 concealed review key
+        if: ${{ always() && hashFiles('bench/reviews/human-tranche-3/key.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: human-tranche-2-key
+          name: human-tranche-3-key
           if-no-files-found: error
           retention-days: 30
-          path: bench/reviews/human-tranche-2/key.json
+          path: bench/reviews/human-tranche-3/key.json
+
+  subtitle-mask:
+    needs: conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out revision
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run subtitle-mask preview and byte-cost experiment
+        run: npm run --silent bench:subtitle-mask
+
+      - name: Upload subtitle-mask blind review and metrics
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-1/summary.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: subtitle-mask-tranche-1-blind
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            bench/results/subtitle-mask-tranche-1
+            !bench/results/subtitle-mask-tranche-1/key.json
+
+      - name: Upload subtitle-mask concealed key
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-1/key.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: subtitle-mask-tranche-1-key
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/results/subtitle-mask-tranche-1/key.json

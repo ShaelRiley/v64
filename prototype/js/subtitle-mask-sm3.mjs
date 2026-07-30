@@ -58,6 +58,61 @@ function connectedComponents(cells, columns, maxGap) {
   return components;
 }
 
+function candidateMetrics(component, support, columns, rows, discovery) {
+  const xs = component.map((cellIndex) => cellIndex % columns);
+  const ys = component.map((cellIndex) => Math.floor(cellIndex / columns));
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+  const distinctColumns = new Set(xs).size;
+  const coverage = distinctColumns / width;
+  const totalSupport = component.reduce((sum, cellIndex) => sum + support.get(cellIndex), 0);
+  const bottomWeight = 1 + maxY / Math.max(1, rows - 1);
+  const center = (minX + maxX) / 2;
+  const centerWeight = 1 - Math.abs(center - (columns - 1) / 2) / Math.max(1, columns);
+  return {
+    component,
+    discovery,
+    width,
+    height,
+    distinctColumns,
+    coverage,
+    totalSupport,
+    score: totalSupport * width * bottomWeight * (0.5 + coverage) *
+      (0.75 + centerWeight) / Math.max(1, height)
+  };
+}
+
+function projectedBandCandidates(
+  persistentCells,
+  support,
+  columns,
+  rows,
+  firstRow,
+  maxHeight,
+  minWidth,
+  minPersistentColumns
+) {
+  const output = [];
+  for (let minY = firstRow; minY < rows; minY += 1) {
+    for (let height = 1; height <= maxHeight && minY + height <= rows; height += 1) {
+      const maxY = minY + height - 1;
+      const component = persistentCells.filter((cellIndex) => {
+        const y = Math.floor(cellIndex / columns);
+        return y >= minY && y <= maxY;
+      });
+      if (component.length < 3) continue;
+      const metrics = candidateMetrics(component, support, columns, rows, "horizontal-projection");
+      if (metrics.width < minWidth || metrics.distinctColumns < minPersistentColumns) continue;
+      output.push(metrics);
+    }
+  }
+  return output;
+}
+
 function componentBox(component, columns, rows, expansionX, expansionY) {
   const xs = component.map((cellIndex) => cellIndex % columns);
   const ys = component.map((cellIndex) => Math.floor(cellIndex / columns));
@@ -67,6 +122,15 @@ function componentBox(component, columns, rows, expansionX, expansionY) {
     minY: Math.max(0, Math.min(...ys) - expansionY),
     maxY: Math.min(rows - 1, Math.max(...ys) + expansionY)
   };
+}
+
+function boxOverlapFraction(a, b) {
+  const width = Math.max(0, Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) + 1);
+  const height = Math.max(0, Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) + 1);
+  const intersection = width * height;
+  const areaA = (a.maxX - a.minX + 1) * (a.maxY - a.minY + 1);
+  const areaB = (b.maxX - b.minX + 1) * (b.maxY - b.minY + 1);
+  return intersection / Math.max(1, Math.min(areaA, areaB));
 }
 
 function insideBox(cellIndex, box, columns) {
@@ -80,9 +144,10 @@ function cloneEntry(entry) {
 }
 
 /**
- * Aggregate subtitle-line evidence across a short sequence, then use the
- * persistent line boxes as a bounded fallback when the per-frame SM2 selector
- * is implausibly sparse. The SM2 sequence syntax remains unchanged.
+ * Aggregate subtitle-line evidence across a short sequence, then use persistent
+ * connected components or horizontal lower-band projections as a bounded
+ * fallback when the per-frame SM2 selector is implausibly sparse. The SM2
+ * sequence syntax remains unchanged.
  */
 export function selectSubtitleRegionsTemporally(frames, columns, rows, options = {}) {
   assertInteger(columns, "SM3 columns", 1, 4096);
@@ -103,6 +168,9 @@ export function selectSubtitleRegionsTemporally(frames, columns, rows, options =
   const temporalGap = Number(options.temporalGap ?? 3);
   const minWidth = Number(options.minWidthCells ?? Math.max(6, Math.ceil(columns * 0.12)));
   const maxHeight = Number(options.maxHeightCells ?? Math.max(3, Math.ceil(rows * 0.18)));
+  const minPersistentColumns = Number(
+    options.minPersistentColumns ?? Math.max(4, Math.ceil(minWidth * 0.65))
+  );
   const maxComponents = Number(options.maxComponents ?? 2);
   const expansionX = Number(options.expansionX ?? 1);
   const expansionY = Number(options.expansionY ?? 0);
@@ -114,6 +182,7 @@ export function selectSubtitleRegionsTemporally(frames, columns, rows, options =
       !Number.isInteger(temporalGap) || temporalGap < 0 || temporalGap > 8 ||
       !Number.isInteger(minWidth) || minWidth < 1 ||
       !Number.isInteger(maxHeight) || maxHeight < 1 ||
+      !Number.isInteger(minPersistentColumns) || minPersistentColumns < 1 ||
       !Number.isInteger(maxComponents) || maxComponents < 1 || maxComponents > 4 ||
       !Number.isInteger(expansionX) || expansionX < 0 || expansionX > 8 ||
       !Number.isInteger(expansionY) || expansionY < 0 || expansionY > 2 ||
@@ -134,37 +203,44 @@ export function selectSubtitleRegionsTemporally(frames, columns, rows, options =
     .filter(([, count]) => count >= persistenceFrames)
     .map(([cellIndex]) => cellIndex);
 
-  const candidates = connectedComponents(persistentCells, columns, temporalGap)
-    .map((component) => {
-      const xs = component.map((cellIndex) => cellIndex % columns);
-      const ys = component.map((cellIndex) => Math.floor(cellIndex / columns));
-      const width = Math.max(...xs) - Math.min(...xs) + 1;
-      const height = Math.max(...ys) - Math.min(...ys) + 1;
-      const totalSupport = component.reduce((sum, cellIndex) => sum + support.get(cellIndex), 0);
-      const bottomWeight = 1 + Math.max(...ys) / Math.max(1, rows - 1);
-      return {
-        component,
-        width,
-        height,
-        totalSupport,
-        score: totalSupport * width * bottomWeight / Math.max(1, height)
-      };
-    })
+  const connected = connectedComponents(persistentCells, columns, temporalGap)
+    .map((component) => candidateMetrics(component, support, columns, rows, "connected-component"))
     .filter((item) => item.component.length >= 3 &&
-      item.width >= minWidth && item.height <= maxHeight)
+      item.width >= minWidth && item.height <= maxHeight);
+  const projected = projectedBandCandidates(
+    persistentCells,
+    support,
+    columns,
+    rows,
+    firstRow,
+    maxHeight,
+    minWidth,
+    minPersistentColumns
+  );
+  const ranked = [...connected, ...projected]
     .sort((a, b) => b.score - a.score || b.width - a.width ||
-      a.component[0] - b.component[0])
-    .slice(0, maxComponents);
+      a.component[0] - b.component[0]);
 
-  const boxes = candidates.map((item) => ({
-    ...componentBox(item.component, columns, rows, expansionX, expansionY),
-    score: item.score,
-    persistentCells: item.component.length,
-    totalSupport: item.totalSupport
-  }));
+  const boxes = [];
+  for (const item of ranked) {
+    const box = {
+      ...componentBox(item.component, columns, rows, expansionX, expansionY),
+      discovery: item.discovery,
+      score: item.score,
+      persistentCells: item.component.length,
+      distinctColumns: item.distinctColumns,
+      coverage: Number(item.coverage.toFixed(6)),
+      totalSupport: item.totalSupport
+    };
+    if (boxes.some((existing) => boxOverlapFraction(existing, box) >= 0.7)) continue;
+    boxes.push(box);
+    if (boxes.length >= maxComponents) break;
+  }
 
-  const selectedFrames = normalized.map((frame) => {
-    const staticSelection = selectSubtitleRegions(frame, columns, rows, options);
+  const staticSelections = normalized.map((frame) =>
+    selectSubtitleRegions(frame, columns, rows, options));
+  const selectedFrames = normalized.map((frame, frameIndex) => {
+    const staticSelection = staticSelections[frameIndex];
     if (!boxes.length || staticSelection.length >= sparseFloor) {
       return staticSelection.map(cloneEntry);
     }
@@ -189,12 +265,13 @@ export function selectSubtitleRegionsTemporally(frames, columns, rows, options =
       sourceFrames: normalized.length,
       persistentCells: persistentCells.length,
       persistenceFrames,
+      connectedCandidates: connected.length,
+      projectedCandidates: projected.length,
       boxes,
-      staticSelectedCells: normalized.reduce((sum, frame) =>
-        sum + selectSubtitleRegions(frame, columns, rows, options).length, 0),
+      staticSelectedCells: staticSelections.reduce((sum, frame) => sum + frame.length, 0),
       temporalSelectedCells: selectedFrames.reduce((sum, frame) => sum + frame.length, 0),
       fallbackFrames: selectedFrames.reduce((count, frame, index) =>
-        count + (frame.length > selectSubtitleRegions(normalized[index], columns, rows, options).length ? 1 : 0), 0)
+        count + (frame.length > staticSelections[index].length ? 1 : 0), 0)
     }
   };
 }

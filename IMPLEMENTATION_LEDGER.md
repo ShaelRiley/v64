@@ -4,7 +4,8 @@ Updated: 2026-07-29
 
 ## Ground truth
 
-- Design source: Google Doc `1qP6a9f6OSggPun4t1wATHRrC1yPgLngblZwlZdrk1Tg`
+- Design source:
+  [public V64 / Video64 Drop Google Doc](https://docs.google.com/document/d/1qP6a9f6OSggPun4t1wATHRrC1yPgLngblZwlZdrk1Tg/edit?usp=sharing)
 - ANSI Tube source: `ShaelRiley/ansi-tube`
 - Inspected ANSI Tube commit: `ee08e66` (`Release ANSI Tube v0.9.9`)
 - Canonical source file blob: `core.js` SHA `29fd2065612454a66a92e431213731c41d5dc28c`
@@ -54,12 +55,17 @@ does not falsely imply the corpus-selection decision is complete.
 - [x] Implement deterministic canonical-Huffman encode/decode experiments.
 - [x] Compare packed-only, per-frame and per-group DEFLATE, Zstandard, and
   canonical Huffman on the identical 48-frame golden trace.
+- [x] Add same-value glyph, foreground, background, and color-pair runs.
+- [x] Replace the fixed greedy trace builder with bounded dynamic programming
+  that minimizes exact packed command bytes.
+- [x] Add deterministic 0.5-, 1-, and 2-second independent-group sweeps with
+  forced keyframes and verified reconstruction.
 - [ ] Add scene-cut scoring and rate-distortion target modes.
 - [ ] Complete the 32-glyph and adaptive 16/32/64 canonical-glyph study.
 - [ ] Repeat the entropy and grammar comparison on the legally reusable mixed
   corpus before selecting normative syntax or a backend.
-- [ ] Test 0.5-, 1-, and 2-second independent groups, same-value component runs,
-  and a cost-minimizing parser.
+- [ ] Add an entropy-aware command objective; the packed-byte optimum did not
+  minimize DEFLATE bytes on the procedural fixture.
 
 ## Phase 2 — audio and finished container profile
 
@@ -108,12 +114,11 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Run `V64-COMMAND-SHOOTOUT-1` over the legally reusable mixed corpus. Compare
-0.5-, 1-, and 2-second independent-group maxima while keeping decoded cell
-states and command candidates identical. Add same-value component runs and a
-dynamic-programming or bounded-beam parser, then publish median and
-75th-percentile complete-file results before freezing the visual command
-grammar or entropy backend.
+Run `V64-COMMAND-SHOOTOUT-2` over the legally reusable mixed corpus. Preserve
+the 0.5-, 1-, and 2-second group sweep while comparing packed-byte and
+entropy-aware parser objectives on identical decoded states. Publish median and
+75th-percentile complete-file results, optimizer cost, memory, and seek latency
+before freezing the visual command grammar or entropy backend.
 
 In parallel after that measurement is reproducible, resume AM1 as a separately
 testable audio pipeline: deterministic WAV fixtures, hysteretic silence

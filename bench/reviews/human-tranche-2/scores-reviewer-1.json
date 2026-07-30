@@ -1,0 +1,138 @@
+{
+  "format": "V64-BLIND-REVIEW-SCORES-1",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-2",
+  "reviewer": "reviewer-1",
+  "reviewMode": "blind code-only midpoint stills at native 100% scale",
+  "paletteKeyConsulted": false,
+  "temporalRatingStatus": "not-scored; still-only package cannot support human temporal-stability judgments",
+  "subtitleExactTranscriptions": 0,
+  "subtitleRows": 8,
+  "rows": [
+    {
+      "code": "65FBF92D",
+      "group": "depth-40",
+      "recognizability": 4,
+      "colorOrGrayscale": 4,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Cube and orb recognizable; floor-grid perspective is weak but present. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "0C94E7AF",
+      "group": "depth-40",
+      "recognizability": 5,
+      "colorOrGrayscale": 5,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Strong cube-face separation, visible floor grid, and stable cyan/blue/violet identity. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "1626F62B",
+      "group": "monochrome-40",
+      "recognizability": 5,
+      "colorOrGrayscale": 5,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Strong silhouette, window rhythm, platform diagonal, and grayscale hierarchy. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "EBC71F4B",
+      "group": "monochrome-40",
+      "recognizability": 4,
+      "colorOrGrayscale": 2,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Scene remains recognizable, but navy/brown substitutions impair the intended grayscale hierarchy. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "6363B9BC",
+      "group": "screen-40",
+      "recognizability": 4,
+      "colorOrGrayscale": 4,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Editor, sidebar, terminal, status region, and cursor are separable; code text is not readable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "4A231D9A",
+      "group": "screen-40",
+      "recognizability": 4,
+      "colorOrGrayscale": 4,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Editor, sidebar, terminal, status region, and cursor are separable; code text is not readable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "9CB79E5B",
+      "group": "lecture-subtitle-60",
+      "recognizability": 3,
+      "colorOrGrayscale": 3,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Face and lamp remain recognizable; subtitle cannot be transcribed exactly at 100% scale. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "645DCB91",
+      "group": "lecture-subtitle-60",
+      "recognizability": 3,
+      "colorOrGrayscale": 4,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Face, jacket, and lamp remain recognizable; subtitle cannot be transcribed exactly at 100% scale. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "59462E8F",
+      "group": "animation-subtitle-60",
+      "recognizability": 3,
+      "colorOrGrayscale": 3,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Diner staging and left profile remain recognizable; right profile is weak; subtitle unreadable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "A97A2F0F",
+      "group": "animation-subtitle-60",
+      "recognizability": 4,
+      "colorOrGrayscale": 4,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Both profiles and diner staging remain distinct; subtitle cannot be transcribed exactly. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "B060A43D",
+      "group": "lecture-subtitle-80",
+      "recognizability": 3,
+      "colorOrGrayscale": 3,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Face, hand, and lamp remain recognizable; subtitle has letter-like structure but is not exactly readable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "40888A36",
+      "group": "lecture-subtitle-80",
+      "recognizability": 4,
+      "colorOrGrayscale": 4,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Face, gesture, jacket, and lamp separate clearly; subtitle remains untranscribable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "ED9582FD",
+      "group": "animation-subtitle-80",
+      "recognizability": 3,
+      "colorOrGrayscale": 3,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Profiles and diner staging are recognizable; subtitle remains untranscribable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    },
+    {
+      "code": "425F8815",
+      "group": "animation-subtitle-80",
+      "recognizability": 4,
+      "colorOrGrayscale": 4,
+      "temporalStability": null,
+      "subtitleTranscription": null,
+      "notes": "Profiles, gesture, rain, and diner staging separate well; subtitle remains untranscribable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+    }
+  ]
+}

@@ -15,6 +15,7 @@ import { measureFrameCommands } from "./commands.mjs";
 import {
   benchmarkCommandBackends, createCommandTraceDocument
 } from "./command-benchmark.mjs";
+import { benchmarkEntropyCorpus } from "./entropy-benchmark.mjs";
 
 const PROFILES = Object.freeze({
   smallest: { stability: 0.82, keyframeInterval: 240, dictionary: true },
@@ -213,6 +214,14 @@ function benchmarkCommands(inputPath) {
   return { path: resolve(inputPath), ...report };
 }
 
+function benchmarkCorpus(inputPath) {
+  const manifest = JSON.parse(readFileSync(inputPath, "utf8"));
+  return {
+    path: resolve(inputPath),
+    ...benchmarkEntropyCorpus(manifest)
+  };
+}
+
 function writeCommandTrace(inputPath, outputPath) {
   const file = readFileSync(inputPath);
   const trace = createCommandTraceDocument(demuxV64(file));
@@ -268,6 +277,7 @@ Usage:
   v64 decode INPUT.v64 OUTPUT.mp4|OUTPUT.mkv
   v64 inspect INPUT.v64
   v64 benchmark-commands INPUT.v64
+  v64 benchmark-corpus MANIFEST.json
   v64 trace-commands INPUT.v64 OUTPUT.json
   v64 verify INPUT.v64
   v64 atlas OUTPUT.ppm
@@ -297,6 +307,9 @@ async function main() {
   } else if (command === "benchmark-commands") {
     if (positional.length !== 1) throw new Error("benchmark-commands requires INPUT.v64");
     result = benchmarkCommands(positional[0]);
+  } else if (command === "benchmark-corpus") {
+    if (positional.length !== 1) throw new Error("benchmark-corpus requires MANIFEST.json");
+    result = benchmarkCorpus(positional[0]);
   } else if (command === "trace-commands") {
     if (positional.length !== 2) throw new Error("trace-commands requires INPUT.v64 and OUTPUT.json");
     result = writeCommandTrace(positional[0], positional[1]);
@@ -317,6 +330,6 @@ async function main() {
 main().catch((error) => fail(error.message));
 
 export {
-  benchmarkCommands, decodeVideo, encodeVideo, inspect, makeSample, probeVideo,
+  benchmarkCommands, benchmarkCorpus, decodeVideo, encodeVideo, inspect, makeSample, probeVideo,
   writeCommandTrace, writePpm
 };

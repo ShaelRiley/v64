@@ -11,7 +11,8 @@
     "extract-assets": "node tools/extract-assets.mjs ../ansi-tube-source/core.js",
     "test": "node --test tests/*.test.mjs",
     "sample": "node prototype/js/cli.mjs make-sample tests/golden",
-    "bench:commands": "node prototype/js/cli.mjs benchmark-commands tests/golden/procedural.v64"
+    "bench:commands": "node prototype/js/cli.mjs benchmark-commands tests/golden/procedural.v64",
+    "bench:corpus": "node prototype/js/cli.mjs benchmark-corpus bench/corpus/seed-manifest.json"
   },
   "engines": {
     "node": ">=20"

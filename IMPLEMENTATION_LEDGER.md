@@ -1,6 +1,6 @@
 # V64 implementation ledger
 
-Updated: 2026-07-29
+Updated: 2026-07-30
 
 ## Ground truth
 
@@ -64,8 +64,15 @@ does not falsely imply the corpus-selection decision is complete.
 - [ ] Complete the 32-glyph and adaptive 16/32/64 canonical-glyph study.
 - [ ] Repeat the entropy and grammar comparison on the legally reusable mixed
   corpus before selecting normative syntax or a backend.
-- [ ] Add an entropy-aware command objective; the packed-byte optimum did not
-  minimize DEFLATE bytes on the procedural fixture.
+- [x] Add a provenance-validating manifest and deterministic CC0 structural
+  seed corpus covering all eleven required content classes.
+- [x] Add a two-pass static-byte entropy objective and actual-DEFLATE candidate
+  selection without changing decoder syntax.
+- [x] Publish the first multi-fixture entropy report: 6,807 selected DEFLATE
+  bytes versus 7,897 for packed-only parsing, with entropy selected on 5 of 11
+  fixtures.
+- [ ] Replace or augment the synthetic seed fixtures with licensed raster-video
+  clips before drawing recognizable-fidelity or normative syntax conclusions.
 
 ## Phase 2 — audio and finished container profile
 
@@ -114,11 +121,11 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Run `V64-COMMAND-SHOOTOUT-2` over the legally reusable mixed corpus. Preserve
-the 0.5-, 1-, and 2-second group sweep while comparing packed-byte and
-entropy-aware parser objectives on identical decoded states. Publish median and
-75th-percentile complete-file results, optimizer cost, memory, and seek latency
-before freezing the visual command grammar or entropy backend.
+Ingest the first licensed raster-video tranche into the corpus manifest.
+Preserve the 0.5-, 1-, and 2-second group sweep while comparing packed-byte and
+entropy-aware parser objectives on identical decoded states. Add encode time,
+peak memory, seek latency, and recognizable-fidelity notes before freezing the
+visual command grammar or entropy backend.
 
 In parallel after that measurement is reproducible, resume AM1 as a separately
 testable audio pipeline: deterministic WAV fixtures, hysteretic silence

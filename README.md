@@ -27,6 +27,9 @@ real binary `.v64` implementation, not a mock UI:
   separable component updates, transactional decoding, and exact byte accounting;
 - reproducible packed-only, DEFLATE, Zstandard, and canonical-Huffman command
   shootouts on identical traces and independent-group boundaries;
+- a provenance-validated, deterministic structural seed corpus spanning eleven
+  visual classes and a two-pass static-byte entropy parser with actual-DEFLATE
+  candidate selection;
 - Node conformance tests and golden hashes.
 
 Audio Opus, Rust, ANSI Drop's desktop shell, the native player, and VLC modules
@@ -48,6 +51,7 @@ npm run sample
 node prototype/js/cli.mjs inspect tests/golden/procedural.v64
 node prototype/js/cli.mjs verify tests/golden/procedural.v64
 npm run bench:commands
+npm run bench:corpus
 ```
 
 Encode any FFmpeg-readable video:
@@ -81,8 +85,10 @@ Grammar B is experimental and does not change the v0.1 container or its golden
 files. See
 [`spec/V64-grammar-b-experiment.md`](spec/V64-grammar-b-experiment.md) and
 [`bench/COMMAND_SHOOTOUT_1.md`](bench/COMMAND_SHOOTOUT_1.md) and
-[`bench/COMMAND_SHOOTOUT_2.md`](bench/COMMAND_SHOOTOUT_2.md) for its exact
-syntax, validation rules, and measured iterations.
+[`bench/COMMAND_SHOOTOUT_2.md`](bench/COMMAND_SHOOTOUT_2.md) and
+[`bench/ENTROPY_SHOOTOUT_1.md`](bench/ENTROPY_SHOOTOUT_1.md) for its exact
+syntax, validation rules, and measured iterations. The seed-corpus manifest is
+[`bench/corpus/seed-manifest.json`](bench/corpus/seed-manifest.json).
 
 See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for verified status,
 blockers, and the next concrete step. See

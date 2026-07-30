@@ -1,7 +1,7 @@
 import { LIMITS } from "./constants.mjs";
 import { decodeVarUint, encodeVarUint } from "./varint.mjs";
 
-export const GRAMMAR_B_VERSION = 2;
+export const GRAMMAR_B_VERSION = 3;
 
 export const PACKED_OPCODE = Object.freeze({
   END: 0,
@@ -151,7 +151,8 @@ const COMMAND_PRIORITY = Object.freeze({
 
 export function buildCommandTrace(currentInput, previousInput, options) {
   const {
-    columns, rows, paletteDepth, keyframe = !previousInput, maxLiteralRun = 64
+    columns, rows, paletteDepth, keyframe = !previousInput, maxLiteralRun = 64,
+    byteCosts = null
   } = options;
   const cellCount = checkedGrid(columns, rows);
   if (!Number.isInteger(maxLiteralRun) || maxLiteralRun < 1 || maxLiteralRun > 1024) {
@@ -167,19 +168,55 @@ export function buildCommandTrace(currentInput, previousInput, options) {
 
   const paletteBits = paletteIndexBits(paletteDepth);
   const tokenBits = 6 + 2 * paletteBits;
+  let normalizedByteCosts = null;
+  if (byteCosts !== null) {
+    if (!Array.isArray(byteCosts) && !(byteCosts instanceof Float64Array)) {
+      throw new TypeError("byteCosts must contain 256 finite positive bit costs");
+    }
+    if (byteCosts.length !== 256 || Array.from(byteCosts).some(
+      (cost) => !Number.isFinite(cost) || cost <= 0
+    )) {
+      throw new RangeError("byteCosts must contain 256 finite positive bit costs");
+    }
+    normalizedByteCosts = Float64Array.from(byteCosts);
+  }
+  const weightedCost = (candidate, cell) => {
+    if (!normalizedByteCosts) return candidate.byteCost;
+    const command = candidate.op === "LITERAL"
+      ? {
+          ...candidate,
+          tokens: Array.from(
+            { length: candidate.count },
+            (_, index) => tokenAt(current, cell + index)
+          )
+        }
+      : candidate;
+    const bytes = encodeSingleCommand(command, paletteBits, paletteDepth);
+    let bits = 0;
+    for (const byte of bytes) bits += normalizedByteCosts[byte];
+    return bits;
+  };
   const bestCost = new Float64Array(cellCount + 1);
   bestCost.fill(Number.POSITIVE_INFINITY);
-  bestCost[cellCount] = 1;
+  bestCost[cellCount] = normalizedByteCosts ? normalizedByteCosts[PACKED_OPCODE.END] : 1;
   const choices = new Array(cellCount);
   const consider = (cell, candidate) => {
-    const total = candidate.byteCost + bestCost[cell + candidate.count];
+    candidate.objectiveCost = weightedCost(candidate, cell);
+    const total = candidate.objectiveCost + bestCost[cell + candidate.count];
     const selected = choices[cell];
     const selectedTotal = selected
-      ? selected.byteCost + bestCost[cell + selected.count]
+      ? selected.objectiveCost + bestCost[cell + selected.count]
       : Number.POSITIVE_INFINITY;
-    const better = total < selectedTotal ||
-      (total === selectedTotal && candidate.count > (selected?.count || 0)) ||
-      (total === selectedTotal && candidate.count === selected?.count &&
+    const equalCost = Math.abs(total - selectedTotal) < 1e-9;
+    const rawByteTie = !normalizedByteCosts ||
+      candidate.byteCost === selected?.byteCost;
+    const better = total < selectedTotal - 1e-9 ||
+      (equalCost && normalizedByteCosts &&
+        candidate.byteCost < (selected?.byteCost ?? Number.POSITIVE_INFINITY)) ||
+      (equalCost && rawByteTie &&
+        candidate.count > (selected?.count || 0)) ||
+      (equalCost && rawByteTie &&
+        candidate.count === selected?.count &&
         COMMAND_PRIORITY[candidate.op] < COMMAND_PRIORITY[selected.op]);
     if (better) {
       choices[cell] = candidate;
@@ -244,14 +281,17 @@ export function buildCommandTrace(currentInput, previousInput, options) {
   }
 
   const commands = [];
+  let packedByteCost = 1;
   for (let cell = 0; cell < cellCount;) {
     const selected = choices[cell];
     const command = { ...selected, startCell: cell };
     delete command.byteCost;
+    delete command.objectiveCost;
     if (command.op === "LITERAL") {
       command.tokens = Array.from({ length: command.count }, (_, index) => tokenAt(current, cell + index));
     }
     commands.push(command);
+    packedByteCost += selected.byteCost;
     cell += command.count;
   }
   commands.push({ op: "END", startCell: cellCount, count: 0 });
@@ -264,9 +304,13 @@ export function buildCommandTrace(currentInput, previousInput, options) {
     paletteDepth,
     paletteBits,
     keyframe: Boolean(keyframe),
-    parser: "bounded-dynamic-programming",
+    parser: normalizedByteCosts
+      ? "static-byte-entropy-dynamic-programming"
+      : "bounded-dynamic-programming",
+    objective: normalizedByteCosts ? "estimated-static-byte-bits" : "packed-bytes",
     maxLiteralRun,
-    packedByteCost: bestCost[0],
+    packedByteCost,
+    objectiveCost: bestCost[0],
     commands
   };
 }
@@ -327,46 +371,50 @@ function pushVar(parts, value) {
   return encoded.length;
 }
 
+function encodeSingleCommand(command, paletteBits, paletteDepth) {
+  const opcode = PACKED_OPCODE[command.op];
+  if (opcode === undefined) throw new Error(`Unknown trace operation ${command.op}`);
+  const parts = [Buffer.from([opcode])];
+  if (command.op === "END") return parts[0];
+  if (command.op === "SKIP") {
+    pushVar(parts, command.count);
+  } else if (command.op === "LITERAL") {
+    if (!command.count || command.tokens?.length !== command.count) throw new Error("Malformed literal trace");
+    pushVar(parts, command.count);
+    parts.push(packedTokens(command.tokens, paletteBits, paletteDepth));
+  } else if (command.op === "REPEAT_TOKEN") {
+    if (!command.count) throw new Error("Malformed repeated-token trace");
+    pushVar(parts, command.count);
+    parts.push(packedTokens([command.token], paletteBits, paletteDepth));
+  } else if (command.op === "SET_GLYPH" || command.op === "REPEAT_GLYPH") {
+    if (command.op === "REPEAT_GLYPH") pushVar(parts, command.count);
+    parts.push(packFields([{ value: command.value, width: 6 }]));
+  } else if (command.op === "SET_FOREGROUND" || command.op === "SET_BACKGROUND" ||
+      command.op === "REPEAT_FOREGROUND" || command.op === "REPEAT_BACKGROUND") {
+    if (command.op.startsWith("REPEAT_")) pushVar(parts, command.count);
+    if (command.value >= paletteDepth) throw new RangeError("Palette index exceeds declared depth");
+    parts.push(packFields([{ value: command.value, width: paletteBits }]));
+  } else if (command.op === "SET_COLOR_PAIR" || command.op === "REPEAT_COLOR_PAIR") {
+    if (command.op === "REPEAT_COLOR_PAIR") pushVar(parts, command.count);
+    if (command.foreground >= paletteDepth || command.background >= paletteDepth) {
+      throw new RangeError("Palette index exceeds declared depth");
+    }
+    parts.push(packFields([
+      { value: command.foreground, width: paletteBits },
+      { value: command.background, width: paletteBits }
+    ]));
+  }
+  return Buffer.concat(parts);
+}
+
 export function encodePackedCommands(trace) {
   if (trace?.grammar !== "V64-GRAMMAR-B" || trace.version !== GRAMMAR_B_VERSION) {
     throw new Error("Unsupported command trace");
   }
   const paletteBits = paletteIndexBits(trace.paletteDepth);
-  const parts = [];
-  for (const command of trace.commands) {
-    const opcode = PACKED_OPCODE[command.op];
-    if (opcode === undefined) throw new Error(`Unknown trace operation ${command.op}`);
-    parts.push(Buffer.from([opcode]));
-    if (command.op === "END") continue;
-    if (command.op === "SKIP") {
-      pushVar(parts, command.count);
-    } else if (command.op === "LITERAL") {
-      if (!command.count || command.tokens?.length !== command.count) throw new Error("Malformed literal trace");
-      pushVar(parts, command.count);
-      parts.push(packedTokens(command.tokens, paletteBits, trace.paletteDepth));
-    } else if (command.op === "REPEAT_TOKEN") {
-      if (!command.count) throw new Error("Malformed repeated-token trace");
-      pushVar(parts, command.count);
-      parts.push(packedTokens([command.token], paletteBits, trace.paletteDepth));
-    } else if (command.op === "SET_GLYPH" || command.op === "REPEAT_GLYPH") {
-      if (command.op === "REPEAT_GLYPH") pushVar(parts, command.count);
-      parts.push(packFields([{ value: command.value, width: 6 }]));
-    } else if (command.op === "SET_FOREGROUND" || command.op === "SET_BACKGROUND" ||
-        command.op === "REPEAT_FOREGROUND" || command.op === "REPEAT_BACKGROUND") {
-      if (command.op.startsWith("REPEAT_")) pushVar(parts, command.count);
-      if (command.value >= trace.paletteDepth) throw new RangeError("Palette index exceeds declared depth");
-      parts.push(packFields([{ value: command.value, width: paletteBits }]));
-    } else if (command.op === "SET_COLOR_PAIR" || command.op === "REPEAT_COLOR_PAIR") {
-      if (command.op === "REPEAT_COLOR_PAIR") pushVar(parts, command.count);
-      if (command.foreground >= trace.paletteDepth || command.background >= trace.paletteDepth) {
-        throw new RangeError("Palette index exceeds declared depth");
-      }
-      parts.push(packFields([
-        { value: command.foreground, width: paletteBits },
-        { value: command.background, width: paletteBits }
-      ]));
-    }
-  }
+  const parts = trace.commands.map(
+    (command) => encodeSingleCommand(command, paletteBits, trace.paletteDepth)
+  );
   return Buffer.concat(parts);
 }
 

@@ -9,7 +9,7 @@ import {
   decodeCanonicalHuffman, encodeCanonicalHuffman
 } from "./canonical-huffman.mjs";
 
-const REPORT_VERSION = "V64-COMMAND-SHOOTOUT-2";
+const REPORT_VERSION = "V64-COMMAND-SHOOTOUT-3";
 const HAS_ZSTANDARD = typeof zlib.zstdCompressSync === "function" &&
   typeof zlib.zstdDecompressSync === "function";
 

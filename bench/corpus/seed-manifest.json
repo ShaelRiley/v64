@@ -1,0 +1,129 @@
+{
+  "format": "V64-CORPUS-MANIFEST-1",
+  "id": "V64-STRUCTURAL-SEED-1",
+  "title": "V64 deterministic structural seed corpus",
+  "scope": "Synthetic cell-state fixtures for command-grammar development; not a substitute for licensed human-content fidelity trials.",
+  "entries": [
+    {
+      "id": "dialogue-face-1",
+      "structuralClass": "dialogue",
+      "generator": "dialogue-face",
+      "seed": 101,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 16,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "dark-cinematography-1",
+      "structuralClass": "dark-cinematography",
+      "generator": "dark-cinematography",
+      "seed": 102,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 4,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "rapid-motion-1",
+      "structuralClass": "rapid-motion",
+      "generator": "rapid-motion",
+      "seed": 103,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 16,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "flat-animation-1",
+      "structuralClass": "2d-animation",
+      "generator": "flat-animation",
+      "seed": 104,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 8,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "depth-animation-1",
+      "structuralClass": "3d-animation",
+      "generator": "depth-animation",
+      "seed": 105,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 16,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "monochrome-film-1",
+      "structuralClass": "black-and-white-film",
+      "generator": "monochrome-film",
+      "seed": 106,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 2,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "music-video-1",
+      "structuralClass": "music-video",
+      "generator": "music-video",
+      "seed": 107,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 16,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "screen-capture-1",
+      "structuralClass": "screen-capture",
+      "generator": "screen-capture",
+      "seed": 108,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 8,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "subtitles-1",
+      "structuralClass": "subtitles",
+      "generator": "subtitles",
+      "seed": 109,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 8,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "static-lecture-1",
+      "structuralClass": "static-lecture",
+      "generator": "static-lecture",
+      "seed": 110,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 8,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    },
+    {
+      "id": "saturated-material-1",
+      "structuralClass": "highly-saturated-material",
+      "generator": "saturated-material",
+      "seed": 111,
+      "grid": { "columns": 24, "rows": 8 },
+      "paletteDepth": 16,
+      "cadence": "24",
+      "frames": 24,
+      "provenance": { "creator": "V64 project", "method": "deterministic cell-state generator v1", "license": "CC0-1.0" }
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+name: V64 conformance and benchmarks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out revision
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run human raster tranche 2 when present
+        if: ${{ hashFiles('bench/corpus/human-raster-tranche-2-manifest.json') != '' }}
+        run: |
+          mkdir -p bench/results/human-tranche-2
+          {
+            node --version
+            npm --version
+            ffmpeg -version | head -n 1
+            ffprobe -version | head -n 1
+            uname -a
+          } > bench/results/human-tranche-2/toolchain.txt
+          npm run palette:hyperreal > bench/results/human-tranche-2/palette.log
+          npm run corpus:missing-classes > bench/results/human-tranche-2/corpus.log
+          npm run preview:human2 > bench/results/human-tranche-2/previews.log
+          npm run review:human2 > bench/results/human-tranche-2/review.log
+          npm run --silent bench:human2 > bench/results/human-tranche-2/benchmark.json
+          node -e 'JSON.parse(require("node:fs").readFileSync("bench/results/human-tranche-2/benchmark.json", "utf8"))'
+          git diff --exit-code -- \
+            assets/palettes/v64-p256-hyperreal-candidate-2.json \
+            assets/palettes/v64-p256-hyperreal-candidate-2.rgb \
+            assets/palettes/v64-p256-hyperreal-candidate-3.json
+          find bench/results/human-tranche-2 bench/previews/human-tranche-2 bench/reviews/human-tranche-2 \
+            -type f -print0 | sort -z | xargs -0 sha256sum \
+            > bench/results/human-tranche-2/SHA256SUMS
+
+      - name: Upload blind review and benchmark
+        if: ${{ hashFiles('bench/results/human-tranche-2/benchmark.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: human-tranche-2-blind
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            bench/results/human-tranche-2
+            bench/previews/human-tranche-2
+            bench/reviews/human-tranche-2
+            !bench/reviews/human-tranche-2/key.json
+
+      - name: Upload concealed review key
+        if: ${{ hashFiles('bench/reviews/human-tranche-2/key.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: human-tranche-2-key
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/reviews/human-tranche-2/key.json

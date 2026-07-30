@@ -47,18 +47,30 @@ For each token, fields appear in this order:
 | `0x05` | `SET_FOREGROUND` | one packed `c`-bit index | Change only foreground and advance one cell. |
 | `0x06` | `SET_BACKGROUND` | one packed `c`-bit index | Change only background and advance one cell. |
 | `0x07` | `SET_COLOR_PAIR` | packed foreground then background | Change both colors and advance one cell. |
+| `0x08` | `REPEAT_GLYPH` | positive varuint `n`, one packed 6-bit glyph | Change only the glyph in `n` sequential cells. |
+| `0x09` | `REPEAT_FOREGROUND` | positive varuint `n`, one packed `c`-bit index | Change only foreground in `n` sequential cells. |
+| `0x0A` | `REPEAT_BACKGROUND` | positive varuint `n`, one packed `c`-bit index | Change only background in `n` sequential cells. |
+| `0x0B` | `REPEAT_COLOR_PAIR` | positive varuint `n`, one packed color pair | Change both colors in `n` sequential cells. |
 
-The reference trace builder is deterministic and greedy:
+Grammar B version 2 uses deterministic bounded dynamic programming. At each
+cell, the reference encoder evaluates:
 
-1. emit maximal `SKIP` runs;
-2. emit `REPEAT_TOKEN` for three or more identical changed cells;
-3. on deltas, emit a component action when exactly its named component or pair
-   changed;
-4. otherwise accumulate full literals;
-5. emit `END`.
+1. a maximal `SKIP` when the cell retains baseline state;
+2. byte-aligned packed literals from one through 64 cells;
+3. a maximal repeated full-token run;
+4. the applicable single-cell component action;
+5. the applicable maximal same-value component run.
 
-This parser is a reproducible baseline, not a claim that greedy parsing is
-optimal. Dynamic programming or bounded beam search remains encoder-only work.
+It minimizes the exact packed bytes from the current cursor through `END`.
+Equal-cost choices prefer the command that advances farther, then the stable
+priority order documented in the implementation. The 64-cell literal horizon
+bounds encoder work without changing decoder syntax.
+
+This is a packed-byte optimum, not an entropy-aware optimum. Shootout 2 showed
+that it substantially reduced raw command bytes while producing worse
+group-level DEFLATE than the earlier greedy trace. A future parser must estimate
+the selected backend or optimize a second-stage model without changing decoder
+semantics.
 
 ## Backend framing used by the shootout
 
@@ -72,9 +84,11 @@ Per-group experiments concatenate records:
 | packed command length | 4 bytes, little-endian |
 | packed commands | declared length |
 
-A keyframe begins a new independent group. The current golden fixture contains
-one group; the next corpus experiment must compare time-based maximum group
-durations.
+A keyframe begins a new independent group. The harness can force keyframes at
+0.5-, 1-, and 2-second maximum elapsed durations, quantized to nominal frame
+boundaries. Each forced keyframe is decoded from canonical void state and
+compared with the source cell state before its group is admitted to the report.
+Repeat records use frame kind `2` and an empty command payload.
 
 The canonical-Huffman experiment uses a deterministic `HUF1` wrapper:
 

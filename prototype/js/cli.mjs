@@ -12,6 +12,9 @@ import {
 import { analyzeRgbaFrame, makeGlyphAtlas, renderCells } from "./video64.mjs";
 import { GLYPH_META, PALETTE_META } from "./assets.mjs";
 import { measureFrameCommands } from "./commands.mjs";
+import {
+  benchmarkCommandBackends, createCommandTraceDocument
+} from "./command-benchmark.mjs";
 
 const PROFILES = Object.freeze({
   smallest: { stability: 0.82, keyframeInterval: 240, dictionary: true },
@@ -204,6 +207,25 @@ function inspect(inputPath) {
   };
 }
 
+function benchmarkCommands(inputPath) {
+  const file = readFileSync(inputPath);
+  const report = benchmarkCommandBackends(demuxV64(file), { sourceFileBytes: file.length });
+  return { path: resolve(inputPath), ...report };
+}
+
+function writeCommandTrace(inputPath, outputPath) {
+  const file = readFileSync(inputPath);
+  const trace = createCommandTraceDocument(demuxV64(file));
+  const json = `${JSON.stringify(trace, null, 2)}\n`;
+  writeFileSync(outputPath, json);
+  return {
+    input: resolve(inputPath),
+    output: resolve(outputPath),
+    bytes: Buffer.byteLength(json),
+    codedFrames: trace.codedFrames
+  };
+}
+
 function writePpm(path, image) {
   const rgb = Buffer.alloc(image.width * image.height * 3);
   for (let source = 0, target = 0; source < image.rgba.length; source += 4, target += 3) {
@@ -245,6 +267,8 @@ Usage:
              [--profile smallest|balanced|clearest] [--max-seconds N]
   v64 decode INPUT.v64 OUTPUT.mp4|OUTPUT.mkv
   v64 inspect INPUT.v64
+  v64 benchmark-commands INPUT.v64
+  v64 trace-commands INPUT.v64 OUTPUT.json
   v64 verify INPUT.v64
   v64 atlas OUTPUT.ppm
   v64 make-sample OUTPUT_DIRECTORY
@@ -270,6 +294,12 @@ async function main() {
   } else if (command === "inspect") {
     if (positional.length !== 1) throw new Error("inspect requires INPUT.v64");
     result = inspect(positional[0]);
+  } else if (command === "benchmark-commands") {
+    if (positional.length !== 1) throw new Error("benchmark-commands requires INPUT.v64");
+    result = benchmarkCommands(positional[0]);
+  } else if (command === "trace-commands") {
+    if (positional.length !== 2) throw new Error("trace-commands requires INPUT.v64 and OUTPUT.json");
+    result = writeCommandTrace(positional[0], positional[1]);
   } else if (command === "verify") {
     if (positional.length !== 1) throw new Error("verify requires INPUT.v64");
     result = verifyV64(readFileSync(positional[0]));
@@ -286,4 +316,7 @@ async function main() {
 
 main().catch((error) => fail(error.message));
 
-export { decodeVideo, encodeVideo, inspect, makeSample, probeVideo, writePpm };
+export {
+  benchmarkCommands, decodeVideo, encodeVideo, inspect, makeSample, probeVideo,
+  writeCommandTrace, writePpm
+};

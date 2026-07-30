@@ -46,9 +46,20 @@ does not falsely imply the corpus-selection decision is complete.
 - [x] Add exact-silence and deterministic particle-event chunk primitives.
 - [x] Encode, verify, decode, and visually inspect a two-second procedural clip.
 - [x] Measure the first round-trip and publish exact hashes and command metrics.
+- [x] Add backend-neutral canonical command traces and exact opcode/count/payload
+  byte accounting.
+- [x] Add experimental Grammar B with packed palette indices, separable
+  glyph/foreground/background/color-pair actions, strict progress rules, and
+  transactional decoding.
+- [x] Implement deterministic canonical-Huffman encode/decode experiments.
+- [x] Compare packed-only, per-frame and per-group DEFLATE, Zstandard, and
+  canonical Huffman on the identical 48-frame golden trace.
 - [ ] Add scene-cut scoring and rate-distortion target modes.
 - [ ] Complete the 32-glyph and adaptive 16/32/64 canonical-glyph study.
-- [ ] Add entropy comparison beyond per-chunk DEFLATE.
+- [ ] Repeat the entropy and grammar comparison on the legally reusable mixed
+  corpus before selecting normative syntax or a backend.
+- [ ] Test 0.5-, 1-, and 2-second independent groups, same-value component runs,
+  and a cost-minimizing parser.
 
 ## Phase 2 — audio and finished container profile
 
@@ -97,8 +108,14 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Implement AM1 audio as a separately testable pipeline: create deterministic WAV
-fixtures with leading, internal, and trailing low-level consonant-bearing
-segments; add hysteretic silence segmentation; encode non-silent spans as
-standard Opus packets; mux them with exact `SILN` spans; then test sample-exact
-duration and A/V synchronization before beginning the Rust port.
+Run `V64-COMMAND-SHOOTOUT-1` over the legally reusable mixed corpus. Compare
+0.5-, 1-, and 2-second independent-group maxima while keeping decoded cell
+states and command candidates identical. Add same-value component runs and a
+dynamic-programming or bounded-beam parser, then publish median and
+75th-percentile complete-file results before freezing the visual command
+grammar or entropy backend.
+
+In parallel after that measurement is reproducible, resume AM1 as a separately
+testable audio pipeline: deterministic WAV fixtures, hysteretic silence
+segmentation, standard Opus packets, exact `SILN` spans, and sample-exact A/V
+synchronization.

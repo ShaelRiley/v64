@@ -25,8 +25,8 @@
     "bench:raster": "node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/raster-manifest.json",
     "bench:human": "node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/human-raster-manifest.json",
     "bench:human2": "node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/human-raster-tranche-2-manifest.json",
-    "bench:human3": "npm run --silent corpus:human3 && node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/human-raster-tranche-3-manifest.json",
-    "bench:subtitle-mask": "npm run --silent corpus:human3 && node tools/benchmark-subtitle-mask.mjs bench/corpus/human-raster-tranche-3-manifest.json bench/results/subtitle-mask-tranche-1"
+    "bench:human3": "npm run --silent corpus:human3 > /dev/null && node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/human-raster-tranche-3-manifest.json",
+    "bench:subtitle-mask": "npm run --silent corpus:human3 > /dev/null && node tools/benchmark-subtitle-mask.mjs bench/corpus/human-raster-tranche-3-manifest.json bench/results/subtitle-mask-tranche-1"
   },
   "engines": {
     "node": ">=20"

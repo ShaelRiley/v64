@@ -17,6 +17,10 @@ real binary `.v64` implementation, not a mock UI:
 - sparse particle-event and exact-silence chunk definitions;
 - FFmpeg-backed source ingest and decoded MP4/MKV output;
 - encoder, decoder, inspector, verifier, atlas generator, and sample generator;
+- an experimental backend-neutral Grammar B trace with packed palette indices,
+  separable component updates, transactional decoding, and exact byte accounting;
+- reproducible packed-only, DEFLATE, Zstandard, and canonical-Huffman command
+  shootouts on identical traces and independent-group boundaries;
 - Node conformance tests and golden hashes.
 
 Audio Opus, Rust, ANSI Drop's desktop shell, the native player, and VLC modules
@@ -37,6 +41,7 @@ npm test
 npm run sample
 node prototype/js/cli.mjs inspect tests/golden/procedural.v64
 node prototype/js/cli.mjs verify tests/golden/procedural.v64
+npm run bench:commands
 ```
 
 Encode any FFmpeg-readable video:
@@ -57,6 +62,20 @@ Generate the canonical glyph atlas:
 ```bash
 node prototype/js/cli.mjs atlas tests/golden/video64-atlas.ppm
 ```
+
+Generate the complete backend-neutral command trace used by the entropy
+shootout:
+
+```bash
+node prototype/js/cli.mjs trace-commands \
+  tests/golden/procedural.v64 procedural-command-trace.json
+```
+
+Grammar B is experimental and does not change the v0.1 container or its golden
+files. See
+[`spec/V64-grammar-b-experiment.md`](spec/V64-grammar-b-experiment.md) and
+[`bench/COMMAND_SHOOTOUT_1.md`](bench/COMMAND_SHOOTOUT_1.md) for its exact
+syntax, validation rules, and first measured result.
 
 See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for verified status,
 blockers, and the next concrete step. See

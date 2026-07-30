@@ -1,0 +1,21 @@
+{
+  "format": "V64-BLIND-SCORES-1",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-4",
+  "reviewer": "reviewer-1",
+  "keyOpened": false,
+  "scale": "1 to 5",
+  "rows": [
+    {"group":"depth-40","code":"71551077","recognizability":4,"separation":4,"temporalStability":4},
+    {"group":"depth-40","code":"7746B5CC","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"depth-40","code":"F4E63B47","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"depth-40","code":"54B42507","recognizability":4,"separation":4,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"BCC42C4C","recognizability":5,"separation":5,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"33B150DD","recognizability":3,"separation":3,"temporalStability":4},
+    {"group":"monochrome-40","code":"15130111","recognizability":4,"separation":4,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"063E391E","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"screen-40","code":"C4B85361","recognizability":4,"separation":4,"temporalStability":4.5},
+    {"group":"screen-40","code":"939D3DC4","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"screen-40","code":"889866AD","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"screen-40","code":"BDB0E296","recognizability":4.5,"separation":4.5,"temporalStability":4.5}
+  ]
+}

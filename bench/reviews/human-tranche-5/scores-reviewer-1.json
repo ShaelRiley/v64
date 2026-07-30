@@ -1,0 +1,27 @@
+{
+  "format": "V64-BLIND-SCORES-1",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-5",
+  "reviewer": "reviewer-1",
+  "keyOpened": false,
+  "scale": "1 to 5",
+  "rows": [
+    {"group":"depth-40","code":"98C56E3A","recognizability":4,"separation":4,"temporalStability":4},
+    {"group":"depth-40","code":"593B581A","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"depth-40","code":"C2B1EFC6","recognizability":4,"separation":4,"temporalStability":4.5},
+    {"group":"depth-40","code":"5C3C2068","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"depth-40","code":"538217A2","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"depth-40","code":"35DACB19","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"C2D50665","recognizability":5,"separation":5,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"3C5E7847","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"959C047C","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"11803C9A","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"monochrome-40","code":"6FCFEA7F","recognizability":3.5,"separation":3.5,"temporalStability":4},
+    {"group":"monochrome-40","code":"A504A135","recognizability":3,"separation":3,"temporalStability":4},
+    {"group":"screen-40","code":"09819E9C","recognizability":4,"separation":4,"temporalStability":4.5},
+    {"group":"screen-40","code":"274F2430","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"screen-40","code":"E3FD5E5D","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"screen-40","code":"50EA4AEA","recognizability":5,"separation":5,"temporalStability":5},
+    {"group":"screen-40","code":"39193065","recognizability":4.5,"separation":4.5,"temporalStability":4.5},
+    {"group":"screen-40","code":"D388450C","recognizability":4.5,"separation":4.5,"temporalStability":4.5}
+  ]
+}

@@ -15,6 +15,10 @@ const DEFINITIONS = Object.freeze([
   {
     id: "V64-P256-HYPERREAL-CANDIDATE-3",
     json: "../../assets/palettes/v64-p256-hyperreal-candidate-3.json"
+  },
+  {
+    id: "V64-P256-HYPERREAL-CANDIDATE-4",
+    json: "../../assets/palettes/v64-p256-hyperreal-candidate-4.json"
   }
 ]);
 

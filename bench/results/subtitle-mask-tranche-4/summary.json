@@ -1,0 +1,42 @@
+{
+  "format": "V64-SUBTITLE-MASK-TRANCHE-4-RESULTS-1",
+  "workflowRun": 30591665741,
+  "codeHead": "b96f45d3abed42d9da25bf55c7e29a5e12a10305",
+  "focus": "60-column lecture persistent subtitle plane",
+  "aggregate": {
+    "lanes": 2,
+    "frames": 48,
+    "broadCells": 4856,
+    "sm2Cells": 188,
+    "sm3Cells": 3511,
+    "sm4CellFrames": 4968,
+    "sm4PersistentCells": 207,
+    "sm3RawBytes": 32454,
+    "sm4RawBytes": 3975,
+    "sm3DeflateBytes": 12284,
+    "sm4DeflateBytes": 1806,
+    "sidePlaneReductionPercent": 85.298,
+    "sm4KilobitsPerSecond": 3.612,
+    "baseV64SelectedDeflateBytes": 19709,
+    "sm3TotalBytes": 31993,
+    "sm4TotalBytes": 21515,
+    "sm3OverheadPercent": 62.327,
+    "sm4OverheadPercent": 9.163
+  },
+  "blindReview": {
+    "base": {"exact":0,"lanes":2,"meanEdgeClarity":1,"meanTemporalStability":2,"meanScenePreservation":4},
+    "sm3": {"exact":2,"lanes":2,"meanEdgeClarity":5,"meanTemporalStability":5,"meanScenePreservation":4},
+    "sm4": {"exact":2,"lanes":2,"meanEdgeClarity":5,"meanTemporalStability":5,"meanScenePreservation":4}
+  },
+  "decision": {
+    "advancePersistentPlane": true,
+    "newOpcodeRequired": false,
+    "advanceSequenceGrammar": ["full-plane","repeat-plane-span","cell-removal-and-upsert-delta"],
+    "containerIntegration": false,
+    "nextGate": "Full eight-lane lecture and animated-dialogue regression at 60 and 80 columns; require 8/8 exact transcription and total-stream overhead at or below 10%."
+  },
+  "artifacts": {
+    "blindDigest": "sha256:a480fa985b35bc37107db51118c868ebc6939f417f5e6667f9b0f0e95e744aae",
+    "keyDigest": "sha256:cf804d1652cb205a29d34ae0340585a330c9de9772143a208b5a6e07720cba66"
+  }
+}

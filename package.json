@@ -10,7 +10,8 @@
   "scripts": {
     "extract-assets": "node tools/extract-assets.mjs ../ansi-tube-source/core.js",
     "test": "node --test tests/*.test.mjs",
-    "sample": "node prototype/js/cli.mjs make-sample tests/golden"
+    "sample": "node prototype/js/cli.mjs make-sample tests/golden",
+    "bench:commands": "node prototype/js/cli.mjs benchmark-commands tests/golden/procedural.v64"
   },
   "engines": {
     "node": ">=20"

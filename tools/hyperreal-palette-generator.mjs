@@ -37,6 +37,18 @@ export const HYPERREAL_CANDIDATE_3_PREFIX = Object.freeze([
   ...HYPERREAL_CANDIDATE_3_UTILITY
 ]);
 
+export const HYPERREAL_CANDIDATE_4_UTILITY = Object.freeze([
+  [16, 32, 72],
+  [0, 92, 96],
+  [224, 224, 224],
+  [112, 112, 112]
+]);
+
+export const HYPERREAL_CANDIDATE_4_PREFIX = Object.freeze([
+  ...HYPERREAL_ANCHORS,
+  ...HYPERREAL_CANDIDATE_4_UTILITY
+]);
+
 function clamp(value) {
   return Math.max(0, Math.min(255, value));
 }
@@ -143,6 +155,10 @@ export function generateHyperRealCandidate3Palette() {
   return generatePaletteFromPrefix(HYPERREAL_CANDIDATE_3_PREFIX);
 }
 
+export function generateHyperRealCandidate4Palette() {
+  return generatePaletteFromPrefix(HYPERREAL_CANDIDATE_4_PREFIX);
+}
+
 export function paletteBytes(palette) {
   return Buffer.from(palette.flat());
 }
@@ -176,6 +192,7 @@ export function writeHyperRealPaletteAssets(outputDirectory) {
   mkdirSync(outputDirectory, { recursive: true });
   const candidate2 = generateHyperRealMasterPalette();
   const candidate3 = generateHyperRealCandidate3Palette();
+  const candidate4 = generateHyperRealCandidate4Palette();
   const sharedSource = sourceMetadata();
   const result2 = writePalette(outputDirectory, "v64-p256-hyperreal-candidate-2", {
     id: "V64-P256-HYPERREAL-CANDIDATE-2",
@@ -199,10 +216,24 @@ export function writeHyperRealPaletteAssets(outputDirectory) {
     sha256: paletteHash(candidate3),
     colors: candidate3
   });
+  const result4 = writePalette(outputDirectory, "v64-p256-hyperreal-candidate-4", {
+    id: "V64-P256-HYPERREAL-CANDIDATE-4",
+    status: "experimental-candidate",
+    source: sharedSource,
+    prefix: {
+      sha256: createHash("sha256")
+        .update(Buffer.from(HYPERREAL_CANDIDATE_4_PREFIX.flat()))
+        .digest("hex"),
+      rationale: "Exact twelve Hyper Real anchors plus dark navy, dark teal, light neutral, and neutral midtone utility colors."
+    },
+    generation: "candidate-4 prefix, then ordered OKLab farthest-point sampling over the Hyper Real-graded 16^3 sRGB lattice",
+    sha256: paletteHash(candidate4),
+    colors: candidate4
+  });
   return {
-    format: "V64-HYPERREAL-PALETTE-BUILD-1",
+    format: "V64-HYPERREAL-PALETTE-BUILD-2",
     anchorsSha256: sharedSource.anchorsSha256,
-    candidates: [result2, result3]
+    candidates: [result2, result3, result4]
   };
 }
 

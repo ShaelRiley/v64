@@ -53,7 +53,7 @@ test("Grammar B emits separate glyph, foreground, background, and color-pair act
     [7, 1, 2], [2, 3, 2], [3, 1, 4], [4, 5, 6], [5, 1, 2], [6, 1, 2]
   ]);
   const trace = buildCommandTrace(current, prior, {
-    columns: 6, rows: 1, paletteDepth: 8, keyframe: false
+    columns: 6, rows: 1, paletteDepth: 8, keyframe: false, maxLiteralRun: 1
   });
   assert.deepEqual(trace.commands.map((command) => command.op), [
     "SET_GLYPH", "SET_FOREGROUND", "SET_BACKGROUND", "SET_COLOR_PAIR", "SKIP", "END"
@@ -69,6 +69,27 @@ test("Grammar B emits separate glyph, foreground, background, and color-pair act
   assert.equal(measured.opcodeBytes + measured.countBytes + measured.payloadBytes, bytes.length);
   assert.deepEqual(applyPackedCommands(bytes, prior, {
     columns: 6, rows: 1, paletteDepth: 8, keyframe: false
+  }), current);
+  const optimized = buildCommandTrace(current, prior, {
+    columns: 6, rows: 1, paletteDepth: 8, keyframe: false
+  });
+  assert.ok(encodePackedCommands(optimized).length <= bytes.length);
+});
+
+test("cost-aware parsing selects same-value component runs when they save bytes", () => {
+  const prior = frame(Array.from({ length: 24 }, (_, index) => [index, 1, 0]));
+  const current = new Uint8Array(prior);
+  for (let cell = 4; cell < 20; cell += 1) current[cell * 3 + 2] = 3;
+  const trace = buildCommandTrace(current, prior, {
+    columns: 8, rows: 3, paletteDepth: 4, keyframe: false
+  });
+  assert.ok(trace.commands.some((command) =>
+    command.op === "REPEAT_BACKGROUND" && command.count === 16 && command.value === 3
+  ));
+  const bytes = encodePackedCommands(trace);
+  assert.equal(bytes.length, trace.packedByteCost);
+  assert.deepEqual(applyPackedCommands(bytes, prior, {
+    columns: 8, rows: 3, paletteDepth: 4, keyframe: false
   }), current);
 });
 
@@ -111,6 +132,9 @@ test("the golden fixture produces a deterministic backend-neutral command report
   assert.deepEqual(first, second);
   assert.equal(first.source.codedFrames, 48);
   assert.equal(first.source.independentGroups, 1);
+  assert.deepEqual(first.groupDurationSweep.map((entry) => entry.groups), [4, 2, 1]);
+  assert.deepEqual(first.groupDurationSweep.map((entry) => entry.keyframes), [4, 2, 1]);
+  assert.ok(first.groupDurationSweep.every((entry) => entry.canonicalTraceSha256.length === 64));
   assert.equal(first.grammarB.canonicalTraceSha256.length, 64);
   assert.equal(first.grammarB.commandBytes,
     first.grammarB.opcodeBytes + first.grammarB.countBytes + first.grammarB.packedPayloadBytes);

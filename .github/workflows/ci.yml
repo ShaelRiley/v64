@@ -2,6 +2,11 @@ name: V64 conformance and benchmarks
 
 on:
   pull_request:
+    paths-ignore:
+      - "bench/results/**"
+      - "bench/reviews/**"
+      - "bench/HUMAN_RASTER_TRANCHE_2.md"
+      - "IMPLEMENTATION_LEDGER.md"
   workflow_dispatch:
 
 permissions:

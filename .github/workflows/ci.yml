@@ -41,6 +41,7 @@ jobs:
             if [[ ! "$path" =~ ^bench/results/ &&
                   ! "$path" =~ ^bench/reviews/ &&
                   ! "$path" =~ ^bench/HUMAN_RASTER_TRANCHE_[0-9]+\.md$ &&
+                  ! "$path" =~ ^bench/SUBTITLE_MASK_TRANCHE_[0-9]+\.md$ &&
                   "$path" != "IMPLEMENTATION_LEDGER.md" &&
                   "$path" != "spec/V64-design.md" &&
                   "$path" != "docs/PLAYBACK_PROFILE.md" ]]; then
@@ -54,7 +55,7 @@ jobs:
     needs: classify
     if: ${{ needs.classify.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
 
     steps:
       - name: Check out revision
@@ -76,19 +77,19 @@ jobs:
       - name: Verify deterministic Hyper Real assets
         run: |
           set -euo pipefail
-          rm -rf /tmp/v64-palettes /tmp/v64-candidate5
+          rm -rf /tmp/v64-palettes /tmp/v64-candidate5 /tmp/v64-candidate6
           node tools/hyperreal-palette-generator.mjs /tmp/v64-palettes > /tmp/v64-palette-build.json
           node tools/hyperreal-candidate-5-generator.mjs /tmp/v64-candidate5 > /tmp/v64-candidate5-build.json
+          node tools/hyperreal-candidate-6-generator.mjs /tmp/v64-candidate6 > /tmp/v64-candidate6-build.json
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
           import { createHash } from "node:crypto";
           import { readFileSync } from "node:fs";
-          const stems = [
+          for (const stem of [
             "v64-p256-hyperreal-candidate-2",
             "v64-p256-hyperreal-candidate-3",
             "v64-p256-hyperreal-candidate-4"
-          ];
-          for (const stem of stems) {
+          ]) {
             const tracked = JSON.parse(readFileSync(`assets/palettes/${stem}.json`, "utf8"));
             const generated = JSON.parse(readFileSync(`/tmp/v64-palettes/${stem}.json`, "utf8"));
             assert.deepStrictEqual(generated, tracked, `${stem}.json differs semantically`);
@@ -98,25 +99,34 @@ jobs:
             readFileSync("assets/palettes/v64-p256-hyperreal-candidate-2.rgb"),
             "candidate-2 RGB bytes differ"
           );
-          for (const stem of [
-            "v64-p256-hyperreal-candidate-5a",
-            "v64-p256-hyperreal-candidate-5b"
+          for (const [directory, stems] of [
+            ["/tmp/v64-candidate5", [
+              "v64-p256-hyperreal-candidate-5a",
+              "v64-p256-hyperreal-candidate-5b"
+            ]],
+            ["/tmp/v64-candidate6", [
+              "v64-p256-hyperreal-candidate-6a",
+              "v64-p256-hyperreal-candidate-6b",
+              "v64-p256-hyperreal-candidate-6c"
+            ]]
           ]) {
-            const tracked = JSON.parse(readFileSync(`assets/palettes/${stem}.json`, "utf8"));
-            const generated = JSON.parse(readFileSync(`/tmp/v64-candidate5/${stem}.json`, "utf8"));
-            assert.deepStrictEqual(generated, tracked, `${stem}.json differs semantically`);
-            const hash = createHash("sha256")
-              .update(readFileSync(`/tmp/v64-candidate5/${stem}.rgb`))
-              .digest("hex");
-            assert.equal(hash, tracked.sha256, `${stem}.rgb hash differs`);
+            for (const stem of stems) {
+              const tracked = JSON.parse(readFileSync(`assets/palettes/${stem}.json`, "utf8"));
+              const generated = JSON.parse(readFileSync(`${directory}/${stem}.json`, "utf8"));
+              assert.deepStrictEqual(generated, tracked, `${stem}.json differs semantically`);
+              const hash = createHash("sha256")
+                .update(readFileSync(`${directory}/${stem}.rgb`))
+                .digest("hex");
+              assert.equal(hash, tracked.sha256, `${stem}.rgb hash differs`);
+            }
           }
           NODE
 
-  candidate-5:
+  candidate-6:
     needs: [classify, conformance]
     if: ${{ needs.classify.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     steps:
       - name: Check out revision
@@ -132,54 +142,54 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes ffmpeg
 
-      - name: Run Candidate-5 dark-neutral ablation
+      - name: Run constrained Candidate-6 finalist gate
         run: |
           set -euo pipefail
-          mkdir -p bench/results/human-tranche-4
+          mkdir -p bench/results/human-tranche-5
           {
             node --version
             npm --version
             ffmpeg -version | head -n 1
             ffprobe -version | head -n 1
             uname -a
-          } > bench/results/human-tranche-4/toolchain.txt
-          npm run --silent corpus:missing-classes > bench/results/human-tranche-4/corpus.log
-          npm run --silent preview:human4 > bench/results/human-tranche-4/previews.log
-          npm run --silent review:human4 > bench/results/human-tranche-4/review.log
-          npm run --silent bench:human4 > bench/results/human-tranche-4/benchmark.json
-          node -e 'JSON.parse(require("node:fs").readFileSync("bench/results/human-tranche-4/benchmark.json", "utf8"))'
-          find bench/results/human-tranche-4 bench/previews/human-tranche-4 bench/reviews/human-tranche-4 \
+          } > bench/results/human-tranche-5/toolchain.txt
+          npm run --silent corpus:missing-classes > bench/results/human-tranche-5/corpus.log
+          npm run --silent preview:human5 > bench/results/human-tranche-5/previews.log
+          npm run --silent review:human5 > bench/results/human-tranche-5/review.log
+          npm run --silent bench:human5 > bench/results/human-tranche-5/benchmark.json
+          node -e 'JSON.parse(require("node:fs").readFileSync("bench/results/human-tranche-5/benchmark.json", "utf8"))'
+          find bench/results/human-tranche-5 bench/previews/human-tranche-5 bench/reviews/human-tranche-5 \
             -type f -print0 | sort -z | xargs -0 sha256sum \
-            > bench/results/human-tranche-4/SHA256SUMS
+            > bench/results/human-tranche-5/SHA256SUMS
 
-      - name: Upload Candidate-5 blind review and benchmark
-        if: ${{ always() && hashFiles('bench/results/human-tranche-4/benchmark.json') != '' }}
+      - name: Upload Candidate-6 blind review and benchmark
+        if: ${{ always() && hashFiles('bench/results/human-tranche-5/benchmark.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: human-tranche-4-blind
+          name: human-tranche-5-blind
           if-no-files-found: error
           retention-days: 30
           path: |
-            bench/corpus/human-raster-tranche-4-manifest.json
-            bench/results/human-tranche-4
-            bench/previews/human-tranche-4
-            bench/reviews/human-tranche-4
-            !bench/reviews/human-tranche-4/key.json
+            bench/corpus/human-raster-tranche-5-manifest.json
+            bench/results/human-tranche-5
+            bench/previews/human-tranche-5
+            bench/reviews/human-tranche-5
+            !bench/reviews/human-tranche-5/key.json
 
-      - name: Upload Candidate-5 concealed review key
-        if: ${{ always() && hashFiles('bench/reviews/human-tranche-4/key.json') != '' }}
+      - name: Upload Candidate-6 concealed review key
+        if: ${{ always() && hashFiles('bench/reviews/human-tranche-5/key.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: human-tranche-4-key
+          name: human-tranche-5-key
           if-no-files-found: error
           retention-days: 30
-          path: bench/reviews/human-tranche-4/key.json
+          path: bench/reviews/human-tranche-5/key.json
 
-  subtitle-mask-2:
+  subtitle-mask-3:
     needs: [classify, conformance]
     if: ${{ needs.classify.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
 
     steps:
       - name: Check out revision
@@ -195,25 +205,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes ffmpeg
 
-      - name: Run SM2 selectivity, temporal coding, and total-byte experiment
-        run: npm run --silent bench:subtitle-mask2
+      - name: Run focused SM2-versus-SM3 lecture gate
+        run: npm run --silent bench:subtitle-mask3
 
-      - name: Upload SM2 blind review and metrics
-        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-2/summary.json') != '' }}
+      - name: Upload SM3 blind review and metrics
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-3/summary.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: subtitle-mask-tranche-2-blind
+          name: subtitle-mask-tranche-3-blind
           if-no-files-found: error
           retention-days: 30
           path: |
-            bench/results/subtitle-mask-tranche-2
-            !bench/results/subtitle-mask-tranche-2/key.json
+            bench/results/subtitle-mask-tranche-3
+            !bench/results/subtitle-mask-tranche-3/key.json
 
-      - name: Upload SM2 concealed key
-        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-2/key.json') != '' }}
+      - name: Upload SM3 concealed key
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-3/key.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: subtitle-mask-tranche-2-key
+          name: subtitle-mask-tranche-3-key
           if-no-files-found: error
           retention-days: 30
-          path: bench/results/subtitle-mask-tranche-2/key.json
+          path: bench/results/subtitle-mask-tranche-3/key.json

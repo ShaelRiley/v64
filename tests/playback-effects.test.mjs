@@ -51,7 +51,16 @@ test("disabling scanlines reproduces the unfiltered decoded raster", () => {
 });
 
 test("invalid scanline strength, period, and phase are rejected", () => {
-  assert.throws(() => normalizePlaybackEffects({ crtScanlineStrength: 0.8 }), /strength/);
-  assert.throws(() => normalizePlaybackEffects({ crtScanlinePeriod: 1 }), /period/);
-  assert.throws(() => normalizePlaybackEffects({ crtScanlinePeriod: 2, crtScanlinePhase: 2 }), /phase/);
+  assert.throws(
+    () => normalizePlaybackEffects({ crtScanlineStrength: 0.8 }),
+    /crtScanlineStrength/
+  );
+  assert.throws(
+    () => normalizePlaybackEffects({ crtScanlinePeriod: 1 }),
+    /crtScanlinePeriod/
+  );
+  assert.throws(
+    () => normalizePlaybackEffects({ crtScanlinePeriod: 2, crtScanlinePhase: 2 }),
+    /crtScanlinePhase/
+  );
 });

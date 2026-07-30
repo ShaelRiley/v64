@@ -1,0 +1,39 @@
+{
+  "format": "V64-HUMAN-RASTER-TRANCHE-5-RESULTS-1",
+  "workflowRun": 30589727547,
+  "codeHead": "35b75024e0d62df8afad472f726defd129802047",
+  "totals": {
+    "packedDeflateBytes": 73634,
+    "selectedDeflateBytes": 64612,
+    "savingsBytes": 9022,
+    "savingsPercent": 12.252,
+    "entropySelectedLanes": 18,
+    "lanes": 18,
+    "canonicalSelectionSha256": "27bee011f3a41283ddfbccba70134314eaee27e938efa695f9286f45d87a1d17"
+  },
+  "palettes": [
+    {"id":"V64-P256-CANDIDATE-1","selectedDeflateBytes":10760,"selectedCommandBytes":17924,"meanChangedCellsPercent":17.635,"meanFlickerReversionPercent":1.371,"meanRecognizability":4.333,"meanSeparation":4.333,"meanTemporalStability":4.333,"depth":4,"monochrome":5,"screen":4},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-5A","selectedDeflateBytes":10668,"selectedCommandBytes":17409,"meanChangedCellsPercent":16.963,"meanFlickerReversionPercent":1.319,"meanRecognizability":4.833,"meanSeparation":4.833,"meanTemporalStability":4.833,"depth":5,"monochrome":4.5,"screen":5},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-5B","selectedDeflateBytes":10558,"selectedCommandBytes":17228,"meanChangedCellsPercent":16.977,"meanFlickerReversionPercent":1.243,"meanRecognizability":4.333,"meanSeparation":4.333,"meanTemporalStability":4.5,"depth":4,"monochrome":4.5,"screen":4.5},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-6A","selectedDeflateBytes":10580,"selectedCommandBytes":17154,"meanChangedCellsPercent":16.861,"meanFlickerReversionPercent":1.222,"meanRecognizability":4.833,"meanSeparation":4.833,"meanTemporalStability":4.833,"depth":5,"monochrome":4.5,"screen":5},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-6B","selectedDeflateBytes":10941,"selectedCommandBytes":17776,"meanChangedCellsPercent":17.25,"meanFlickerReversionPercent":1.274,"meanRecognizability":4.333,"meanSeparation":4.333,"meanTemporalStability":4.5,"depth":5,"monochrome":3.5,"screen":4.5},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-6C","selectedDeflateBytes":11105,"selectedCommandBytes":18000,"meanChangedCellsPercent":17.503,"meanFlickerReversionPercent":1.329,"meanRecognizability":4,"meanSeparation":4,"meanTemporalStability":4.333,"depth":4.5,"monochrome":3,"screen":4.5}
+  ],
+  "groupDurations": [
+    {"maximumSeconds":0.5,"groups":72,"selectedDeflateBytes":85957,"medianSeekMilliseconds":0.623,"p95SeekMilliseconds":1.314},
+    {"maximumSeconds":1,"groups":36,"selectedDeflateBytes":72922,"medianSeekMilliseconds":1.108,"p95SeekMilliseconds":1.865},
+    {"maximumSeconds":2,"groups":18,"selectedDeflateBytes":64612,"medianSeekMilliseconds":1.996,"p95SeekMilliseconds":3.143}
+  ],
+  "decision": {
+    "normativePalette": "V64-P256-1",
+    "sourceCandidate": "V64-P256-HYPERREAL-CANDIDATE-6A",
+    "prefixSha256": "e8d7b7de275b79acb403d17a97c4e7ef72ca16600a8f4f3ebdcba86099ce41cf",
+    "paletteSha256": "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105",
+    "freeze": true,
+    "executableDefault": "V64-P256-1"
+  },
+  "artifacts": {
+    "blindDigest": "sha256:62d9796ebbf4b0487652b61266b8d818fb0b44f6bc9f6a63fab313cbea1110a2",
+    "keyDigest": "sha256:fcb36a62ac94f9e582b9dd6cd1108db8ba8a8bc908df73eed280af0ec710914c"
+  }
+}

@@ -9,7 +9,9 @@ import {
   decodeCanonicalHuffman, encodeCanonicalHuffman
 } from "./canonical-huffman.mjs";
 
-const REPORT_VERSION = "V64-COMMAND-SHOOTOUT-1";
+const REPORT_VERSION = "V64-COMMAND-SHOOTOUT-2";
+const HAS_ZSTANDARD = typeof zlib.zstdCompressSync === "function" &&
+  typeof zlib.zstdDecompressSync === "function";
 
 function equalBytes(a, b) {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -91,6 +93,103 @@ function canonicalTraceFrame(item, trace, commands) {
   };
 }
 
+function expandNominalFrames(timeline, frameTicks) {
+  const frames = [];
+  for (const item of timeline) {
+    if (!item.duration || item.duration % frameTicks) {
+      throw new Error("Timeline item is not an integral nominal-frame span");
+    }
+    const count = item.duration / frameTicks;
+    for (let index = 0; index < count; index += 1) {
+      frames.push({
+        timestamp: item.timestamp + index * frameTicks,
+        state: item.state
+      });
+    }
+  }
+  return frames;
+}
+
+function benchmarkGroupDuration(demuxed, timeline, maximumSeconds) {
+  const maximumTicks = maximumSeconds * 60_000;
+  if (!Number.isSafeInteger(maximumTicks) || maximumTicks < 1) {
+    throw new RangeError("Group duration must resolve to positive integral timeline ticks");
+  }
+  const frames = expandNominalFrames(timeline, demuxed.header.cadence.frameTicks);
+  const groups = [];
+  const hash = createHash("sha256");
+  let currentGroup = null;
+  let groupStart = null;
+  let prior = null;
+  let packedCommandBytes = 0;
+  let codedFrames = 0;
+  let repeatFrames = 0;
+  let keyframes = 0;
+  for (const frame of frames) {
+    const keyframe = !prior || frame.timestamp - groupStart >= maximumTicks;
+    if (keyframe) {
+      currentGroup = [];
+      groups.push(currentGroup);
+      groupStart = frame.timestamp;
+      keyframes += 1;
+    }
+    let kind;
+    let packed;
+    if (!keyframe && equalBytes(frame.state, prior)) {
+      kind = 2;
+      packed = Buffer.alloc(0);
+      repeatFrames += 1;
+    } else {
+      kind = keyframe ? 0 : 1;
+      const trace = buildCommandTrace(frame.state, keyframe ? null : prior, {
+        columns: demuxed.header.columns,
+        rows: demuxed.header.rows,
+        paletteDepth: demuxed.header.paletteDepth,
+        keyframe
+      });
+      packed = encodePackedCommands(trace);
+      if (packed.length !== trace.packedByteCost) {
+        throw new Error(`Group-duration optimizer cost mismatch at ${frame.timestamp}`);
+      }
+      const decoded = applyPackedCommands(packed, keyframe ? null : prior, {
+        columns: demuxed.header.columns,
+        rows: demuxed.header.rows,
+        paletteDepth: demuxed.header.paletteDepth,
+        keyframe
+      });
+      if (!equalBytes(decoded, frame.state)) {
+        throw new Error(`Group-duration round-trip mismatch at ${frame.timestamp}`);
+      }
+      packedCommandBytes += packed.length;
+      codedFrames += 1;
+    }
+    const record = frameRecord(kind, packed);
+    currentGroup.push(record);
+    hash.update(record);
+    prior = frame.state;
+  }
+  const deflate = deflateGroups(groups);
+  const huffman = codecGroups(groups, encodeCanonicalHuffman, decodeCanonicalHuffman);
+  const zstandard = HAS_ZSTANDARD
+    ? codecGroups(groups, zlib.zstdCompressSync, zlib.zstdDecompressSync)
+    : null;
+  return {
+    maximumSeconds,
+    maximumTicks,
+    groups: groups.length,
+    nominalFrames: frames.length,
+    codedFrames,
+    repeatFrames,
+    keyframes,
+    packedCommandBytes,
+    groupInputBytes: deflate.inputBytes,
+    deflateBytes: deflate.compressedBytes,
+    zstandardBytes: zstandard?.compressedBytes ?? null,
+    canonicalHuffmanBytes: huffman.compressedBytes,
+    canonicalTraceSha256: hash.digest("hex")
+  };
+}
+
 export function createCommandTraceDocument(demuxed) {
   const timeline = decodeVideoTimeline(demuxed);
   const videoChunks = demuxed.chunks.filter((chunk) => chunk.type === "VFRM" || chunk.type === "RPTF");
@@ -107,6 +206,9 @@ export function createCommandTraceDocument(demuxed) {
         keyframe: item.keyframe
       });
       const commands = encodePackedCommands(trace);
+      if (commands.length !== trace.packedByteCost) {
+        throw new Error(`Packed optimizer cost mismatch at ${item.timestamp}`);
+      }
       frames.push(canonicalTraceFrame(item, trace, commands));
     }
     prior = item.state;
@@ -196,6 +298,9 @@ export function benchmarkCommandBackends(demuxed, options = {}) {
       keyframe: item.keyframe
     });
     const packed = encodePackedCommands(trace);
+    if (packed.length !== trace.packedByteCost) {
+      throw new Error(`Packed optimizer cost mismatch at ${item.timestamp}`);
+    }
     const decoded = applyPackedCommands(packed, prior, {
       columns: demuxed.header.columns,
       rows: demuxed.header.rows,
@@ -245,20 +350,25 @@ export function benchmarkCommandBackends(demuxed, options = {}) {
   const grammarHuffmanGroups = codecGroups(
     grammarGroups, encodeCanonicalHuffman, decodeCanonicalHuffman
   );
-  const hasZstandard = typeof zlib.zstdCompressSync === "function" &&
-    typeof zlib.zstdDecompressSync === "function";
-  const phase1ZstandardFrames = hasZstandard
+  const phase1ZstandardFrames = HAS_ZSTANDARD
     ? codecFrames(phase1Payloads, zlib.zstdCompressSync, zlib.zstdDecompressSync)
     : null;
-  const grammarZstandardFrames = hasZstandard
+  const grammarZstandardFrames = HAS_ZSTANDARD
     ? codecFrames(grammarPayloads, zlib.zstdCompressSync, zlib.zstdDecompressSync)
     : null;
-  const phase1ZstandardGroups = hasZstandard
+  const phase1ZstandardGroups = HAS_ZSTANDARD
     ? codecGroups(phase1Groups, zlib.zstdCompressSync, zlib.zstdDecompressSync)
     : null;
-  const grammarZstandardGroups = hasZstandard
+  const grammarZstandardGroups = HAS_ZSTANDARD
     ? codecGroups(grammarGroups, zlib.zstdCompressSync, zlib.zstdDecompressSync)
     : null;
+  const groupDurations = options.groupDurationsSeconds ?? [0.5, 1, 2];
+  if (!Array.isArray(groupDurations) || !groupDurations.length) {
+    throw new RangeError("groupDurationsSeconds must be a nonempty array");
+  }
+  const groupDurationSweep = groupDurations.map((seconds) =>
+    benchmarkGroupDuration(demuxed, timeline, Number(seconds))
+  );
   const fixedContainerBytes = sourceFileBytes === null ? null : sourceFileBytes - phase1.storedVfrmBytes;
   const projectedFiles = fixedContainerBytes === null ? null : {
     packedOnlyBytes: fixedContainerBytes + grammar.payloadBytes,
@@ -290,7 +400,7 @@ export function benchmarkCommandBackends(demuxed, options = {}) {
       deflatePerGroupBytes: phase1GroupDeflate.compressedBytes,
       canonicalHuffmanPerFrameBytes: phase1HuffmanFrames,
       canonicalHuffmanPerGroupBytes: phase1HuffmanGroups.compressedBytes,
-      zstandardAvailable: hasZstandard,
+      zstandardAvailable: HAS_ZSTANDARD,
       zstandardPerFrameBytes: phase1ZstandardFrames,
       zstandardPerGroupBytes: phase1ZstandardGroups?.compressedBytes ?? null
     },
@@ -304,7 +414,7 @@ export function benchmarkCommandBackends(demuxed, options = {}) {
       deflatePerGroupBytes: grammarGroupDeflate.compressedBytes,
       canonicalHuffmanPerFrameBytes: grammarHuffmanFrames,
       canonicalHuffmanPerGroupBytes: grammarHuffmanGroups.compressedBytes,
-      zstandardAvailable: hasZstandard,
+      zstandardAvailable: HAS_ZSTANDARD,
       zstandardPerFrameBytes: grammarZstandardFrames,
       zstandardPerGroupBytes: grammarZstandardGroups?.compressedBytes ?? null,
       savings: {
@@ -319,6 +429,7 @@ export function benchmarkCommandBackends(demuxed, options = {}) {
         )
       }
     },
+    groupDurationSweep,
     projectedFiles
   };
 }

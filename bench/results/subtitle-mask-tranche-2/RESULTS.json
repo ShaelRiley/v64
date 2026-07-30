@@ -1,0 +1,39 @@
+{
+  "format": "V64-SUBTITLE-MASK-TRANCHE-2-RESULTS-1",
+  "workflowRun": 30587498438,
+  "codeHead": "8b0f80dda9da650e40b75edfbef16c91cea28df7",
+  "aggregate": {
+    "lanes": 8,
+    "frames": 192,
+    "sm1CandidateCells": 28632,
+    "sm2SelectedCells": 10362,
+    "selectedCellReductionPercent": 63.81,
+    "sm2RawBytes": 34117,
+    "sm2DeflateBytes": 9569,
+    "baseV64SelectedDeflateBytes": 126080,
+    "totalV64PlusSm2DeflateBytes": 135649,
+    "sm2OverheadPercentOfBase": 7.59,
+    "sm2KilobitsPerSecond": 4.785,
+    "rateReductionFromSm1Percent": 91.206
+  },
+  "blindReview": {
+    "base": {"exactTranscriptions":2,"lanes":8,"meanEdgeClarity":2,"meanTemporalStability":2.75,"meanScenePreservation":4},
+    "sm2": {"exactTranscriptions":6,"lanes":8,"meanEdgeClarity":4.125,"meanTemporalStability":4.375,"meanScenePreservation":4},
+    "byGroup": [
+      {"group":"lecture-subtitle-60","baseExact":0,"sm2Exact":0,"variants":2},
+      {"group":"animation-subtitle-60","baseExact":0,"sm2Exact":2,"variants":2},
+      {"group":"lecture-subtitle-80","baseExact":2,"sm2Exact":2,"variants":2},
+      {"group":"animation-subtitle-80","baseExact":0,"sm2Exact":2,"variants":2}
+    ]
+  },
+  "decision": {
+    "advanceSequenceSemantics": ["full-plane","repeat-plane-span","cell-removal-and-upsert-delta"],
+    "freezeSelector": false,
+    "normativeContainerIntegration": false,
+    "nextGate": "Temporal line aggregation and bounded fallback expansion for the under-selected 60-column lecture lane while retaining total-stream overhead below 10%."
+  },
+  "artifacts": {
+    "blindDigest": "sha256:e65a62da82c8ab33edb7a3b17b3c2257016b67b46ef5fd9778e88bb8b22736a2",
+    "keyDigest": "sha256:6eda1a997189f9dc7972816f73ed93a9f1d591b993f7bb487f88d62181168bd7"
+  }
+}

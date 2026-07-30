@@ -2,12 +2,6 @@ name: V64 conformance and visual gates
 
 on:
   pull_request:
-    paths-ignore:
-      - "bench/results/**"
-      - "bench/reviews/**"
-      - "bench/HUMAN_RASTER_TRANCHE_2.md"
-      - "bench/HUMAN_RASTER_TRANCHE_3.md"
-      - "IMPLEMENTATION_LEDGER.md"
   workflow_dispatch:
 
 permissions:
@@ -18,7 +12,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      code_changed: ${{ steps.diff.outputs.code_changed }}
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Classify latest commit
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "code_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files="$(git diff --name-only HEAD^ HEAD)"
+          printf '%s\n' "$files"
+          code_changed=false
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            if [[ ! "$path" =~ ^bench/results/ &&
+                  ! "$path" =~ ^bench/reviews/ &&
+                  ! "$path" =~ ^bench/HUMAN_RASTER_TRANCHE_[0-9]+\.md$ &&
+                  "$path" != "IMPLEMENTATION_LEDGER.md" &&
+                  "$path" != "spec/V64-design.md" ]]; then
+              code_changed=true
+              break
+            fi
+          done <<< "$files"
+          echo "code_changed=$code_changed" >> "$GITHUB_OUTPUT"
+
   conformance:
+    needs: classify
+    if: ${{ needs.classify.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -65,7 +98,8 @@ jobs:
           NODE
 
   candidate-4:
-    needs: conformance
+    needs: [classify, conformance]
+    if: ${{ needs.classify.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
 
@@ -127,7 +161,8 @@ jobs:
           path: bench/reviews/human-tranche-3/key.json
 
   subtitle-mask:
-    needs: conformance
+    needs: [classify, conformance]
+    if: ${{ needs.classify.outputs.code_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

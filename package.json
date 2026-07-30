@@ -38,7 +38,8 @@
     "bench:human5": "npm run --silent corpus:human5 > /dev/null && node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/human-raster-tranche-5-manifest.json",
     "bench:subtitle-mask": "npm run --silent corpus:human3 > /dev/null && node tools/benchmark-subtitle-mask.mjs bench/corpus/human-raster-tranche-3-manifest.json bench/results/subtitle-mask-tranche-1",
     "bench:subtitle-mask2": "npm run --silent corpus:human3 > /dev/null && node tools/benchmark-subtitle-mask-sm2.mjs bench/corpus/human-raster-tranche-3-manifest.json bench/results/subtitle-mask-tranche-2",
-    "bench:subtitle-mask3": "npm run --silent corpus:human3 > /dev/null && node tools/benchmark-subtitle-mask-sm3.mjs bench/corpus/human-raster-tranche-3-manifest.json bench/results/subtitle-mask-tranche-3"
+    "bench:subtitle-mask3": "npm run --silent corpus:human3 > /dev/null && node tools/benchmark-subtitle-mask-sm3.mjs bench/corpus/human-raster-tranche-3-manifest.json bench/results/subtitle-mask-tranche-3",
+    "bench:subtitle-mask4": "npm run --silent corpus:human3 > /dev/null && node tools/benchmark-subtitle-mask-sm3.mjs bench/corpus/human-raster-tranche-3-manifest.json bench/results/subtitle-mask-tranche-4"
   },
   "engines": {
     "node": ">=20"

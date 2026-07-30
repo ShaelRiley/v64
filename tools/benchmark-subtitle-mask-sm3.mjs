@@ -18,11 +18,12 @@ import {
   selectSubtitleRegions
 } from "../prototype/js/subtitle-mask-sm2.mjs";
 import { selectSubtitleRegionsTemporally } from "../prototype/js/subtitle-mask-sm3.mjs";
+import { stabilizeSubtitlePlane } from "../prototype/js/subtitle-mask-sm4.mjs";
 import { renderCells } from "../prototype/js/video64.mjs";
 
 const [manifestArgument, outputArgument] = process.argv.slice(2);
 if (!manifestArgument || !outputArgument) {
-  throw new Error("Usage: benchmark-subtitle-mask-sm3 MANIFEST.json OUTPUT_DIRECTORY");
+  throw new Error("Usage: benchmark-subtitle-mask-sm4 MANIFEST.json OUTPUT_DIRECTORY");
 }
 
 const manifestPath = resolve(manifestArgument);
@@ -30,7 +31,7 @@ const outputDirectory = resolve(outputArgument);
 const motionDirectory = resolve(outputDirectory, "motion");
 const manifest = validateRasterCorpusManifest(JSON.parse(readFileSync(manifestPath, "utf8")));
 const entries = manifest.entries.filter((entry) => entry.review?.group === "lecture-subtitle-60");
-if (entries.length !== 2) throw new Error(`SM3 benchmark requires two lecture-subtitle-60 lanes; found ${entries.length}`);
+if (entries.length !== 2) throw new Error(`SM4 benchmark requires two lecture-subtitle-60 lanes; found ${entries.length}`);
 mkdirSync(motionDirectory, { recursive: true });
 
 function runFfmpeg(args, input = null) {
@@ -47,7 +48,7 @@ function runFfmpeg(args, input = null) {
 }
 
 function sourceFrames(entry) {
-  if (entry.source.kind !== "local-file") throw new Error(`SM3 requires local-file source: ${entry.id}`);
+  if (entry.source.kind !== "local-file") throw new Error(`SM4 requires local-file source: ${entry.id}`);
   const path = resolve(entry.source.path);
   const sourceBytes = readFileSync(path);
   const hash = createHash("sha256").update(sourceBytes).digest("hex");
@@ -85,7 +86,7 @@ function writeMotion(path, width, height, cadence, frames) {
 
 function blindCode(entryId, variant) {
   return createHash("sha256")
-    .update(`V64-SUBTITLE-MASK-TRANCHE-3\0${manifest.id}\0${entryId}\0${variant}`)
+    .update(`V64-SUBTITLE-MASK-TRANCHE-4\0${manifest.id}\0${entryId}\0${variant}`)
     .digest("hex").slice(0, 8).toUpperCase();
 }
 
@@ -162,8 +163,17 @@ for (const entry of entries) {
     selectorOptions
   );
   const sm3Planes = temporal.frames;
-  const sm2 = canonicalSequence(sm2Planes, entry);
+  const stabilized = stabilizeSubtitlePlane(sm3Planes, {
+    cellCount: entry.grid.columns * entry.grid.rows,
+    paletteDepth: entry.paletteDepth,
+    minimumFrameFraction: 0.25,
+    bitThreshold: 0.35,
+    minimumMaskBits: 3,
+    maximumMaskBits: 112
+  });
+  const sm4Planes = stabilized.frames;
   const sm3 = canonicalSequence(sm3Planes, entry);
+  const sm4 = canonicalSequence(sm4Planes, entry);
 
   const renderVariant = (decoded) => decoded.frames.map((plane, frameIndex) =>
     compositeSubtitleMaskPlane(
@@ -179,8 +189,8 @@ for (const entry of entries) {
     ));
   const variants = [
     { name: "base", frames: baseFrames },
-    { name: "sm2", frames: renderVariant(sm2.decoded) },
-    { name: "sm3", frames: renderVariant(sm3.decoded) }
+    { name: "sm3", frames: renderVariant(sm3.decoded) },
+    { name: "sm4", frames: renderVariant(sm4.decoded) }
   ];
   const outputs = {};
   for (const variant of variants) {
@@ -200,7 +210,7 @@ for (const entry of entries) {
       sha256: createHash("sha256").update(bytes).digest("hex")
     };
     rows.push({
-      group: "lecture-subtitle-60-sm3",
+      group: "lecture-subtitle-60-sm4",
       code,
       grid: `${entry.grid.columns}x${entry.grid.rows}`,
       motion: `motion/${code}.mp4`,
@@ -209,11 +219,11 @@ for (const entry of entries) {
     });
     keyRows.push({
       code,
-      group: "lecture-subtitle-60-sm3",
+      group: "lecture-subtitle-60-sm4",
       entryId: entry.id,
       paletteAsset: entry.paletteAsset,
       variant: variant.name,
-      metrics: variant.name === "sm2" ? sm2.metrics : variant.name === "sm3" ? sm3.metrics : null
+      metrics: variant.name === "sm3" ? sm3.metrics : variant.name === "sm4" ? sm4.metrics : null
     });
   }
 
@@ -224,16 +234,18 @@ for (const entry of entries) {
     broadCells: broadFrames.reduce((sum, frame) => sum + frame.length, 0),
     sm2Cells: sm2Planes.reduce((sum, frame) => sum + frame.length, 0),
     sm3Cells: sm3Planes.reduce((sum, frame) => sum + frame.length, 0),
-    sm2: sm2.metrics,
+    sm4Cells: sm4Planes.reduce((sum, frame) => sum + frame.length, 0),
     sm3: sm3.metrics,
-    temporalDiagnostics: temporal.diagnostics
+    sm4: sm4.metrics,
+    temporalDiagnostics: temporal.diagnostics,
+    stabilizationDiagnostics: stabilized.diagnostics
   });
 }
 
 const baseReport = benchmarkEntropyFixtures({
   id: `${manifest.id}-LECTURE-60`,
   title: `${manifest.title} 60-column lecture subset`,
-  scope: "Identical base V64 lanes used for focused SM2-versus-SM3 total-byte accounting."
+  scope: "Identical base V64 lanes used for focused SM3-versus-SM4 total-byte accounting."
 }, analyzedFixtures, {
   groupDurationsSeconds: [2],
   measurePerformance: false
@@ -244,8 +256,9 @@ const aggregate = laneMetrics.reduce((result, lane) => {
   result.broadCells += lane.broadCells;
   result.sm2Cells += lane.sm2Cells;
   result.sm3Cells += lane.sm3Cells;
-  result.sm2DeflateBytes += lane.sm2.deflateBytes;
+  result.sm4Cells += lane.sm4Cells;
   result.sm3DeflateBytes += lane.sm3.deflateBytes;
+  result.sm4DeflateBytes += lane.sm4.deflateBytes;
   return result;
 }, {
   lanes: laneMetrics.length,
@@ -253,15 +266,16 @@ const aggregate = laneMetrics.reduce((result, lane) => {
   broadCells: 0,
   sm2Cells: 0,
   sm3Cells: 0,
-  sm2DeflateBytes: 0,
-  sm3DeflateBytes: 0
+  sm4Cells: 0,
+  sm3DeflateBytes: 0,
+  sm4DeflateBytes: 0
 });
 aggregate.baseV64SelectedDeflateBytes = baseReport.totals.selectedDeflateBytes;
-aggregate.sm2TotalBytes = aggregate.baseV64SelectedDeflateBytes + aggregate.sm2DeflateBytes;
 aggregate.sm3TotalBytes = aggregate.baseV64SelectedDeflateBytes + aggregate.sm3DeflateBytes;
-aggregate.sm2OverheadPercent = Number((aggregate.sm2DeflateBytes /
-  aggregate.baseV64SelectedDeflateBytes * 100).toFixed(3));
+aggregate.sm4TotalBytes = aggregate.baseV64SelectedDeflateBytes + aggregate.sm4DeflateBytes;
 aggregate.sm3OverheadPercent = Number((aggregate.sm3DeflateBytes /
+  aggregate.baseV64SelectedDeflateBytes * 100).toFixed(3));
+aggregate.sm4OverheadPercent = Number((aggregate.sm4DeflateBytes /
   aggregate.baseV64SelectedDeflateBytes * 100).toFixed(3));
 
 rows.sort((a, b) => a.code.localeCompare(b.code));
@@ -275,27 +289,27 @@ for (const row of rows) {
 
 writeFileSync(resolve(outputDirectory, "worksheet.csv"), `${worksheet.join("\n")}\n`);
 writeFileSync(resolve(outputDirectory, "public-manifest.json"), `${JSON.stringify({
-  format: "V64-SUBTITLE-MASK-REVIEW-PUBLIC-3",
+  format: "V64-SUBTITLE-MASK-REVIEW-PUBLIC-4",
   sourceManifest: manifest.id,
   rows
 }, null, 2)}\n`);
 writeFileSync(resolve(outputDirectory, "summary.json"), `${JSON.stringify({
-  format: "V64-SUBTITLE-MASK-TRANCHE-3",
+  format: "V64-SUBTITLE-MASK-TRANCHE-4",
   sourceManifest: manifest.id,
-  focus: "60-column lecture subtitle",
+  focus: "60-column lecture persistent subtitle plane",
   aggregate,
   baseV64: baseReport.totals,
   laneMetrics,
   reviewClips: rows.length
 }, null, 2)}\n`);
 writeFileSync(resolve(outputDirectory, "key.json"), `${JSON.stringify({
-  format: "V64-SUBTITLE-MASK-REVIEW-KEY-3",
+  format: "V64-SUBTITLE-MASK-REVIEW-KEY-4",
   warning: "Keep hidden until transcription and motion scoring are complete.",
   rows: keyRows
 }, null, 2)}\n`);
 
 console.log(JSON.stringify({
-  format: "V64-SUBTITLE-MASK-TRANCHE-BUILD-3",
+  format: "V64-SUBTITLE-MASK-TRANCHE-BUILD-4",
   outputDirectory,
   aggregate,
   reviewClips: rows.length

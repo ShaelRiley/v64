@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code_changed: ${{ steps.diff.outputs.code_changed }}
+      candidate6_changed: ${{ steps.diff.outputs.candidate6_changed }}
+      sm3_changed: ${{ steps.diff.outputs.sm3_changed }}
 
     steps:
       - name: Check out pull-request head
@@ -31,11 +33,15 @@ jobs:
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "code_changed=true" >> "$GITHUB_OUTPUT"
+            echo "candidate6_changed=true" >> "$GITHUB_OUTPUT"
+            echo "sm3_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           files="$(git diff --name-only HEAD^ HEAD)"
           printf '%s\n' "$files"
           code_changed=false
+          candidate6_changed=false
+          sm3_changed=false
           while IFS= read -r path; do
             [[ -z "$path" ]] && continue
             if [[ ! "$path" =~ ^bench/results/ &&
@@ -46,10 +52,23 @@ jobs:
                   "$path" != "spec/V64-design.md" &&
                   "$path" != "docs/PLAYBACK_PROFILE.md" ]]; then
               code_changed=true
-              break
+            fi
+            if [[ "$path" =~ candidate-6 ||
+                  "$path" == "tools/build-candidate-6-finalists.mjs" ||
+                  "$path" == "tests/candidate6.test.mjs" ||
+                  "$path" == "tests/candidate6-interpolation-order.test.mjs" ||
+                  "$path" == "tests/candidate-6-finalists.test.mjs" ]]; then
+              candidate6_changed=true
+            fi
+            if [[ "$path" == "prototype/js/subtitle-mask-sm3.mjs" ||
+                  "$path" == "tools/benchmark-subtitle-mask-sm3.mjs" ||
+                  "$path" == "tests/subtitle-mask-sm3.test.mjs" ]]; then
+              sm3_changed=true
             fi
           done <<< "$files"
           echo "code_changed=$code_changed" >> "$GITHUB_OUTPUT"
+          echo "candidate6_changed=$candidate6_changed" >> "$GITHUB_OUTPUT"
+          echo "sm3_changed=$sm3_changed" >> "$GITHUB_OUTPUT"
 
   conformance:
     needs: classify
@@ -124,24 +143,21 @@ jobs:
 
   candidate-6:
     needs: [classify, conformance]
-    if: ${{ needs.classify.outputs.code_changed == 'true' }}
+    if: ${{ needs.classify.outputs.candidate6_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
       - name: Check out revision
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install --yes ffmpeg
-
       - name: Run constrained Candidate-6 finalist gate
         run: |
           set -euo pipefail
@@ -161,7 +177,6 @@ jobs:
           find bench/results/human-tranche-5 bench/previews/human-tranche-5 bench/reviews/human-tranche-5 \
             -type f -print0 | sort -z | xargs -0 sha256sum \
             > bench/results/human-tranche-5/SHA256SUMS
-
       - name: Upload Candidate-6 blind review and benchmark
         if: ${{ always() && hashFiles('bench/results/human-tranche-5/benchmark.json') != '' }}
         uses: actions/upload-artifact@v4
@@ -175,7 +190,6 @@ jobs:
             bench/previews/human-tranche-5
             bench/reviews/human-tranche-5
             !bench/reviews/human-tranche-5/key.json
-
       - name: Upload Candidate-6 concealed review key
         if: ${{ always() && hashFiles('bench/reviews/human-tranche-5/key.json') != '' }}
         uses: actions/upload-artifact@v4
@@ -187,27 +201,23 @@ jobs:
 
   subtitle-mask-3:
     needs: [classify, conformance]
-    if: ${{ needs.classify.outputs.code_changed == 'true' }}
+    if: ${{ needs.classify.outputs.sm3_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - name: Check out revision
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install --yes ffmpeg
-
       - name: Run focused SM2-versus-SM3 lecture gate
         run: npm run --silent bench:subtitle-mask3
-
       - name: Upload SM3 blind review and metrics
         if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-3/summary.json') != '' }}
         uses: actions/upload-artifact@v4
@@ -218,7 +228,6 @@ jobs:
           path: |
             bench/results/subtitle-mask-tranche-3
             !bench/results/subtitle-mask-tranche-3/key.json
-
       - name: Upload SM3 concealed key
         if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-3/key.json') != '' }}
         uses: actions/upload-artifact@v4

@@ -27,11 +27,11 @@ command.
   the ultra-saturated Hyper Real direction.
 - [ ] Freeze the palette as normative `V64-P256-1`.
 
-Palette blocker: the design document requires empirical corpus comparison before
-the final palette is frozen. The executable still uses
-`V64-P256-CANDIDATE-1`; the Hyper Real-derived candidate is now the preferred
-design direction, but it requires licensed-raster comparison before replacing
-the enforced runtime asset.
+Palette blocker: the first human-content comparison validates Hyper Real as the
+preferred design direction but rejects candidate 2 as-is for the normative
+16-color prefix. The executable still uses `V64-P256-CANDIDATE-1`. Candidate 3
+must preserve the saturated anchors while improving blue/teal, skin, midtone,
+and subtitle-edge separation.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -79,8 +79,20 @@ the enforced runtime asset.
 - [x] Add provenance- and SHA-256-validated FFmpeg raster-video ingest.
 - [x] Run raster tranche 0 from the self-authored CC0 procedural MP4: entropy
   pass 2 reduced DEFLATE from 9,402 to 8,696 bytes (7.509%).
-- [ ] Replace or augment the synthetic seed fixtures with licensed raster-video
-  clips before drawing recognizable-fidelity or normative syntax conclusions.
+- [x] Add original CC0 human-content raster tranche 1: dialogue/lecture,
+  saturated performance, and 2D animated dialogue crossed with both palette
+  candidates.
+- [x] Add reproducible 0.5-, 1-, and 2-second independent-group sweeps,
+  seek-decode timing, process high-water memory, changed-cell percentage, and a
+  one-frame-reversion flicker proxy to the raster harness.
+- [x] Measure entropy pass 2 on all six human-content lanes: 29,749 selected
+  DEFLATE bytes versus 34,834 for packed parsing (14.598% reduction).
+- [x] Compare palette candidates at the 16-color prefix. Hyper Real candidate 2
+  was 99 bytes (0.66%) smaller overall but showed mixed low-depth color fidelity.
+- [ ] Add original or redistributable 3D-animation, black-and-white-film, and
+  screen-capture sources to complete raster coverage of all eleven classes.
+- [ ] Run blinded recognizable-fidelity scoring and subtitle trials at 60 and
+  80 columns before normative syntax, palette, or group-duration conclusions.
 
 ## Phase 2 — audio and finished container profile
 
@@ -129,14 +141,11 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Ingest the first redistributed human-content raster-video tranche into the
-corpus manifest.
-Preserve the 0.5-, 1-, and 2-second group sweep while comparing packed-byte and
-entropy-aware parser objectives on identical decoded states. Add encode time,
-peak memory, seek latency, and recognizable-fidelity notes before freezing the
-visual command grammar or entropy backend.
+Build Hyper Real candidate 3 and complete the raster corpus with original or
+redistributable 3D-animation, black-and-white-film, and screen-capture sources.
+Add 60- and 80-column subtitle lanes and a blind-review worksheet before
+freezing the palette, visual command grammar, or independent-group duration.
 
-In parallel after that measurement is reproducible, resume AM1 as a separately
-testable audio pipeline: deterministic WAV fixtures, hysteretic silence
-segmentation, standard Opus packets, exact `SILN` spans, and sample-exact A/V
-synchronization.
+Then resume AM1 as a separately testable audio pipeline: deterministic WAV
+fixtures, hysteretic silence segmentation, standard Opus packets, exact `SILN`
+spans, and sample-exact A/V synchronization.

@@ -220,6 +220,16 @@ Master-palette construction
 
 - Order the resulting 256 entries so useful lower-depth prefixes are perceptually balanced rather than merely truncations of an arbitrary list.
 
+- Anchor the chromatic identity in ANSI Tube's Hyper Real palette, preserving
+  its ordered ultra-saturated hue anchors and 1.60 saturation / 1.12 contrast
+  grade while retaining neutral, skin-tone, dark-scene, and prefix-utility
+  safeguards.
+
+- Treat the first human-content result as a candidate-3 requirement: the
+  16-color prefix needs stronger blue/teal, skin, midtone, and subtitle-edge
+  separation even though Hyper Real candidate 2 was marginally smaller and
+  visibly stronger on saturated performance material.
+
 - Publish the 768-byte RGB table, human-readable values, rendered chart, construction script, corpus manifest, and cryptographic hash.
 
 - Freeze the master palette only after blind review across every supported depth.
@@ -973,5 +983,4 @@ The inspected ANSI Tube repository does not currently expose a root LICENSE file
 ### Recommended next artifact
 
 The next artifact should be a compact normative V64 v0.1 Bitstream Specification containing only exact binary layouts, required decoder behavior, canonical asset hashes, pseudocode for frame-command application, and conformance vectors. This design document should remain the architectural rationale and implementation roadmap.
-
 

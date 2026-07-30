@@ -33,6 +33,8 @@ real binary `.v64` implementation, not a mock UI:
 - a hash-validated FFmpeg raster-corpus path and a reproducible Hyper
   Real-derived 256-color palette candidate preserving ANSI Tube's exact
   saturated anchors;
+- an original CC0 human-content tranche with palette A/B previews, temporal
+  metrics, independent-group seek/size sweeps, and measured entropy selection;
 - Node conformance tests and golden hashes.
 
 Audio Opus, Rust, ANSI Drop's desktop shell, the native player, and VLC modules
@@ -56,6 +58,9 @@ node prototype/js/cli.mjs verify tests/golden/procedural.v64
 npm run bench:commands
 npm run bench:corpus
 npm run bench:raster
+npm run corpus:visual
+npm run preview:human
+npm run bench:human
 npm run palette:hyperreal
 ```
 
@@ -99,6 +104,9 @@ The first file-backed raster-ingest result is
 [`bench/RASTER_TRANCHE_0.md`](bench/RASTER_TRANCHE_0.md). Palette direction,
 provenance, and the experimental Hyper Real-derived candidate are documented in
 [`spec/V64-palette-research.md`](spec/V64-palette-research.md).
+The first original human-content measurement, including the palette and group
+duration decisions it does and does not support, is
+[`bench/HUMAN_RASTER_TRANCHE_1.md`](bench/HUMAN_RASTER_TRANCHE_1.md).
 
 See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for verified status,
 blockers, and the next concrete step. See

@@ -48,7 +48,19 @@ Assets:
 - anchor-byte SHA-256:
   `31c9a10ee942a10ce0d251dbe5b121cde724844d17e84f42fa247027a1345322`
 
-The current executable still uses `V64-P256-CANDIDATE-1`. Candidate 2 must be
-benchmarked on licensed raster clips for recognizable color identity, skin
-tone behavior, dark-scene separation, and low-depth prefix utility before it
-can be frozen as `V64-P256-1`.
+The current executable still uses `V64-P256-CANDIDATE-1`.
+
+## Human-content tranche 1 result
+
+Candidate 2 has now been measured on three original CC0 human-content sources
+at a 16-color prefix: lecture/dialogue, saturated performance, and 2D animated
+dialogue. It was 99 raw-DEFLATE bytes (0.66%) smaller than candidate 1 across
+the matched two-second lanes. Visual inspection was mixed: the performance
+lane gained the intended saturated identity, while lecture and animation
+showed inadequate blue/teal and midtone separation. Subtitles were unreadable
+at 40 columns under both candidates.
+
+Candidate 2 therefore validates the Hyper Real direction but fails the
+low-depth-prefix freeze gate. Candidate 3 should retain the exact Hyper Real
+anchors while improving 16-color midtones, skin separation, blue/teal
+separation, and subtitle edges. See `bench/HUMAN_RASTER_TRANCHE_1.md`.

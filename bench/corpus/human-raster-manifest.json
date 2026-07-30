@@ -1,0 +1,122 @@
+{
+  "format": "V64-RASTER-CORPUS-MANIFEST-1",
+  "id": "V64-HUMAN-RASTER-TRANCHE-1",
+  "title": "V64 original human-content raster tranche 1",
+  "scope": "Original fictional human imagery dedicated under CC0, with deterministic motion and subtitle treatments. Compares palette candidates and independent-group durations on identical source classes.",
+  "entries": [
+    {
+      "id": "lecture-candidate-1",
+      "structuralClass": "dialogue",
+      "coverageClasses": ["dialogue", "dark-cinematography", "subtitles", "static-lecture"],
+      "recognizabilityTargets": ["eyes and mouth remain legible", "hand gesture remains distinct", "blue jacket and amber lamp retain identity", "subtitle remains readable"],
+      "source": {
+        "kind": "local-file",
+        "path": "bench/corpus/sources/video/fictional-lecture-speaker.mp4",
+        "sha256": "581c544244c067fdeb9f0dc26b0d0d7462132bb10b0f1b8e19062c04322a4bee",
+        "origin": "V64 original fictional lecture fixture; see bench/corpus/sources/PROVENANCE.json",
+        "license": "CC0-1.0"
+      },
+      "grid": { "columns": 40, "rows": 11 },
+      "paletteDepth": 16,
+      "paletteAsset": "V64-P256-CANDIDATE-1",
+      "cadence": "12",
+      "maximumSeconds": 2,
+      "temporalStability": 0.48
+    },
+    {
+      "id": "lecture-hyperreal-2",
+      "structuralClass": "dialogue",
+      "coverageClasses": ["dialogue", "dark-cinematography", "subtitles", "static-lecture"],
+      "recognizabilityTargets": ["eyes and mouth remain legible", "hand gesture remains distinct", "blue jacket and amber lamp retain identity", "subtitle remains readable"],
+      "source": {
+        "kind": "local-file",
+        "path": "bench/corpus/sources/video/fictional-lecture-speaker.mp4",
+        "sha256": "581c544244c067fdeb9f0dc26b0d0d7462132bb10b0f1b8e19062c04322a4bee",
+        "origin": "V64 original fictional lecture fixture; see bench/corpus/sources/PROVENANCE.json",
+        "license": "CC0-1.0"
+      },
+      "grid": { "columns": 40, "rows": 11 },
+      "paletteDepth": 16,
+      "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-2",
+      "cadence": "12",
+      "maximumSeconds": 2,
+      "temporalStability": 0.48
+    },
+    {
+      "id": "performance-candidate-1",
+      "structuralClass": "rapid-motion",
+      "coverageClasses": ["rapid-motion", "music-video", "highly-saturated-material"],
+      "recognizabilityTargets": ["performer silhouette remains coherent", "microphone and extended arm remain distinct", "magenta cyan and amber lighting retain identity"],
+      "source": {
+        "kind": "local-file",
+        "path": "bench/corpus/sources/video/fictional-saturated-performance.mp4",
+        "sha256": "bee891fa433eeb43130c02d73537f142e34947f47aae5294c252594300531883",
+        "origin": "V64 original fictional performance fixture; see bench/corpus/sources/PROVENANCE.json",
+        "license": "CC0-1.0"
+      },
+      "grid": { "columns": 40, "rows": 11 },
+      "paletteDepth": 16,
+      "paletteAsset": "V64-P256-CANDIDATE-1",
+      "cadence": "12",
+      "maximumSeconds": 2,
+      "temporalStability": 0.48
+    },
+    {
+      "id": "performance-hyperreal-2",
+      "structuralClass": "rapid-motion",
+      "coverageClasses": ["rapid-motion", "music-video", "highly-saturated-material"],
+      "recognizabilityTargets": ["performer silhouette remains coherent", "microphone and extended arm remain distinct", "magenta cyan and amber lighting retain identity"],
+      "source": {
+        "kind": "local-file",
+        "path": "bench/corpus/sources/video/fictional-saturated-performance.mp4",
+        "sha256": "bee891fa433eeb43130c02d73537f142e34947f47aae5294c252594300531883",
+        "origin": "V64 original fictional performance fixture; see bench/corpus/sources/PROVENANCE.json",
+        "license": "CC0-1.0"
+      },
+      "grid": { "columns": 40, "rows": 11 },
+      "paletteDepth": 16,
+      "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-2",
+      "cadence": "12",
+      "maximumSeconds": 2,
+      "temporalStability": 0.48
+    },
+    {
+      "id": "animation-candidate-1",
+      "structuralClass": "2d-animation",
+      "coverageClasses": ["2d-animation", "dialogue", "subtitles"],
+      "recognizabilityTargets": ["both profiles remain distinct", "speaker gesture remains legible", "rain and diner staging remain intelligible", "subtitle remains readable"],
+      "source": {
+        "kind": "local-file",
+        "path": "bench/corpus/sources/video/fictional-animated-dialogue.mp4",
+        "sha256": "cbe2d5c14e085051a66579fdba8a02396d21219101216864300e94d95273ebe4",
+        "origin": "V64 original fictional animated-dialogue fixture; see bench/corpus/sources/PROVENANCE.json",
+        "license": "CC0-1.0"
+      },
+      "grid": { "columns": 40, "rows": 11 },
+      "paletteDepth": 16,
+      "paletteAsset": "V64-P256-CANDIDATE-1",
+      "cadence": "12",
+      "maximumSeconds": 2,
+      "temporalStability": 0.48
+    },
+    {
+      "id": "animation-hyperreal-2",
+      "structuralClass": "2d-animation",
+      "coverageClasses": ["2d-animation", "dialogue", "subtitles"],
+      "recognizabilityTargets": ["both profiles remain distinct", "speaker gesture remains legible", "rain and diner staging remain intelligible", "subtitle remains readable"],
+      "source": {
+        "kind": "local-file",
+        "path": "bench/corpus/sources/video/fictional-animated-dialogue.mp4",
+        "sha256": "cbe2d5c14e085051a66579fdba8a02396d21219101216864300e94d95273ebe4",
+        "origin": "V64 original fictional animated-dialogue fixture; see bench/corpus/sources/PROVENANCE.json",
+        "license": "CC0-1.0"
+      },
+      "grid": { "columns": 40, "rows": 11 },
+      "paletteDepth": 16,
+      "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-2",
+      "cadence": "12",
+      "maximumSeconds": 2,
+      "temporalStability": 0.48
+    }
+  ]
+}

@@ -18,6 +18,10 @@ const rasterManifest = JSON.parse(readFileSync(
   new URL("../bench/corpus/raster-manifest.json", import.meta.url),
   "utf8"
 ));
+const humanManifest = JSON.parse(readFileSync(
+  new URL("../bench/corpus/human-raster-manifest.json", import.meta.url),
+  "utf8"
+));
 
 test("Hyper Real candidate preserves canonical ANSI Tube anchors and is reproducible", () => {
   const first = generateHyperRealMasterPalette();
@@ -60,9 +64,39 @@ test("raster manifest verifies licensing, source hash, and deterministic cell an
 });
 
 test("raster entropy benchmark is lossless and retains a no-regression baseline", () => {
-  const report = benchmarkRasterCorpus(rasterManifest);
+  const report = benchmarkRasterCorpus(rasterManifest, {
+    groupDurationsSeconds: [],
+    measurePerformance: false
+  });
   assert.equal(report.rasterSources.length, 1);
   assert.equal(report.rasterSources[0].analyzedFrames, 48);
   assert.ok(report.totals.selectedDeflateBytes <= report.totals.packedDeflateBytes);
   assert.equal(report.totals.canonicalSelectionSha256.length, 64);
+});
+
+test("human raster tranche compares both palette assets on identical licensed sources", () => {
+  const manifest = validateRasterCorpusManifest(humanManifest);
+  assert.equal(manifest.entries.length, 6);
+  assert.ok(manifest.entries.every((entry) => entry.source.license === "CC0-1.0"));
+  assert.deepEqual(
+    [...new Set(manifest.entries.map((entry) => entry.paletteAsset))].sort(),
+    ["V64-P256-CANDIDATE-1", "V64-P256-HYPERREAL-CANDIDATE-2"]
+  );
+
+  const candidate1 = analyzeRasterEntry(manifest.entries[0]);
+  const hyperReal = analyzeRasterEntry(manifest.entries[1]);
+  assert.equal(candidate1.sourceSha256, hyperReal.sourceSha256);
+  assert.equal(candidate1.frames.length, 24);
+  assert.equal(hyperReal.frames.length, 24);
+  assert.notDeepEqual(candidate1.frames, hyperReal.frames);
+  assert.ok(candidate1.analysisMetrics.changedCellPercent > 0);
+  assert.ok(hyperReal.analysisMetrics.changedCellPercent > 0);
+  assert.ok(candidate1.analysisMetrics.flickerReversionPercent >= 0);
+  for (const frame of [...candidate1.frames, ...hyperReal.frames]) {
+    for (let offset = 0; offset < frame.length; offset += 3) {
+      assert.ok(frame[offset] < 64);
+      assert.ok(frame[offset + 1] < 16);
+      assert.ok(frame[offset + 2] < 16);
+    }
+  }
 });

@@ -1,0 +1,51 @@
+{
+  "format": "V64-GENERATED-SOURCE-PROVENANCE-1",
+  "created": "2026-07-30",
+  "license": "CC0-1.0",
+  "licenseStatement": "The V64 project dedicates its rights in these original fictional test images and derived videos to the public domain under CC0 1.0. No real person's identity was requested or used.",
+  "generation": {
+    "tool": "OpenAI built-in image generation",
+    "mode": "new image generation",
+    "postprocess": "Deterministic three-second motion and subtitle treatments produced by tools/build-visual-corpus.mjs"
+  },
+  "derivedVideos": [
+    {
+      "file": "video/fictional-lecture-speaker.mp4",
+      "sha256": "581c544244c067fdeb9f0dc26b0d0d7462132bb10b0f1b8e19062c04322a4bee",
+      "source": "fictional-lecture-speaker"
+    },
+    {
+      "file": "video/fictional-saturated-performance.mp4",
+      "sha256": "bee891fa433eeb43130c02d73537f142e34947f47aae5294c252594300531883",
+      "source": "fictional-saturated-performance"
+    },
+    {
+      "file": "video/fictional-animated-dialogue.mp4",
+      "sha256": "cbe2d5c14e085051a66579fdba8a02396d21219101216864300e94d95273ebe4",
+      "source": "fictional-animated-dialogue"
+    }
+  ],
+  "sources": [
+    {
+      "id": "fictional-lecture-speaker",
+      "file": "stills/fictional-lecture-speaker.png",
+      "sha256": "b9711e85f4a5e85e2765cfd75c93e60bdb33addc8c5713a48006131185a782a7",
+      "purpose": ["dialogue", "faces", "dark-cinematography", "subtitles", "static-lecture"],
+      "promptSummary": "Fictional adult lecturer, mixed warm/cool light, saturated blue jacket, natural face detail, no text or recognizable person."
+    },
+    {
+      "id": "fictional-saturated-performance",
+      "file": "stills/fictional-saturated-performance.png",
+      "sha256": "4ca6367143db0617f4e73aca0e56120a9fdec0f28458faa1763d087e4cc34360",
+      "purpose": ["rapid-motion", "music-video", "highly-saturated"],
+      "promptSummary": "Fictional vocalist in lateral motion under ultra-saturated stage lighting, no text or recognizable person."
+    },
+    {
+      "id": "fictional-animated-dialogue",
+      "file": "stills/fictional-animated-dialogue.png",
+      "sha256": "bd43cfd91676a4b0a27f4a8e84f4ffceba3e1ea6423534c864cc6ee00615f964",
+      "purpose": ["2d-animation", "dialogue", "faces", "subtitles"],
+      "promptSummary": "Original cel-animation diner conversation with clean profiles, varied contours, and a subtitle-safe lower field."
+    }
+  ]
+}

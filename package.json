@@ -10,11 +10,14 @@
   "scripts": {
     "extract-assets": "node tools/extract-assets.mjs ../ansi-tube-source/core.js",
     "palette:hyperreal": "node tools/hyperreal-palette-generator.mjs assets/palettes",
+    "corpus:visual": "node tools/build-visual-corpus.mjs",
+    "preview:human": "node tools/render-raster-previews.mjs bench/corpus/human-raster-manifest.json bench/previews/human-tranche-1",
     "test": "node --test tests/*.test.mjs",
     "sample": "node prototype/js/cli.mjs make-sample tests/golden",
     "bench:commands": "node prototype/js/cli.mjs benchmark-commands tests/golden/procedural.v64",
     "bench:corpus": "node prototype/js/cli.mjs benchmark-corpus bench/corpus/seed-manifest.json",
-    "bench:raster": "node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/raster-manifest.json"
+    "bench:raster": "node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/raster-manifest.json",
+    "bench:human": "node prototype/js/cli.mjs benchmark-raster-corpus bench/corpus/human-raster-manifest.json"
   },
   "engines": {
     "node": ">=20"

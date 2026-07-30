@@ -1,0 +1,411 @@
+{
+  "format": "V64-HUMAN-RASTER-TRANCHE-2-SUMMARY-1",
+  "date": "2026-07-30",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-2",
+  "workflow": {
+    "runId": 30569348195,
+    "headSha": "5e326e406e02d6750389b28c4e3dffbf4e604a20",
+    "blindArtifactId": 8770656104,
+    "blindArtifactDigest": "sha256:71363cf85af1dfe774e07109c6456e3d4b33a315eb9bac8449547eab3bb43610",
+    "keyArtifactId": 8770656613,
+    "keyArtifactDigest": "sha256:5185290b01293ad85710cbe57fcc2a752aaecd141ab44fe30ed3590e8ca168ed"
+  },
+  "toolchain": {
+    "node": "v22.23.1",
+    "npm": "10.9.8",
+    "ffmpeg": "6.1.1-3ubuntu5",
+    "runner": "Ubuntu 24.04 x86_64"
+  },
+  "totals": {
+    "packedCommandBytes": 240311,
+    "packedDeflateBytes": 174666,
+    "selectedCommandBytes": 256589,
+    "selectedDeflateBytes": 147912,
+    "entropySelected": 14,
+    "selectedDeflateSavingsBytes": 26754,
+    "selectedDeflateSavingsPercent": 15.317,
+    "packedSelected": 0,
+    "medianFixtureSavingsPercent": 13.676,
+    "p75FixtureSavingsPercent": 16.46,
+    "canonicalSelectionSha256": "fdf6758a60e991d29461305f824b3e5cb18d368d238751172f7a2d4f84ed9588"
+  },
+  "paletteSummary": [
+    {
+      "paletteAsset": "V64-P256-CANDIDATE-1",
+      "entries": 7,
+      "packedCommandBytes": 120458,
+      "packedDeflateBytes": 87643,
+      "selectedCommandBytes": 128673,
+      "selectedDeflateBytes": 74043,
+      "meanChangedCellPercent": 21.656,
+      "meanFlickerReversionPercent": 2.506,
+      "reviewRows": 7,
+      "meanRecognizability": 3.571,
+      "meanColorOrGrayscale": 3.571
+    },
+    {
+      "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+      "entries": 7,
+      "packedCommandBytes": 119853,
+      "packedDeflateBytes": 87023,
+      "selectedCommandBytes": 127916,
+      "selectedDeflateBytes": 73869,
+      "meanChangedCellPercent": 21.645,
+      "meanFlickerReversionPercent": 2.596,
+      "reviewRows": 7,
+      "meanRecognizability": 4.0,
+      "meanColorOrGrayscale": 3.857
+    }
+  ],
+  "candidate3DeltaVersusBaseline": {
+    "selectedDeflateBytes": -174,
+    "selectedDeflatePercent": -0.235,
+    "packedDeflateBytes": -620,
+    "packedDeflatePercent": -0.707,
+    "selectedCommandBytes": -757,
+    "meanChangedCellPercentagePoints": -0.011,
+    "meanFlickerReversionPercentagePoints": 0.09,
+    "meanRecognizability": 0.429,
+    "meanColorOrGrayscale": 0.286
+  },
+  "groupDurationSweep": [
+    {
+      "maximumSeconds": 0.5,
+      "groups": 56,
+      "packedCommandBytes": 263483,
+      "packedDeflateBytes": 206850,
+      "selectedCommandBytes": 278117,
+      "selectedDeflateBytes": 186593,
+      "selectedDeflateSavingsBytes": 20257,
+      "entropySelected": 14,
+      "medianSeekMilliseconds": 1.613,
+      "p95SeekMilliseconds": 5.789,
+      "selectedDeflatePenaltyVersus2SecondsPercent": 26.151
+    },
+    {
+      "maximumSeconds": 1,
+      "groups": 28,
+      "packedCommandBytes": 250806,
+      "packedDeflateBytes": 189751,
+      "selectedCommandBytes": 267185,
+      "selectedDeflateBytes": 164405,
+      "selectedDeflateSavingsBytes": 25346,
+      "entropySelected": 14,
+      "medianSeekMilliseconds": 2.843,
+      "p95SeekMilliseconds": 10.493,
+      "selectedDeflatePenaltyVersus2SecondsPercent": 11.151
+    },
+    {
+      "maximumSeconds": 2,
+      "groups": 14,
+      "packedCommandBytes": 240311,
+      "packedDeflateBytes": 174666,
+      "selectedCommandBytes": 256589,
+      "selectedDeflateBytes": 147912,
+      "selectedDeflateSavingsBytes": 26754,
+      "entropySelected": 14,
+      "medianSeekMilliseconds": 6.087,
+      "p95SeekMilliseconds": 16.408,
+      "selectedDeflatePenaltyVersus2SecondsPercent": 0.0
+    }
+  ],
+  "objectivePairs": [
+    {
+      "group": "animation-subtitle-60",
+      "columns": 60,
+      "baselineSelectedDeflateBytes": 12796,
+      "candidate3SelectedDeflateBytes": 12742,
+      "candidate3DeltaBytes": -54,
+      "baselineFlickerReversionPercent": 4.02,
+      "candidate3FlickerReversionPercent": 4.015
+    },
+    {
+      "group": "animation-subtitle-80",
+      "columns": 80,
+      "baselineSelectedDeflateBytes": 23902,
+      "candidate3SelectedDeflateBytes": 23915,
+      "candidate3DeltaBytes": 13,
+      "baselineFlickerReversionPercent": 4.298,
+      "candidate3FlickerReversionPercent": 4.398
+    },
+    {
+      "group": "depth-40",
+      "columns": 40,
+      "baselineSelectedDeflateBytes": 4450,
+      "candidate3SelectedDeflateBytes": 4467,
+      "candidate3DeltaBytes": 17,
+      "baselineFlickerReversionPercent": 2.211,
+      "candidate3FlickerReversionPercent": 2.924
+    },
+    {
+      "group": "lecture-subtitle-60",
+      "columns": 60,
+      "baselineSelectedDeflateBytes": 9902,
+      "candidate3SelectedDeflateBytes": 9759,
+      "candidate3DeltaBytes": -143,
+      "baselineFlickerReversionPercent": 2.696,
+      "candidate3FlickerReversionPercent": 2.522
+    },
+    {
+      "group": "lecture-subtitle-80",
+      "columns": 80,
+      "baselineSelectedDeflateBytes": 16683,
+      "candidate3SelectedDeflateBytes": 16688,
+      "candidate3DeltaBytes": 5,
+      "baselineFlickerReversionPercent": 2.415,
+      "candidate3FlickerReversionPercent": 2.41
+    },
+    {
+      "group": "monochrome-40",
+      "columns": 40,
+      "baselineSelectedDeflateBytes": 2909,
+      "candidate3SelectedDeflateBytes": 2967,
+      "candidate3DeltaBytes": 58,
+      "baselineFlickerReversionPercent": 1.095,
+      "candidate3FlickerReversionPercent": 1.126
+    },
+    {
+      "group": "screen-40",
+      "columns": 40,
+      "baselineSelectedDeflateBytes": 3401,
+      "candidate3SelectedDeflateBytes": 3331,
+      "candidate3DeltaBytes": -70,
+      "baselineFlickerReversionPercent": 0.806,
+      "candidate3FlickerReversionPercent": 0.775
+    }
+  ],
+  "blindReview": {
+    "reviewers": 1,
+    "mode": "code-only midpoint stills at native 100% scale",
+    "scores": [
+      {
+        "code": "65FBF92D",
+        "group": "depth-40",
+        "entryId": "depth-40-baseline",
+        "paletteAsset": "V64-P256-CANDIDATE-1",
+        "recognizability": 4,
+        "colorOrGrayscale": 4,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Cube and orb recognizable; floor-grid perspective is weak but present. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "0C94E7AF",
+        "group": "depth-40",
+        "entryId": "depth-40-hyperreal-3",
+        "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+        "recognizability": 5,
+        "colorOrGrayscale": 5,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Strong cube-face separation, visible floor grid, and stable cyan/blue/violet identity. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "1626F62B",
+        "group": "monochrome-40",
+        "entryId": "monochrome-40-baseline",
+        "paletteAsset": "V64-P256-CANDIDATE-1",
+        "recognizability": 5,
+        "colorOrGrayscale": 5,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Strong silhouette, window rhythm, platform diagonal, and grayscale hierarchy. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "EBC71F4B",
+        "group": "monochrome-40",
+        "entryId": "monochrome-40-hyperreal-3",
+        "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+        "recognizability": 4,
+        "colorOrGrayscale": 2,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Scene remains recognizable, but navy/brown substitutions impair the intended grayscale hierarchy. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "6363B9BC",
+        "group": "screen-40",
+        "entryId": "screen-40-baseline",
+        "paletteAsset": "V64-P256-CANDIDATE-1",
+        "recognizability": 4,
+        "colorOrGrayscale": 4,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Editor, sidebar, terminal, status region, and cursor are separable; code text is not readable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "4A231D9A",
+        "group": "screen-40",
+        "entryId": "screen-40-hyperreal-3",
+        "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+        "recognizability": 4,
+        "colorOrGrayscale": 4,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Editor, sidebar, terminal, status region, and cursor are separable; code text is not readable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "9CB79E5B",
+        "group": "lecture-subtitle-60",
+        "entryId": "lecture-subtitle-60-baseline",
+        "paletteAsset": "V64-P256-CANDIDATE-1",
+        "recognizability": 3,
+        "colorOrGrayscale": 3,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Face and lamp remain recognizable; subtitle cannot be transcribed exactly at 100% scale. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "645DCB91",
+        "group": "lecture-subtitle-60",
+        "entryId": "lecture-subtitle-60-hyperreal-3",
+        "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+        "recognizability": 3,
+        "colorOrGrayscale": 4,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Face, jacket, and lamp remain recognizable; subtitle cannot be transcribed exactly at 100% scale. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "59462E8F",
+        "group": "animation-subtitle-60",
+        "entryId": "animation-subtitle-60-baseline",
+        "paletteAsset": "V64-P256-CANDIDATE-1",
+        "recognizability": 3,
+        "colorOrGrayscale": 3,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Diner staging and left profile remain recognizable; right profile is weak; subtitle unreadable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "A97A2F0F",
+        "group": "animation-subtitle-60",
+        "entryId": "animation-subtitle-60-hyperreal-3",
+        "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+        "recognizability": 4,
+        "colorOrGrayscale": 4,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Both profiles and diner staging remain distinct; subtitle cannot be transcribed exactly. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "B060A43D",
+        "group": "lecture-subtitle-80",
+        "entryId": "lecture-subtitle-80-baseline",
+        "paletteAsset": "V64-P256-CANDIDATE-1",
+        "recognizability": 3,
+        "colorOrGrayscale": 3,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Face, hand, and lamp remain recognizable; subtitle has letter-like structure but is not exactly readable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "40888A36",
+        "group": "lecture-subtitle-80",
+        "entryId": "lecture-subtitle-80-hyperreal-3",
+        "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+        "recognizability": 4,
+        "colorOrGrayscale": 4,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Face, gesture, jacket, and lamp separate clearly; subtitle remains untranscribable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "ED9582FD",
+        "group": "animation-subtitle-80",
+        "entryId": "animation-subtitle-80-baseline",
+        "paletteAsset": "V64-P256-CANDIDATE-1",
+        "recognizability": 3,
+        "colorOrGrayscale": 3,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Profiles and diner staging are recognizable; subtitle remains untranscribable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      },
+      {
+        "code": "425F8815",
+        "group": "animation-subtitle-80",
+        "entryId": "animation-subtitle-80-hyperreal-3",
+        "paletteAsset": "V64-P256-HYPERREAL-CANDIDATE-3",
+        "recognizability": 4,
+        "colorOrGrayscale": 4,
+        "temporalStability": null,
+        "subtitleTranscription": null,
+        "notes": "Profiles, gesture, rain, and diner staging separate well; subtitle remains untranscribable. Temporal stability left blank because the blind package contains midpoint stills, not motion."
+      }
+    ],
+    "groupPairs": [
+      {
+        "group": "animation-subtitle-60",
+        "baselineRecognizability": 3,
+        "candidate3Recognizability": 4,
+        "baselineColorOrGrayscale": 3,
+        "candidate3ColorOrGrayscale": 4,
+        "subtitleTranscriptions": 0
+      },
+      {
+        "group": "animation-subtitle-80",
+        "baselineRecognizability": 3,
+        "candidate3Recognizability": 4,
+        "baselineColorOrGrayscale": 3,
+        "candidate3ColorOrGrayscale": 4,
+        "subtitleTranscriptions": 0
+      },
+      {
+        "group": "depth-40",
+        "baselineRecognizability": 4,
+        "candidate3Recognizability": 5,
+        "baselineColorOrGrayscale": 4,
+        "candidate3ColorOrGrayscale": 5,
+        "subtitleTranscriptions": null
+      },
+      {
+        "group": "lecture-subtitle-60",
+        "baselineRecognizability": 3,
+        "candidate3Recognizability": 3,
+        "baselineColorOrGrayscale": 3,
+        "candidate3ColorOrGrayscale": 4,
+        "subtitleTranscriptions": 0
+      },
+      {
+        "group": "lecture-subtitle-80",
+        "baselineRecognizability": 3,
+        "candidate3Recognizability": 4,
+        "baselineColorOrGrayscale": 3,
+        "candidate3ColorOrGrayscale": 4,
+        "subtitleTranscriptions": 0
+      },
+      {
+        "group": "monochrome-40",
+        "baselineRecognizability": 5,
+        "candidate3Recognizability": 4,
+        "baselineColorOrGrayscale": 5,
+        "candidate3ColorOrGrayscale": 2,
+        "subtitleTranscriptions": null
+      },
+      {
+        "group": "screen-40",
+        "baselineRecognizability": 4,
+        "candidate3Recognizability": 4,
+        "baselineColorOrGrayscale": 4,
+        "candidate3ColorOrGrayscale": 4,
+        "subtitleTranscriptions": null
+      }
+    ],
+    "exactSubtitleTranscriptions": 0,
+    "subtitleRows": 8,
+    "temporalHumanScores": "not scorable from still-only package"
+  },
+  "decision": {
+    "candidate3": "reject as frozen 16-color prefix; retain as chromatic benchmark",
+    "reasons": [
+      "Candidate 3 improved mean recognizability and chromatic separation.",
+      "Candidate 3 reduced selected DEFLATE by only 174 bytes (0.235%).",
+      "Candidate 3 increased mean one-frame-reversion flicker by 0.090 percentage points.",
+      "Candidate 3 scored 2/5 versus 5/5 for the baseline monochrome hierarchy.",
+      "Neither 60 nor 80 columns yielded an exact subtitle transcription.",
+      "The still-only blind package cannot support human temporal-stability scoring."
+    ],
+    "groupDuration": "retain 2 seconds as the prototype default; defer normative freeze until browser seek validation because the worst 80-column lane reached 19.402 ms p95.",
+    "nextMilestone": "Candidate 4 utility rebalance plus motion-capable blind review."
+  }
+}

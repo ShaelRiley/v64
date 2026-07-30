@@ -17,7 +17,7 @@ jobs:
     outputs:
       code_changed: ${{ steps.diff.outputs.code_changed }}
       candidate6_changed: ${{ steps.diff.outputs.candidate6_changed }}
-      sm3_changed: ${{ steps.diff.outputs.sm3_changed }}
+      subtitle_changed: ${{ steps.diff.outputs.subtitle_changed }}
 
     steps:
       - name: Check out pull-request head
@@ -34,14 +34,14 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "code_changed=true" >> "$GITHUB_OUTPUT"
             echo "candidate6_changed=true" >> "$GITHUB_OUTPUT"
-            echo "sm3_changed=true" >> "$GITHUB_OUTPUT"
+            echo "subtitle_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           files="$(git diff --name-only HEAD^ HEAD)"
           printf '%s\n' "$files"
           code_changed=false
           candidate6_changed=false
-          sm3_changed=false
+          subtitle_changed=false
           while IFS= read -r path; do
             [[ -z "$path" ]] && continue
             if [[ ! "$path" =~ ^bench/results/ &&
@@ -60,15 +60,16 @@ jobs:
                   "$path" == "tests/candidate-6-finalists.test.mjs" ]]; then
               candidate6_changed=true
             fi
-            if [[ "$path" == "prototype/js/subtitle-mask-sm3.mjs" ||
+            if [[ "$path" == prototype/js/subtitle-mask-sm*.mjs ||
                   "$path" == "tools/benchmark-subtitle-mask-sm3.mjs" ||
-                  "$path" == "tests/subtitle-mask-sm3.test.mjs" ]]; then
-              sm3_changed=true
+                  "$path" == tests/subtitle-mask-sm*.test.mjs ||
+                  "$path" == "package.json" ]]; then
+              subtitle_changed=true
             fi
           done <<< "$files"
           echo "code_changed=$code_changed" >> "$GITHUB_OUTPUT"
           echo "candidate6_changed=$candidate6_changed" >> "$GITHUB_OUTPUT"
-          echo "sm3_changed=$sm3_changed" >> "$GITHUB_OUTPUT"
+          echo "subtitle_changed=$subtitle_changed" >> "$GITHUB_OUTPUT"
 
   conformance:
     needs: classify
@@ -199,9 +200,9 @@ jobs:
           retention-days: 30
           path: bench/reviews/human-tranche-5/key.json
 
-  subtitle-mask-3:
+  subtitle-mask-4:
     needs: [classify, conformance]
-    if: ${{ needs.classify.outputs.sm3_changed == 'true' }}
+    if: ${{ needs.classify.outputs.subtitle_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -216,23 +217,23 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes ffmpeg
-      - name: Run focused SM2-versus-SM3 lecture gate
-        run: npm run --silent bench:subtitle-mask3
-      - name: Upload SM3 blind review and metrics
-        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-3/summary.json') != '' }}
+      - name: Run focused SM3-versus-SM4 lecture gate
+        run: npm run --silent bench:subtitle-mask4
+      - name: Upload SM4 blind review and metrics
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-4/summary.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: subtitle-mask-tranche-3-blind
+          name: subtitle-mask-tranche-4-blind
           if-no-files-found: error
           retention-days: 30
           path: |
-            bench/results/subtitle-mask-tranche-3
-            !bench/results/subtitle-mask-tranche-3/key.json
-      - name: Upload SM3 concealed key
-        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-3/key.json') != '' }}
+            bench/results/subtitle-mask-tranche-4
+            !bench/results/subtitle-mask-tranche-4/key.json
+      - name: Upload SM4 concealed key
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-4/key.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: subtitle-mask-tranche-3-key
+          name: subtitle-mask-tranche-4-key
           if-no-files-found: error
           retention-days: 30
-          path: bench/results/subtitle-mask-tranche-3/key.json
+          path: bench/results/subtitle-mask-tranche-4/key.json

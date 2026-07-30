@@ -28,12 +28,18 @@ command.
 - [x] Generate `V64-P256-HYPERREAL-CANDIDATE-3`, retaining the twelve anchors
   while adding dark navy, dark teal, warm skin, and neutral midtone utility
   colors to the 16-color prefix.
+- [x] Run the Candidate-3 missing-class, subtitle, compression, and blind-still
+  decision gate.
+- [x] Reject Candidate 3 as the frozen prefix while retaining it as the
+  chromatic benchmark for Candidate 4.
+- [ ] Generate Candidate 4 with a light-neutral utility replacing Candidate 3's
+  redundant extra warm-skin utility.
 - [ ] Freeze the palette as normative `V64-P256-1`.
 
-Palette blocker: candidate 3 is reproducible and registered, but the executable
-still defaults to `V64-P256-CANDIDATE-1`. Candidate 3 must clear the matched
-missing-class benchmark and blinded 60/80-column subtitle review before any
-normative palette change.
+Palette blocker: Candidate 3 improved general chromatic recognizability but its
+black-and-white tonal-separation score fell from 5/5 to 2/5. Candidate 1 remains
+the executable default. Candidate 4 must preserve the Hyper Real chromatic
+behavior while restoring a usable low-depth neutral ladder.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -99,8 +105,20 @@ normative palette change.
 - [x] Add matched candidate-1 / candidate-3 subtitle lanes at 60 and 80 columns.
 - [x] Add deterministic blind-code previews, public worksheets, and a concealed
   palette key.
-- [ ] Run and publish tranche-2 codec measurements and blinded recognizability
-  scoring before normative syntax, palette, or group-duration conclusions.
+- [x] Run and publish tranche-2 codec measurements: entropy pass 2 was selected
+  on all fourteen lanes and reduced raw DEFLATE from 174,666 to 147,912 bytes,
+  a 15.317% reduction.
+- [x] Publish the pre-key blind-still worksheet and decision report. Candidate 3
+  improved mean recognizability from 3.571 to 4.000 but failed the monochrome
+  hierarchy and produced no exact subtitle transcription at 60 or 80 columns.
+- [x] Retain two-second independent groups as the prototype default: 10.034%
+  smaller than one-second groups and 20.730% smaller than half-second groups.
+- [ ] Validate two-second seek behavior in the browser before freezing the group
+  duration; the worst hosted-runner lane reached 19.402 ms p95.
+- [ ] Emit anonymous motion clips from the blind-review apparatus so temporal
+  stability can be human-scored.
+- [ ] Add a subtitle-preserving renderer or grammar path; palette-only changes
+  did not make subtitles readable.
 
 ## Phase 2 — audio and finished container profile
 
@@ -149,12 +167,12 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Run `npm run preview:human2`, `npm run review:human2`, and
-`npm run bench:human2`; collect blinded scores without opening `key.json`; then
-publish the candidate-1 / candidate-3 size, temporal, recognizability, and
-subtitle-transcription results. Freeze no visual decision until that report is
-complete.
+Build Candidate 4 by replacing Candidate 3's extra warm-skin utility with a
+light neutral, extend the blind package to anonymous motion clips, and rerun the
+matched monochrome/depth/screen lanes. In parallel, prototype a subtitle-aware
+rendering path because increasing the grid from 60 to 80 columns did not yield
+an exact transcription.
 
-After the tranche-2 decision, resume AM1 as a separately testable audio
-pipeline: deterministic WAV fixtures, hysteretic silence segmentation,
-standard Opus packets, exact `SILN` spans, and sample-exact A/V synchronization.
+After that visual gate, resume AM1 as a separately testable audio pipeline:
+deterministic WAV fixtures, hysteretic silence segmentation, standard Opus
+packets, exact `SILN` spans, and sample-exact A/V synchronization.

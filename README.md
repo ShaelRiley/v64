@@ -4,6 +4,10 @@ V64 is a deliberately low-fidelity audiovisual container and glyph-video codec
 derived from Shael Riley's canonical **Video 64 Homebrew** alphabet in
 [ANSI Tube](https://github.com/ShaelRiley/ansi-tube).
 
+The authoritative living specification and implementation plan is the publicly
+viewable
+[V64 / Video64 Drop design document](https://docs.google.com/document/d/1qP6a9f6OSggPun4t1wATHRrC1yPgLngblZwlZdrk1Tg/edit?usp=sharing).
+
 This repository currently contains the executable Phase 1 proof codec. It is a
 real binary `.v64` implementation, not a mock UI:
 

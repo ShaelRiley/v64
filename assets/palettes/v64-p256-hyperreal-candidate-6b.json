@@ -1,0 +1,10 @@
+{
+  "id": "V64-P256-HYPERREAL-CANDIDATE-6B",
+  "status": "experimental-finalist-interpolation",
+  "source": {"repository":"ShaelRiley/ansi-tube","file":"core.js","blobSha":"29fd2065612454a66a92e431213731c41d5dc28c","palette":"hyperreal","anchorsSha256":"31c9a10ee942a10ce0d251dbe5b121cde724844d17e84f42fa247027a1345322","saturationGrade":1.6,"contrastGrade":1.12},
+  "interpolation": {"fractionFromTealToNavy":0.5,"tealEndpoint":[0,92,96],"navyEndpoint":[16,32,72],"darkChroma":[8,62,84]},
+  "prefix": {"sha256":"f60c17a1c2b5a318aaf4b29b8b50000c77eb7be02b05e30038bc9bc4ae302458","rationale":"Exact twelve Hyper Real anchors plus one constrained teal-to-navy dark-chroma interpolation and fixed dark, light, and middle neutral rungs."},
+  "generation": "Candidate-6 constrained prefix followed by ordered OKLab farthest-point sampling over the Hyper Real-graded 16^3 sRGB lattice",
+  "sha256": "149eb1c91fe9481606b43cb375473fead9f133941ff2de2168db6946b10ae71a",
+  "generatedColors": true
+}

@@ -35,15 +35,22 @@ command.
 - [x] Generate and register `V64-P256-HYPERREAL-CANDIDATE-4`, replacing
   Candidate 3's redundant extra warm-skin utility with light neutral
   `[224,224,224]`.
-- [ ] Run the matched Candidate-1/Candidate-4 visual and compression gate.
+- [x] Run the matched Candidate-1/Candidate-4 visual and compression gate.
+- [x] Reject Candidate 4 as the frozen prefix while retaining it as the strongest
+  chromatic and temporal benchmark.
+- [ ] Generate Candidate 5A/5B with dark neutral `[32,32,32]`, separately
+  sacrificing dark navy and dark teal.
 - [ ] Freeze the palette as normative `V64-P256-1`.
 
 Candidate 4 is deterministic: its 16-color prefix SHA-256 is
 `1e8997b6c6abb748df607bfe3156898a4fd6df547554b31cb150ce31c410bfd6`
 and its complete palette SHA-256 is
 `f683d64d46f95d5cd49638302eb18aeee7ac1684b2ad22b61ff7b4984c3ffd37`.
-Candidate 1 remains the executable default until Candidate 4 clears matched
-monochrome, depth, screen-capture, subtitle, temporal, and compression review.
+It improved mean recognizability from 4.000 to 4.429, separation from 3.571 to
+4.143, temporal stability from 3.429 to 4.000, and selected DEFLATE by 504 bytes
+(0.681%). Its monochrome separation improved over Candidate 3 from 2/5 to 3/5,
+but remained below Candidate 1's 5/5. Candidate 1 therefore remains the
+executable default.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -118,21 +125,32 @@ monochrome, depth, screen-capture, subtitle, temporal, and compression review.
 - [x] Retain two-second independent groups as the prototype default: 10.034%
   smaller than one-second groups and 20.730% smaller than half-second groups.
 - [ ] Validate two-second seek behavior in the browser before freezing the group
-  duration; the worst hosted-runner lane reached 19.402 ms p95.
+  duration; tranche 3 measured 6.008 ms median and 16.150 ms p95 on the hosted
+  runner.
 - [x] Emit fourteen anonymous motion clips under the established blind codes,
   plus a temporal worksheet and public motion manifest.
-- [ ] Collect pre-key human temporal-stability scores from those motion clips.
+- [x] Collect and publish pre-key human temporal-stability scores. Candidate 3
+  scored 4.000/5 versus Candidate 1's 3.429/5 despite a slightly worse automated
+  one-frame-reversion proxy.
 - [x] Prototype a bounded sparse `SM1` subtitle-mask plane with arbitrary 8×16
   masks, row-major delta positions, palette indices, strict progress, exact
   rasterization, and damaged-stream rejection.
-- [ ] Integrate the subtitle-mask plane into decoded previews and entropy
-  accounting, then test exact transcription at 60 and 80 columns.
+- [x] Integrate SM1 into decoded previews and byte accounting, then perform a
+  segregated blind base-versus-SM1 motion review.
+- [x] Demonstrate exact 60-column transcription: base 0/4 versus SM1 4/4.
+- [x] Measure the current SM1 side-plane cost: 108,823 raw-DEFLATE bytes across
+  sixteen lane-seconds, or 54.412 kbit/s.
+- [x] Reject the broad SM1 extractor and per-frame framing as normative while
+  retaining exact arbitrary-mask semantics as a research primitive.
+- [ ] Build SM2 with subtitle-region selectivity, repeat-plane spans, cell-delta
+  coding, and total-V64-byte accounting.
 
-Clean GitHub Actions run `30574053284` at head `1b9280dc9bd77fdf1b4c250b741d13b642560f57`
-passed all tests, regenerated Candidate 4, rendered all fourteen motion previews,
-built all fourteen anonymous review clips, completed the entropy benchmark, and
-uploaded segregated blind/key artifacts. Inspection of the blind artifact found
-zero copies of `key.json`.
+Clean GitHub Actions run `30584192835` at code head
+`7b7b9779c4280d1618186dea01336bca85f76649` passed all conformance tests,
+regenerated Candidates 2–4, completed the Candidate-4 matched benchmark, built
+both blinded review packages, and uploaded all four blind/key artifacts
+separately. Candidate-4 entropy selection reduced raw DEFLATE from 174,202 to
+147,582 bytes (15.281%) and selected entropy pass 2 on all fourteen lanes.
 
 ## Phase 2 — audio and finished container profile
 
@@ -181,12 +199,12 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Build a matched Candidate-1/Candidate-4 corpus for monochrome, depth, screen
-capture, and subtitle scenes. Score the anonymous motion clips before consulting
-the concealed key. Integrate the sparse subtitle-mask plane into decoded preview
-and entropy measurement, then compare its byte overhead against exact subtitle
-transcription at 60 and 80 columns.
+Generate Candidate 5A and 5B by adding dark neutral `[32,32,32]` while
+separately sacrificing dark navy and dark teal; run a compact matched
+monochrome/depth/screen ablation against Candidate 1 and Candidate 4. In
+parallel, build SM2 around subtitle-region selectivity before adding temporal
+repeat and cell-delta syntax.
 
-After that visual gate, resume AM1 as a separately testable audio pipeline:
+After those visual gates, resume AM1 as a separately testable audio pipeline:
 deterministic WAV fixtures, hysteretic silence segmentation, standard Opus
 packets, exact `SILN` spans, and sample-exact A/V synchronization.

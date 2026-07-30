@@ -32,14 +32,18 @@ command.
   decision gate.
 - [x] Reject Candidate 3 as the frozen prefix while retaining it as the
   chromatic benchmark for Candidate 4.
-- [ ] Generate Candidate 4 with a light-neutral utility replacing Candidate 3's
-  redundant extra warm-skin utility.
+- [x] Generate and register `V64-P256-HYPERREAL-CANDIDATE-4`, replacing
+  Candidate 3's redundant extra warm-skin utility with light neutral
+  `[224,224,224]`.
+- [ ] Run the matched Candidate-1/Candidate-4 visual and compression gate.
 - [ ] Freeze the palette as normative `V64-P256-1`.
 
-Palette blocker: Candidate 3 improved general chromatic recognizability but its
-black-and-white tonal-separation score fell from 5/5 to 2/5. Candidate 1 remains
-the executable default. Candidate 4 must preserve the Hyper Real chromatic
-behavior while restoring a usable low-depth neutral ladder.
+Candidate 4 is deterministic: its 16-color prefix SHA-256 is
+`1e8997b6c6abb748df607bfe3156898a4fd6df547554b31cb150ce31c410bfd6`
+and its complete palette SHA-256 is
+`f683d64d46f95d5cd49638302eb18aeee7ac1684b2ad22b61ff7b4984c3ffd37`.
+Candidate 1 remains the executable default until Candidate 4 clears matched
+monochrome, depth, screen-capture, subtitle, temporal, and compression review.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -115,10 +119,20 @@ behavior while restoring a usable low-depth neutral ladder.
   smaller than one-second groups and 20.730% smaller than half-second groups.
 - [ ] Validate two-second seek behavior in the browser before freezing the group
   duration; the worst hosted-runner lane reached 19.402 ms p95.
-- [ ] Emit anonymous motion clips from the blind-review apparatus so temporal
-  stability can be human-scored.
-- [ ] Add a subtitle-preserving renderer or grammar path; palette-only changes
-  did not make subtitles readable.
+- [x] Emit fourteen anonymous motion clips under the established blind codes,
+  plus a temporal worksheet and public motion manifest.
+- [ ] Collect pre-key human temporal-stability scores from those motion clips.
+- [x] Prototype a bounded sparse `SM1` subtitle-mask plane with arbitrary 8×16
+  masks, row-major delta positions, palette indices, strict progress, exact
+  rasterization, and damaged-stream rejection.
+- [ ] Integrate the subtitle-mask plane into decoded previews and entropy
+  accounting, then test exact transcription at 60 and 80 columns.
+
+Clean GitHub Actions run `30574053284` at head `1b9280dc9bd77fdf1b4c250b741d13b642560f57`
+passed all tests, regenerated Candidate 4, rendered all fourteen motion previews,
+built all fourteen anonymous review clips, completed the entropy benchmark, and
+uploaded segregated blind/key artifacts. Inspection of the blind artifact found
+zero copies of `key.json`.
 
 ## Phase 2 — audio and finished container profile
 
@@ -167,11 +181,11 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Build Candidate 4 by replacing Candidate 3's extra warm-skin utility with a
-light neutral, extend the blind package to anonymous motion clips, and rerun the
-matched monochrome/depth/screen lanes. In parallel, prototype a subtitle-aware
-rendering path because increasing the grid from 60 to 80 columns did not yield
-an exact transcription.
+Build a matched Candidate-1/Candidate-4 corpus for monochrome, depth, screen
+capture, and subtitle scenes. Score the anonymous motion clips before consulting
+the concealed key. Integrate the sparse subtitle-mask plane into decoded preview
+and entropy measurement, then compare its byte overhead against exact subtitle
+transcription at 60 and 80 columns.
 
 After that visual gate, resume AM1 as a separately testable audio pipeline:
 deterministic WAV fixtures, hysteretic silence segmentation, standard Opus

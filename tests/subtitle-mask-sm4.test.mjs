@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { encodeSubtitleMaskSequence } from "../prototype/js/subtitle-mask-sm2.mjs";
+import {
+  decodeSubtitleMaskSequence,
+  encodeSubtitleMaskSequence
+} from "../prototype/js/subtitle-mask-sm2.mjs";
 import { stabilizeSubtitlePlane } from "../prototype/js/subtitle-mask-sm4.mjs";
 
 const MASK_A = Buffer.from([
@@ -49,6 +52,9 @@ test("SM4 creates one stable consensus plane and repeatable sequence", () => {
     paletteDepth: 2
   });
   assert.ok(encoded.includes(0x00), "stable sequence should contain a repeat opcode");
+  const decoded = decodeSubtitleMaskSequence(encoded);
+  assert.deepEqual(plain(decoded.frames), plain(result.frames));
+  assert.equal(decoded.frameCount, result.frames.length);
 });
 
 test("SM4 removes transient cells and chooses modal palette pair", () => {

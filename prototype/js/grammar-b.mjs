@@ -1,7 +1,7 @@
 import { LIMITS } from "./constants.mjs";
 import { decodeVarUint, encodeVarUint } from "./varint.mjs";
 
-export const GRAMMAR_B_VERSION = 1;
+export const GRAMMAR_B_VERSION = 2;
 
 export const PACKED_OPCODE = Object.freeze({
   END: 0,
@@ -11,7 +11,11 @@ export const PACKED_OPCODE = Object.freeze({
   SET_GLYPH: 4,
   SET_FOREGROUND: 5,
   SET_BACKGROUND: 6,
-  SET_COLOR_PAIR: 7
+  SET_COLOR_PAIR: 7,
+  REPEAT_GLYPH: 8,
+  REPEAT_FOREGROUND: 9,
+  REPEAT_BACKGROUND: 10,
+  REPEAT_COLOR_PAIR: 11
 });
 
 const OPCODE_NAMES = Object.freeze(
@@ -75,20 +79,84 @@ function changeKind(current, previous, cell) {
   return glyph || foreground || background ? "LITERAL" : "SKIP";
 }
 
-function countEqualTokens(current, previous, start, cellCount, keyframe) {
+function countEqualTokens(current, start, cellCount) {
   const offset = start * 3;
   let count = 1;
   while (start + count < cellCount &&
-      equalToken(current, offset, current, (start + count) * 3) &&
-      (keyframe || !equalToken(current, (start + count) * 3, previous, (start + count) * 3))) {
-    count += 1;
-  }
+      equalToken(current, offset, current, (start + count) * 3)) count += 1;
   return count;
 }
 
+function varUintLength(value) {
+  if (value < 0x80) return 1;
+  if (value < 0x4000) return 2;
+  if (value < 0x20_0000) return 3;
+  if (value < 0x1000_0000) return 4;
+  return 5;
+}
+
+function componentCommand(current, previous, cell) {
+  const offset = cell * 3;
+  const op = changeKind(current, previous, cell);
+  if (op === "SET_GLYPH") return { op, value: current[offset] };
+  if (op === "SET_FOREGROUND") return { op, value: current[offset + 1] };
+  if (op === "SET_BACKGROUND") return { op, value: current[offset + 2] };
+  if (op === "SET_COLOR_PAIR") {
+    return { op, foreground: current[offset + 1], background: current[offset + 2] };
+  }
+  return null;
+}
+
+function equalComponentCommand(a, b) {
+  return a?.op === b?.op &&
+    a?.value === b?.value &&
+    a?.foreground === b?.foreground &&
+    a?.background === b?.background;
+}
+
+function repeatComponentOp(op) {
+  if (op === "SET_GLYPH") return "REPEAT_GLYPH";
+  if (op === "SET_FOREGROUND") return "REPEAT_FOREGROUND";
+  if (op === "SET_BACKGROUND") return "REPEAT_BACKGROUND";
+  if (op === "SET_COLOR_PAIR") return "REPEAT_COLOR_PAIR";
+  throw new Error(`No repeat form for ${op}`);
+}
+
+function componentRunLength(current, previous, start, cellCount, command) {
+  let count = 1;
+  while (start + count < cellCount &&
+      equalComponentCommand(componentCommand(current, previous, start + count), command)) count += 1;
+  return count;
+}
+
+function componentPayloadBytes(op, paletteBits) {
+  if (op === "SET_GLYPH" || op === "REPEAT_GLYPH") return 1;
+  if (op === "SET_COLOR_PAIR" || op === "REPEAT_COLOR_PAIR") return Math.ceil(2 * paletteBits / 8);
+  return Math.ceil(paletteBits / 8);
+}
+
+const COMMAND_PRIORITY = Object.freeze({
+  SKIP: 0,
+  REPEAT_GLYPH: 1,
+  REPEAT_FOREGROUND: 1,
+  REPEAT_BACKGROUND: 1,
+  REPEAT_COLOR_PAIR: 1,
+  REPEAT_TOKEN: 2,
+  SET_GLYPH: 3,
+  SET_FOREGROUND: 3,
+  SET_BACKGROUND: 3,
+  SET_COLOR_PAIR: 3,
+  LITERAL: 4
+});
+
 export function buildCommandTrace(currentInput, previousInput, options) {
-  const { columns, rows, paletteDepth, keyframe = !previousInput } = options;
+  const {
+    columns, rows, paletteDepth, keyframe = !previousInput, maxLiteralRun = 64
+  } = options;
   const cellCount = checkedGrid(columns, rows);
+  if (!Number.isInteger(maxLiteralRun) || maxLiteralRun < 1 || maxLiteralRun > 1024) {
+    throw new RangeError("maxLiteralRun must be an integer from 1 through 1024");
+  }
   const current = Uint8Array.from(currentInput);
   if (current.length !== cellCount * 3) throw new RangeError("Current cell-state length mismatch");
   const previous = keyframe ? new Uint8Array(current.length) : Uint8Array.from(previousInput || []);
@@ -97,74 +165,96 @@ export function buildCommandTrace(currentInput, previousInput, options) {
   }
   for (let cell = 0; cell < cellCount; cell += 1) validateToken(tokenAt(current, cell), paletteDepth);
 
-  const commands = [];
-  let cell = 0;
-  while (cell < cellCount) {
+  const paletteBits = paletteIndexBits(paletteDepth);
+  const tokenBits = 6 + 2 * paletteBits;
+  const bestCost = new Float64Array(cellCount + 1);
+  bestCost.fill(Number.POSITIVE_INFINITY);
+  bestCost[cellCount] = 1;
+  const choices = new Array(cellCount);
+  const consider = (cell, candidate) => {
+    const total = candidate.byteCost + bestCost[cell + candidate.count];
+    const selected = choices[cell];
+    const selectedTotal = selected
+      ? selected.byteCost + bestCost[cell + selected.count]
+      : Number.POSITIVE_INFINITY;
+    const better = total < selectedTotal ||
+      (total === selectedTotal && candidate.count > (selected?.count || 0)) ||
+      (total === selectedTotal && candidate.count === selected?.count &&
+        COMMAND_PRIORITY[candidate.op] < COMMAND_PRIORITY[selected.op]);
+    if (better) {
+      choices[cell] = candidate;
+      bestCost[cell] = total;
+    }
+  };
+
+  for (let cell = cellCount - 1; cell >= 0; cell -= 1) {
     const offset = cell * 3;
     const unchanged = keyframe ? isVoidToken(current, offset) : equalToken(current, offset, previous, offset);
     if (unchanged) {
-      const startCell = cell;
-      cell += 1;
-      while (cell < cellCount) {
-        const at = cell * 3;
+      let count = 1;
+      while (cell + count < cellCount) {
+        const at = (cell + count) * 3;
         const same = keyframe ? isVoidToken(current, at) : equalToken(current, at, previous, at);
         if (!same) break;
-        cell += 1;
+        count += 1;
       }
-      commands.push({ op: "SKIP", startCell, count: cell - startCell });
-      continue;
+      consider(cell, { op: "SKIP", count, byteCost: 1 + varUintLength(count) });
     }
 
-    const repeat = countEqualTokens(current, previous, cell, cellCount, keyframe);
-    if (repeat >= 3) {
-      commands.push({ op: "REPEAT_TOKEN", startCell: cell, count: repeat, token: tokenAt(current, cell) });
-      cell += repeat;
-      continue;
+    const maximumLiteral = Math.min(maxLiteralRun, cellCount - cell);
+    for (let count = 1; count <= maximumLiteral; count += 1) {
+      consider(cell, {
+        op: "LITERAL",
+        count,
+        byteCost: 1 + varUintLength(count) + Math.ceil(count * tokenBits / 8)
+      });
+    }
+
+    const tokenRepeat = countEqualTokens(current, cell, cellCount);
+    if (tokenRepeat >= 2) {
+      consider(cell, {
+        op: "REPEAT_TOKEN",
+        count: tokenRepeat,
+        token: tokenAt(current, cell),
+        byteCost: 1 + varUintLength(tokenRepeat) + Math.ceil(tokenBits / 8)
+      });
     }
 
     if (!keyframe) {
-      const kind = changeKind(current, previous, cell);
-      if (kind === "SET_GLYPH") {
-        commands.push({ op: kind, startCell: cell, value: current[offset] });
-        cell += 1;
-        continue;
-      }
-      if (kind === "SET_FOREGROUND") {
-        commands.push({ op: kind, startCell: cell, value: current[offset + 1] });
-        cell += 1;
-        continue;
-      }
-      if (kind === "SET_BACKGROUND") {
-        commands.push({ op: kind, startCell: cell, value: current[offset + 2] });
-        cell += 1;
-        continue;
-      }
-      if (kind === "SET_COLOR_PAIR") {
-        commands.push({
-          op: kind,
-          startCell: cell,
-          foreground: current[offset + 1],
-          background: current[offset + 2]
+      const component = componentCommand(current, previous, cell);
+      if (component) {
+        consider(cell, {
+          ...component,
+          count: 1,
+          byteCost: 1 + componentPayloadBytes(component.op, paletteBits)
         });
-        cell += 1;
-        continue;
+        const count = componentRunLength(current, previous, cell, cellCount, component);
+        if (count >= 2) {
+          const op = repeatComponentOp(component.op);
+          consider(cell, {
+            ...component,
+            op,
+            count,
+            byteCost: 1 + varUintLength(count) + componentPayloadBytes(op, paletteBits)
+          });
+        }
       }
     }
-
-    const startCell = cell;
-    const tokens = [tokenAt(current, cell)];
-    cell += 1;
-    while (cell < cellCount) {
-      const at = cell * 3;
-      const same = keyframe ? isVoidToken(current, at) : equalToken(current, at, previous, at);
-      if (same || countEqualTokens(current, previous, cell, cellCount, keyframe) >= 3) break;
-      if (!keyframe && changeKind(current, previous, cell) !== "LITERAL") break;
-      tokens.push(tokenAt(current, cell));
-      cell += 1;
-    }
-    commands.push({ op: "LITERAL", startCell, count: tokens.length, tokens });
+    if (!choices[cell]) throw new Error("Command optimizer failed to make progress");
   }
-  commands.push({ op: "END", startCell: cell, count: 0 });
+
+  const commands = [];
+  for (let cell = 0; cell < cellCount;) {
+    const selected = choices[cell];
+    const command = { ...selected, startCell: cell };
+    delete command.byteCost;
+    if (command.op === "LITERAL") {
+      command.tokens = Array.from({ length: command.count }, (_, index) => tokenAt(current, cell + index));
+    }
+    commands.push(command);
+    cell += command.count;
+  }
+  commands.push({ op: "END", startCell: cellCount, count: 0 });
   return {
     grammar: "V64-GRAMMAR-B",
     version: GRAMMAR_B_VERSION,
@@ -172,8 +262,11 @@ export function buildCommandTrace(currentInput, previousInput, options) {
     rows,
     cellCount,
     paletteDepth,
-    paletteBits: paletteIndexBits(paletteDepth),
+    paletteBits,
     keyframe: Boolean(keyframe),
+    parser: "bounded-dynamic-programming",
+    maxLiteralRun,
+    packedByteCost: bestCost[0],
     commands
   };
 }
@@ -255,12 +348,16 @@ export function encodePackedCommands(trace) {
       if (!command.count) throw new Error("Malformed repeated-token trace");
       pushVar(parts, command.count);
       parts.push(packedTokens([command.token], paletteBits, trace.paletteDepth));
-    } else if (command.op === "SET_GLYPH") {
+    } else if (command.op === "SET_GLYPH" || command.op === "REPEAT_GLYPH") {
+      if (command.op === "REPEAT_GLYPH") pushVar(parts, command.count);
       parts.push(packFields([{ value: command.value, width: 6 }]));
-    } else if (command.op === "SET_FOREGROUND" || command.op === "SET_BACKGROUND") {
+    } else if (command.op === "SET_FOREGROUND" || command.op === "SET_BACKGROUND" ||
+        command.op === "REPEAT_FOREGROUND" || command.op === "REPEAT_BACKGROUND") {
+      if (command.op.startsWith("REPEAT_")) pushVar(parts, command.count);
       if (command.value >= trace.paletteDepth) throw new RangeError("Palette index exceeds declared depth");
       parts.push(packFields([{ value: command.value, width: paletteBits }]));
-    } else if (command.op === "SET_COLOR_PAIR") {
+    } else if (command.op === "SET_COLOR_PAIR" || command.op === "REPEAT_COLOR_PAIR") {
+      if (command.op === "REPEAT_COLOR_PAIR") pushVar(parts, command.count);
       if (command.foreground >= trace.paletteDepth || command.background >= trace.paletteDepth) {
         throw new RangeError("Palette index exceeds declared depth");
       }
@@ -368,28 +465,34 @@ export function parsePackedCommands(commandInput, options) {
       continue;
     }
 
-    const widths = op === "SET_GLYPH" ? [6] :
-      (op === "SET_COLOR_PAIR" ? [paletteBits, paletteBits] : [paletteBits]);
+    const repeatingComponent = op === "REPEAT_GLYPH" ||
+      op === "REPEAT_FOREGROUND" ||
+      op === "REPEAT_BACKGROUND" ||
+      op === "REPEAT_COLOR_PAIR";
+    const count = repeatingComponent ? readVar() : { value: 1, bytes: 0 };
+    const glyphComponent = op === "SET_GLYPH" || op === "REPEAT_GLYPH";
+    const pairComponent = op === "SET_COLOR_PAIR" || op === "REPEAT_COLOR_PAIR";
+    const widths = glyphComponent ? [6] : (pairComponent ? [paletteBits, paletteBits] : [paletteBits]);
     const packed = readPacked(widths);
-    if (cursor >= cellCount) throw new Error("Packed component command advances beyond grid");
+    if (cursor + count.value > cellCount) throw new Error("Packed component command advances beyond grid");
     const values = packed.values;
-    if (op !== "SET_GLYPH" && values.some((value) => value >= paletteDepth)) {
+    if (!glyphComponent && values.some((value) => value >= paletteDepth)) {
       throw new Error("Palette index exceeds declared depth");
     }
     push({
       op,
       startCell: cursor,
-      count: 1,
-      ...(op === "SET_COLOR_PAIR"
+      count: count.value,
+      ...(pairComponent
         ? { foreground: values[0], background: values[1] }
         : { value: values[0] }),
       byteStart,
       byteLength: offset - byteStart,
       opcodeBytes: 1,
-      countBytes: 0,
+      countBytes: count.bytes,
       payloadBytes: packed.bytes
     });
-    cursor += 1;
+    cursor += count.value;
   }
 
   if (!ended) throw new Error("Packed command stream has no END");
@@ -426,13 +529,18 @@ export function applyPackedCommands(commandBytes, priorInput, options) {
         state.set(command.token, (command.startCell + index) * 3);
       }
     } else {
-      const offset = command.startCell * 3;
-      if (command.op === "SET_GLYPH") state[offset] = command.value;
-      else if (command.op === "SET_FOREGROUND") state[offset + 1] = command.value;
-      else if (command.op === "SET_BACKGROUND") state[offset + 2] = command.value;
-      else if (command.op === "SET_COLOR_PAIR") {
-        state[offset + 1] = command.foreground;
-        state[offset + 2] = command.background;
+      for (let index = 0; index < command.count; index += 1) {
+        const offset = (command.startCell + index) * 3;
+        if (command.op === "SET_GLYPH" || command.op === "REPEAT_GLYPH") {
+          state[offset] = command.value;
+        } else if (command.op === "SET_FOREGROUND" || command.op === "REPEAT_FOREGROUND") {
+          state[offset + 1] = command.value;
+        } else if (command.op === "SET_BACKGROUND" || command.op === "REPEAT_BACKGROUND") {
+          state[offset + 2] = command.value;
+        } else if (command.op === "SET_COLOR_PAIR" || command.op === "REPEAT_COLOR_PAIR") {
+          state[offset + 1] = command.foreground;
+          state[offset + 2] = command.background;
+        }
       }
     }
   }

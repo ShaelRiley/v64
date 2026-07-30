@@ -11,12 +11,28 @@ const DEFINITIONS = Object.freeze([
     id: "V64-P256-HYPERREAL-CANDIDATE-2",
     rgb: "../../assets/palettes/v64-p256-hyperreal-candidate-2.rgb",
     json: "../../assets/palettes/v64-p256-hyperreal-candidate-2.json"
+  },
+  {
+    id: "V64-P256-HYPERREAL-CANDIDATE-3",
+    json: "../../assets/palettes/v64-p256-hyperreal-candidate-3.json"
   }
 ]);
 
+function inlinePaletteBytes(metadata, definition) {
+  if (!Array.isArray(metadata.colors) || metadata.colors.length !== 256 ||
+      metadata.colors.some((color) =>
+        !Array.isArray(color) || color.length !== 3 ||
+        color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255))) {
+    throw new Error(`Invalid inline V64 palette colors ${definition.id}`);
+  }
+  return Buffer.from(metadata.colors.flat());
+}
+
 function load(definition) {
-  const bytes = readFileSync(new URL(definition.rgb, import.meta.url));
   const metadata = JSON.parse(readFileSync(new URL(definition.json, import.meta.url), "utf8"));
+  const bytes = definition.rgb
+    ? readFileSync(new URL(definition.rgb, import.meta.url))
+    : inlinePaletteBytes(metadata, definition);
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   if (bytes.length !== 768 || metadata.colors?.length !== 256 ||
       metadata.id !== definition.id || metadata.sha256 !== sha256) {

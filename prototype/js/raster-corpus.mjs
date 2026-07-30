@@ -11,13 +11,52 @@ import { STRUCTURAL_CLASSES } from "./corpus-fixtures.mjs";
 import {
   PALETTE_ASSET_IDS, paletteAssetFromId
 } from "./palette-registry.mjs";
+import {
+  GENERATED_RASTER_SOURCE_IDS, generatedRasterSourceFromId
+} from "./generated-raster-sources.mjs";
 
 export const RASTER_CORPUS_MANIFEST_VERSION = "V64-RASTER-CORPUS-MANIFEST-1";
 const ALLOWED_LICENSES = new Set(["CC0-1.0", "CC-BY-3.0", "CC-BY-4.0", "Public-Domain"]);
+const SOURCE_KINDS = new Set(["local-file", "local-still", "generated-plate"]);
 
 function assertObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError(`${label} must be an object`);
+  }
+}
+
+function validateSource(source, entryId) {
+  assertObject(source, `Source for ${entryId}`);
+  if (!SOURCE_KINDS.has(source.kind) ||
+      !/^[0-9a-f]{64}$/.test(source.sha256 || "") ||
+      typeof source.origin !== "string" ||
+      !ALLOWED_LICENSES.has(source.license)) {
+    throw new Error(`Unverifiable raster source metadata for ${entryId}`);
+  }
+  if ((source.kind === "local-file" || source.kind === "local-still") &&
+      typeof source.path !== "string") {
+    throw new Error(`Raster source path is missing for ${entryId}`);
+  }
+  if (source.kind === "generated-plate" &&
+      !GENERATED_RASTER_SOURCE_IDS.includes(source.generatorId)) {
+    throw new Error(`Unknown generated raster source for ${entryId}`);
+  }
+  if (source.kind === "local-still" || source.kind === "generated-plate") {
+    if (!Number.isFinite(source.framerate) || source.framerate <= 0 || source.framerate > 120 ||
+        typeof source.videoFilter !== "string" || !source.videoFilter.trim() ||
+        /[\r\n]/.test(source.videoFilter)) {
+      throw new Error(`Invalid deterministic still treatment for ${entryId}`);
+    }
+  }
+}
+
+function validateReview(review, entryId) {
+  if (review === undefined) return;
+  assertObject(review, `Review metadata for ${entryId}`);
+  if (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(review.group || "") ||
+      !Array.isArray(review.questions) || !review.questions.length ||
+      review.questions.some((question) => typeof question !== "string" || !question.trim())) {
+    throw new Error(`Invalid blind-review metadata for ${entryId}`);
   }
 }
 
@@ -53,14 +92,8 @@ export function validateRasterCorpusManifest(input) {
             typeof item !== "string" || !item.trim()))) {
       throw new Error(`Invalid recognizability targets for ${entry.id}`);
     }
-    assertObject(entry.source, `Source for ${entry.id}`);
-    if (entry.source.kind !== "local-file" ||
-        typeof entry.source.path !== "string" ||
-        !/^[0-9a-f]{64}$/.test(entry.source.sha256 || "") ||
-        typeof entry.source.origin !== "string" ||
-        !ALLOWED_LICENSES.has(entry.source.license)) {
-      throw new Error(`Unverifiable raster source metadata for ${entry.id}`);
-    }
+    validateSource(entry.source, entry.id);
+    validateReview(entry.review, entry.id);
     assertObject(entry.grid, `Grid for ${entry.id}`);
     const { columns, rows } = entry.grid;
     if (!Number.isInteger(columns) || !Number.isInteger(rows) ||
@@ -90,8 +123,9 @@ export function validateRasterCorpusManifest(input) {
   return structuredClone(input);
 }
 
-function runFfmpeg(args) {
+function runFfmpeg(args, input = null) {
   const result = spawnSync("ffmpeg", args, {
+    input,
     encoding: null,
     maxBuffer: 1024 * 1024 * 1024
   });
@@ -102,8 +136,46 @@ function runFfmpeg(args) {
   return result.stdout;
 }
 
-function sourceHash(path) {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
+function sourceMaterial(source, baseDirectory) {
+  if (source.kind === "generated-plate") {
+    const generated = generatedRasterSourceFromId(source.generatorId);
+    return {
+      path: null,
+      identity: `generated:${generated.id}`,
+      bytes: generated.bytes,
+      sha256: generated.sha256
+    };
+  }
+  const path = resolve(baseDirectory, source.path);
+  const bytes = readFileSync(path);
+  return {
+    path,
+    identity: source.path,
+    bytes: null,
+    sha256: createHash("sha256").update(bytes).digest("hex")
+  };
+}
+
+function sourceInputArguments(source, sourcePath) {
+  if (source.kind === "generated-plate") {
+    return [
+      "-loop", "1",
+      "-framerate", String(source.framerate),
+      "-f", "image2pipe",
+      "-vcodec", "ppm",
+      "-i", "pipe:0"
+    ];
+  }
+  if (source.kind === "local-still") {
+    return ["-loop", "1", "-framerate", String(source.framerate), "-i", sourcePath];
+  }
+  return ["-i", sourcePath];
+}
+
+function sourceFilters(source) {
+  return source.kind === "local-still" || source.kind === "generated-plate"
+    ? [source.videoFilter]
+    : [];
 }
 
 function temporalCellMetrics(frames) {
@@ -155,8 +227,8 @@ function temporalCellMetrics(frames) {
 export function analyzeRasterEntry(entry, options = {}) {
   const started = performance.now();
   const baseDirectory = resolve(options.baseDirectory || process.cwd());
-  const sourcePath = resolve(baseDirectory, entry.source.path);
-  const actualHash = sourceHash(sourcePath);
+  const material = sourceMaterial(entry.source, baseDirectory);
+  const actualHash = material.sha256;
   if (actualHash !== entry.source.sha256) {
     throw new Error(`Raster source hash mismatch for ${entry.id}`);
   }
@@ -164,16 +236,21 @@ export function analyzeRasterEntry(entry, options = {}) {
   const paletteAsset = paletteAssetFromId(entry.paletteAsset);
   const proxyWidth = entry.grid.columns * 4;
   const proxyHeight = entry.grid.rows * 8;
+  const filters = [
+    ...sourceFilters(entry.source),
+    `fps=${cadence.numerator}/${cadence.denominator}`,
+    `scale=${proxyWidth}:${proxyHeight}:flags=area`
+  ];
   const raw = runFfmpeg([
     "-v", "error",
-    "-i", sourcePath,
+    ...sourceInputArguments(entry.source, material.path),
     "-t", String(entry.maximumSeconds),
-    "-vf", `fps=${cadence.numerator}/${cadence.denominator},scale=${proxyWidth}:${proxyHeight}:flags=area`,
+    "-vf", filters.join(","),
     "-an",
     "-pix_fmt", "rgba",
     "-f", "rawvideo",
     "pipe:1"
-  ]);
+  ], material.bytes);
   const frameBytes = proxyWidth * proxyHeight * 4;
   if (!raw.length || raw.length % frameBytes) {
     throw new Error(`FFmpeg returned a truncated raster stream for ${entry.id}`);
@@ -198,17 +275,26 @@ export function analyzeRasterEntry(entry, options = {}) {
   return {
     entry: {
       ...entry,
-      generator: "ffmpeg-raster-ingest-v1",
+      generator: entry.source.kind === "generated-plate"
+        ? "generated-ppm-and-ffmpeg-treatment-v1"
+        : entry.source.kind === "local-still"
+          ? "ffmpeg-hash-validated-still-treatment-v1"
+          : "ffmpeg-raster-ingest-v1",
       paletteAsset: paletteAsset.id,
       paletteSha256: paletteAsset.sha256,
       provenance: {
         creator: entry.source.origin,
-        method: "hash-validated local raster decoded through FFmpeg",
+        method: entry.source.kind === "generated-plate"
+          ? "hash-validated generated source plate with deterministic FFmpeg treatment"
+          : entry.source.kind === "local-still"
+            ? "hash-validated local source plate with deterministic FFmpeg treatment"
+            : "hash-validated local raster decoded through FFmpeg",
         license: entry.source.license
       }
     },
     frames,
-    sourcePath,
+    sourcePath: material.path,
+    sourceIdentity: material.identity,
     sourceSha256: actualHash,
     analysisMetrics: {
       milliseconds: Number((performance.now() - started).toFixed(3)),
@@ -234,7 +320,8 @@ export function benchmarkRasterCorpus(manifestInput, options = {}) {
     ...report,
     rasterSources: analyzed.map((fixture) => ({
       id: fixture.entry.id,
-      path: fixture.entry.source.path,
+      kind: fixture.entry.source.kind,
+      path: fixture.sourceIdentity,
       sha256: fixture.sourceSha256,
       origin: fixture.entry.source.origin,
       license: fixture.entry.source.license,

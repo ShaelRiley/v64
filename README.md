@@ -30,15 +30,17 @@ real binary `.v64` implementation, not a mock UI:
 - a provenance-validated, deterministic structural seed corpus spanning eleven
   visual classes and a two-pass static-byte entropy parser with actual-DEFLATE
   candidate selection;
-- a hash-validated FFmpeg raster-corpus path and a reproducible Hyper
-  Real-derived 256-color palette candidate preserving ANSI Tube's exact
-  saturated anchors;
-- an original CC0 human-content tranche with palette A/B previews, temporal
-  metrics, independent-group seek/size sweeps, and measured entropy selection;
+- hash-validated FFmpeg raster-corpus paths, including deterministic source-plate
+  treatments that avoid opaque derived-video fixtures;
+- reproducible Hyper Real-derived 256-color palette candidates preserving ANSI
+  Tube's exact saturated anchors;
+- original CC0 human-content tranches with matched palette previews, temporal
+  metrics, independent-group seek/size sweeps, 60/80-column subtitle lanes, and
+  deterministic blinded-review worksheets;
 - Node conformance tests and golden hashes.
 
-Audio Opus, Rust, ANSI Drop's desktop shell, the native player, and VLC modules
-are staged in the ledger rather than represented as finished.
+Audio Opus, Rust, Video64 Drop's desktop shell, the native player, and VLC
+modules are staged in the ledger rather than represented as finished.
 
 ## Requirements
 
@@ -59,8 +61,12 @@ npm run bench:commands
 npm run bench:corpus
 npm run bench:raster
 npm run corpus:visual
+npm run corpus:missing-classes
 npm run preview:human
 npm run bench:human
+npm run preview:human2
+npm run review:human2
+npm run bench:human2
 npm run palette:hyperreal
 ```
 
@@ -102,11 +108,13 @@ syntax, validation rules, and measured iterations. The seed-corpus manifest is
 
 The first file-backed raster-ingest result is
 [`bench/RASTER_TRANCHE_0.md`](bench/RASTER_TRANCHE_0.md). Palette direction,
-provenance, and the experimental Hyper Real-derived candidate are documented in
-[`spec/V64-palette-research.md`](spec/V64-palette-research.md).
+provenance, and the experimental Hyper Real-derived candidates are documented
+in [`spec/V64-palette-research.md`](spec/V64-palette-research.md).
 The first original human-content measurement, including the palette and group
 duration decisions it does and does not support, is
 [`bench/HUMAN_RASTER_TRANCHE_1.md`](bench/HUMAN_RASTER_TRANCHE_1.md).
+The missing-class, candidate-3, subtitle-resolution, and blinded-review tranche
+is [`bench/HUMAN_RASTER_TRANCHE_2.md`](bench/HUMAN_RASTER_TRANCHE_2.md).
 
 See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for verified status,
 blockers, and the next concrete step. See

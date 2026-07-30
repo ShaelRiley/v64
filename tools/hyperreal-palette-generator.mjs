@@ -18,11 +18,23 @@ export const HYPERREAL_ANCHORS = Object.freeze([
   [240, 200, 160]
 ]);
 
-const NEUTRAL_COMPLETION = Object.freeze([
+const CANDIDATE_2_NEUTRAL_COMPLETION = Object.freeze([
   [32, 32, 32],
   [96, 96, 96],
   [160, 160, 160],
   [224, 224, 224]
+]);
+
+export const HYPERREAL_CANDIDATE_3_UTILITY = Object.freeze([
+  [16, 32, 72],
+  [0, 92, 96],
+  [178, 112, 72],
+  [112, 112, 112]
+]);
+
+export const HYPERREAL_CANDIDATE_3_PREFIX = Object.freeze([
+  ...HYPERREAL_ANCHORS,
+  ...HYPERREAL_CANDIDATE_3_UTILITY
 ]);
 
 function clamp(value) {
@@ -74,11 +86,8 @@ function unique(colors) {
   });
 }
 
-export function generateHyperRealMasterPalette() {
-  const selected = unique([
-    ...HYPERREAL_ANCHORS.map((color) => [...color]),
-    ...NEUTRAL_COMPLETION.map((color) => [...color])
-  ]);
+function generatePaletteFromPrefix(prefix) {
+  const selected = unique(prefix.map((color) => [...color]));
   const selectedKeys = new Set(selected.map((color) => color.join(",")));
   const candidates = unique(Array.from({ length: 16 ** 3 }, (_, index) => {
     const r = Math.floor(index / 256) * 17;
@@ -123,6 +132,17 @@ export function generateHyperRealMasterPalette() {
   return selected;
 }
 
+export function generateHyperRealMasterPalette() {
+  return generatePaletteFromPrefix([
+    ...HYPERREAL_ANCHORS,
+    ...CANDIDATE_2_NEUTRAL_COMPLETION
+  ]);
+}
+
+export function generateHyperRealCandidate3Palette() {
+  return generatePaletteFromPrefix(HYPERREAL_CANDIDATE_3_PREFIX);
+}
+
 export function paletteBytes(palette) {
   return Buffer.from(palette.flat());
 }
@@ -131,35 +151,59 @@ export function paletteHash(palette) {
   return createHash("sha256").update(paletteBytes(palette)).digest("hex");
 }
 
+function sourceMetadata() {
+  return {
+    repository: "ShaelRiley/ansi-tube",
+    file: "core.js",
+    blobSha: "29fd2065612454a66a92e431213731c41d5dc28c",
+    palette: "hyperreal",
+    anchorsSha256: createHash("sha256")
+      .update(Buffer.from(HYPERREAL_ANCHORS.flat()))
+      .digest("hex"),
+    saturationGrade: 1.60,
+    contrastGrade: 1.12
+  };
+}
+
+function writePalette(outputDirectory, fileStem, metadata) {
+  const bytes = paletteBytes(metadata.colors);
+  writeFileSync(resolve(outputDirectory, `${fileStem}.rgb`), bytes);
+  writeFileSync(resolve(outputDirectory, `${fileStem}.json`), `${JSON.stringify(metadata, null, 2)}\n`);
+  return { id: metadata.id, sha256: metadata.sha256, bytes: bytes.length };
+}
+
 export function writeHyperRealPaletteAssets(outputDirectory) {
   mkdirSync(outputDirectory, { recursive: true });
-  const colors = generateHyperRealMasterPalette();
-  const bytes = paletteBytes(colors);
-  const sha256 = paletteHash(colors);
-  const anchorsSha256 = createHash("sha256")
-    .update(Buffer.from(HYPERREAL_ANCHORS.flat()))
-    .digest("hex");
-  writeFileSync(resolve(outputDirectory, "v64-p256-hyperreal-candidate-2.rgb"), bytes);
-  writeFileSync(
-    resolve(outputDirectory, "v64-p256-hyperreal-candidate-2.json"),
-    `${JSON.stringify({
-      id: "V64-P256-HYPERREAL-CANDIDATE-2",
-      status: "experimental-candidate",
-      source: {
-        repository: "ShaelRiley/ansi-tube",
-        file: "core.js",
-        blobSha: "29fd2065612454a66a92e431213731c41d5dc28c",
-        palette: "hyperreal",
-        anchorsSha256,
-        saturationGrade: 1.60,
-        contrastGrade: 1.12
-      },
-      generation: "exact Hyper Real anchors, four neutral completions, then ordered OKLab farthest-point sampling over the Hyper Real-graded 16^3 sRGB lattice",
-      sha256,
-      colors
-    }, null, 2)}\n`
-  );
-  return { id: "V64-P256-HYPERREAL-CANDIDATE-2", sha256, anchorsSha256, bytes: bytes.length };
+  const candidate2 = generateHyperRealMasterPalette();
+  const candidate3 = generateHyperRealCandidate3Palette();
+  const sharedSource = sourceMetadata();
+  const result2 = writePalette(outputDirectory, "v64-p256-hyperreal-candidate-2", {
+    id: "V64-P256-HYPERREAL-CANDIDATE-2",
+    status: "experimental-candidate",
+    source: sharedSource,
+    generation: "exact Hyper Real anchors, four neutral completions, then ordered OKLab farthest-point sampling over the Hyper Real-graded 16^3 sRGB lattice",
+    sha256: paletteHash(candidate2),
+    colors: candidate2
+  });
+  const result3 = writePalette(outputDirectory, "v64-p256-hyperreal-candidate-3", {
+    id: "V64-P256-HYPERREAL-CANDIDATE-3",
+    status: "experimental-candidate",
+    source: sharedSource,
+    prefix: {
+      sha256: createHash("sha256")
+        .update(Buffer.from(HYPERREAL_CANDIDATE_3_PREFIX.flat()))
+        .digest("hex"),
+      rationale: "Exact twelve Hyper Real anchors plus dark navy, dark teal, warm skin midtone, and neutral midtone utility colors."
+    },
+    generation: "candidate-3 prefix, then ordered OKLab farthest-point sampling over the Hyper Real-graded 16^3 sRGB lattice",
+    sha256: paletteHash(candidate3),
+    colors: candidate3
+  });
+  return {
+    format: "V64-HYPERREAL-PALETTE-BUILD-1",
+    anchorsSha256: sharedSource.anchorsSha256,
+    candidates: [result2, result3]
+  };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

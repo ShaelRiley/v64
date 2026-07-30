@@ -1,6 +1,6 @@
 # V64 palette research
 
-Status: design direction and experimental asset; not a normative palette
+Status: design direction and experimental assets; not a normative palette
 freeze.
 
 ## Chromatic direction
@@ -48,12 +48,10 @@ Assets:
 - anchor-byte SHA-256:
   `31c9a10ee942a10ce0d251dbe5b121cde724844d17e84f42fa247027a1345322`
 
-The current executable still uses `V64-P256-CANDIDATE-1`.
-
 ## Human-content tranche 1 result
 
-Candidate 2 has now been measured on three original CC0 human-content sources
-at a 16-color prefix: lecture/dialogue, saturated performance, and 2D animated
+Candidate 2 has been measured on three original CC0 human-content sources at a
+16-color prefix: lecture/dialogue, saturated performance, and 2D animated
 dialogue. It was 99 raw-DEFLATE bytes (0.66%) smaller than candidate 1 across
 the matched two-second lanes. Visual inspection was mixed: the performance
 lane gained the intended saturated identity, while lecture and animation
@@ -61,6 +59,50 @@ showed inadequate blue/teal and midtone separation. Subtitles were unreadable
 at 40 columns under both candidates.
 
 Candidate 2 therefore validates the Hyper Real direction but fails the
-low-depth-prefix freeze gate. Candidate 3 should retain the exact Hyper Real
-anchors while improving 16-color midtones, skin separation, blue/teal
-separation, and subtitle edges. See `bench/HUMAN_RASTER_TRANCHE_1.md`.
+low-depth-prefix freeze gate.
+
+## Candidate 3
+
+`V64-P256-HYPERREAL-CANDIDATE-3` keeps the exact twelve Hyper Real anchors in the
+same order and replaces candidate 2's four grayscale completions with targeted
+16-color utility entries:
+
+| Prefix | Hex | Role |
+|---:|---|---|
+| 13 | `#102048` | dark navy separation |
+| 14 | `#005c60` | dark teal separation |
+| 15 | `#b27048` | warm skin midtone |
+| 16 | `#707070` | neutral midtone / edge support |
+
+The first twelve legal prefixes therefore remain unchanged. Candidate 3 changes
+only the 16-color completion and the deterministic farthest-point sequence that
+follows it.
+
+Asset and identities:
+
+- `assets/palettes/v64-p256-hyperreal-candidate-3.json`
+- generator: `tools/hyperreal-palette-generator.mjs`
+- runtime bytes are reconstructed from the validated JSON color table;
+  `npm run palette:hyperreal` also emits the corresponding `.rgb` file
+- palette SHA-256:
+  `071127822f9fb56aef0c6b62b6b2807ff035d76d801fe8aa0d71c5c89ca872af`
+- 16-color prefix SHA-256:
+  `ed5a8057ee3bc5dbd06c1f03949d59cf323f736295a70b72aefc5aa875886838`
+
+Candidate 3 is a testable hypothesis, not a selection. Its darker chromatic
+utility colors may improve blue/teal and skin separation, but only the matched
+tranche-2 previews and blinded scoring can establish whether that benefit
+outweighs the loss of candidate 2's additional grayscale steps.
+
+## Freeze gate
+
+Do not freeze `V64-P256-1` until all of the following are recorded:
+
+- matched candidate-1 / candidate-3 results for 3D animation,
+  black-and-white film, and screen capture;
+- 60- and 80-column subtitle transcription rates for both palettes;
+- blinded recognizability and separation scores;
+- complete-file size and temporal-stability deltas on identical source lanes.
+
+See `bench/HUMAN_RASTER_TRANCHE_1.md` and
+`bench/HUMAN_RASTER_TRANCHE_2.md`.

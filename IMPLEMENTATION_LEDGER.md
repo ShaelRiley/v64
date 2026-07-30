@@ -25,13 +25,15 @@ command.
   parameters as versioned palette-research provenance.
 - [x] Generate `V64-P256-HYPERREAL-CANDIDATE-2`, whose lower prefixes preserve
   the ultra-saturated Hyper Real direction.
+- [x] Generate `V64-P256-HYPERREAL-CANDIDATE-3`, retaining the twelve anchors
+  while adding dark navy, dark teal, warm skin, and neutral midtone utility
+  colors to the 16-color prefix.
 - [ ] Freeze the palette as normative `V64-P256-1`.
 
-Palette blocker: the first human-content comparison validates Hyper Real as the
-preferred design direction but rejects candidate 2 as-is for the normative
-16-color prefix. The executable still uses `V64-P256-CANDIDATE-1`. Candidate 3
-must preserve the saturated anchors while improving blue/teal, skin, midtone,
-and subtitle-edge separation.
+Palette blocker: candidate 3 is reproducible and registered, but the executable
+still defaults to `V64-P256-CANDIDATE-1`. Candidate 3 must clear the matched
+missing-class benchmark and blinded 60/80-column subtitle review before any
+normative palette change.
 
 ## Phase 1 — JavaScript proof codec
 
@@ -89,10 +91,16 @@ and subtitle-edge separation.
   DEFLATE bytes versus 34,834 for packed parsing (14.598% reduction).
 - [x] Compare palette candidates at the 16-color prefix. Hyper Real candidate 2
   was 99 bytes (0.66%) smaller overall but showed mixed low-depth color fidelity.
-- [ ] Add original or redistributable 3D-animation, black-and-white-film, and
-  screen-capture sources to complete raster coverage of all eleven classes.
-- [ ] Run blinded recognizable-fidelity scoring and subtitle trials at 60 and
-  80 columns before normative syntax, palette, or group-duration conclusions.
+- [x] Add original deterministic CC0 3D-animation, black-and-white-film, and
+  screen-capture source plates, completing raster coverage of all eleven
+  classes.
+- [x] Add hash-validated deterministic still-to-motion treatments without
+  requiring opaque derived-video fixtures.
+- [x] Add matched candidate-1 / candidate-3 subtitle lanes at 60 and 80 columns.
+- [x] Add deterministic blind-code previews, public worksheets, and a concealed
+  palette key.
+- [ ] Run and publish tranche-2 codec measurements and blinded recognizability
+  scoring before normative syntax, palette, or group-duration conclusions.
 
 ## Phase 2 — audio and finished container profile
 
@@ -118,7 +126,7 @@ blocker, not a codec-design blocker.
 
 ## Phase 4 — products
 
-- [ ] `apps/ansi-drop`: Linux-first drag/drop batch encoder.
+- [ ] `apps/video64-drop`: Linux-first drag/drop batch encoder.
 - [ ] Source/V64 decoded split preview.
 - [ ] Representative-sample size estimator and calibration history.
 - [ ] Per-file overrides and six-stage progress reporting.
@@ -141,11 +149,12 @@ intentionally downstream of standalone conformance.
 
 ## Next concrete step
 
-Build Hyper Real candidate 3 and complete the raster corpus with original or
-redistributable 3D-animation, black-and-white-film, and screen-capture sources.
-Add 60- and 80-column subtitle lanes and a blind-review worksheet before
-freezing the palette, visual command grammar, or independent-group duration.
+Run `npm run preview:human2`, `npm run review:human2`, and
+`npm run bench:human2`; collect blinded scores without opening `key.json`; then
+publish the candidate-1 / candidate-3 size, temporal, recognizability, and
+subtitle-transcription results. Freeze no visual decision until that report is
+complete.
 
-Then resume AM1 as a separately testable audio pipeline: deterministic WAV
-fixtures, hysteretic silence segmentation, standard Opus packets, exact `SILN`
-spans, and sample-exact A/V synchronization.
+After the tranche-2 decision, resume AM1 as a separately testable audio
+pipeline: deterministic WAV fixtures, hysteretic silence segmentation,
+standard Opus packets, exact `SILN` spans, and sample-exact A/V synchronization.

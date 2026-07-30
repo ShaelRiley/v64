@@ -53,7 +53,9 @@ const previews = manifest.entries.map((entry) => {
   const bytes = readFileSync(output);
   return {
     id: entry.id,
-    source: basename(entry.source.path),
+    source: entry.source.path
+      ? basename(entry.source.path)
+      : `generated:${entry.source.generatorId}`,
     frameIndex,
     paletteAsset: palette.id,
     width: image.width,

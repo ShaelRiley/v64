@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 import { PALETTE_DEPTHS } from "../prototype/js/constants.mjs";
 import { encodeCellTimeline, muxV64, verifyV64 } from "../prototype/js/container.mjs";
@@ -17,6 +18,12 @@ function blankFrame(columns, rows) {
 test("AM1 PCM16 WAV fixture round-trips byte-exact samples", () => {
   const fixture = synthesizeAm1Fixture(48000);
   const wav = encodePcm16Wav(fixture.samples, fixture.sampleRate, fixture.channels);
+  assert.equal(fixture.samples.length, 96000);
+  assert.equal(wav.length, 192044);
+  assert.equal(
+    createHash("sha256").update(wav).digest("hex"),
+    "cb98b4184e0c5f69ab296b80c94b71b9896f5e44cff6e76dd0ec6d957f237c89"
+  );
   const decoded = decodePcm16Wav(wav);
   assert.equal(decoded.sampleRate, 48000);
   assert.equal(decoded.channels, 1);

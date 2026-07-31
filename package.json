@@ -31,6 +31,7 @@
     "browser:fixtures": "node tools/build-browser-seek-fixture-v2.mjs bench/generated/browser-seek",
     "registry:matrix": "node tools/build-v1-registry-matrix.mjs bench/generated/v1-registry",
     "verify:v1": "node prototype/js/verify-v1.mjs",
+    "bench:rd-glyph": "node tools/benchmark-rd-glyph-study.mjs bench/generated/rd-glyph-study",
     "bench:audio-bitrates": "node tools/benchmark-am1-bitrates.mjs bench/results/am1-bitrate-sweep",
     "test": "node --test tests/*.test.mjs",
     "sample": "node prototype/js/cli.mjs make-sample tests/golden",

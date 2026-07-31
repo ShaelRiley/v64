@@ -14,7 +14,9 @@ Artifact ZIP SHA-256:
 ## Scope
 
 The initial Rust implementation uses pinned Rust 1.85.0, edition 2024, locked
-dependencies, `#![forbid(unsafe_code)]`, and the repository's 0BSD license.
+dependencies, and `#![forbid(unsafe_code)]`. The repository now uses the MIT
+License with `Copyright (c) 2026 Shael Riley`; the checked implementation itself
+is otherwise unchanged from this historical gate.
 
 The checked `v64-core` container parser validates:
 
@@ -99,8 +101,7 @@ committed unchanged.
   and direct Grammar B video-state decoding.
 - Retain the JavaScript implementation as the current conformance oracle while
   cross-language coverage expands.
-- Grammar B has now cleared its first cross-language decoded-state gate, but its
-  V1 freeze still requires Rust/WebAssembly resource measurements and broader
-  conformance fixtures.
-- Add subtitle-plane and audio-timeline agreement next, followed by renderer,
-  fuzz, WebAssembly, and C-ABI gates.
+- Grammar B has cleared its first cross-language decoded-state gate, but its V1
+  freeze still requires resource measurements and broader conformance fixtures.
+- Subtitle and audio agreement subsequently passed; hostile-input/resource,
+  renderer, fuzz, WebAssembly, and C-ABI gates remain in sequence.

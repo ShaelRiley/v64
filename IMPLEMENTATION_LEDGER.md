@@ -69,9 +69,12 @@ Candidate 1. Any palette-byte change requires a new normative identifier.
 - [x] Pass the complete eight-lane gate: exact transcription improved from base
   4/8 to SM4/SM5 8/8 at 7.082% total-stream overhead.
 - [x] Publish the versioned subtitle-extension profile.
-- [ ] Integrate the proposed `SUBT` chunk and its feature bit into the proof
-  container with grid, palette, frame-count, duration, alignment, overlap, and
-  canonical-sequence validation.
+- [x] Register mandatory `SUBT` with feature bit `0x80` in the JavaScript proof
+  container.
+- [x] Enforce grid, palette, frame-count, duration, alignment, overlap,
+  file-boundary, feature-presence, and canonical-sequence validation.
+- [x] Publish a deterministic sparse-coverage fixture and checked container
+  identities.
 
 Full subtitle gate, workflow `30593087909`, code head
 `25b108b8572dc940362394286a1f88b63f5a7a85`:
@@ -82,6 +85,17 @@ Full subtitle gate, workflow `30593087909`, code head
 - 137,390 total bytes;
 - 7.082% overhead / 4.543 kbit/s;
 - mean edge clarity and temporal stability 4.875/5.
+
+`SUBT` container gate, workflow `30598259834`, checked code head
+`c710c8b5e85399d5d1d35ed65ca6829755a0a7d3`:
+
+- all 96 repository tests passed;
+- fixture artifact `8780957363`;
+- container: 528 bytes,
+  `2535ea2368fe562dcc9ec46b6b6cdb216ad797a7f1b735753719101180b9935a`;
+- two `SUBT` chunks / five subtitle frames / one sparse base-only frame;
+- feature flags `0xB9`, including mandatory `SUBT` bit `0x80`;
+- feature bits above `0x80` remain mandatory-unknown.
 
 ## Phase 2 — AM1 audio and finished container profile
 
@@ -111,7 +125,7 @@ Full subtitle gate, workflow `30593087909`, code head
 - [x] Reject TOC-duration, trim/accounting, payload-length, duration, feature,
   alignment, gap, and incomplete-coverage failures.
 
-### Playback and synchronization
+### Playback, preprocessing, and synchronization
 
 - [x] Reconstruct deterministic Ogg framing only as an FFmpeg/libopus transport.
 - [x] Decode independent `AURN` runs to exact kept-sample PCM lengths.
@@ -119,11 +133,15 @@ Full subtitle gate, workflow `30593087909`, code head
 - [x] Pass full-decode determinism and five repeated-seek comparisons, including
   windows crossing audio/silence boundaries.
 - [x] Publish a verified two-second `.v64` playback fixture.
-- [ ] Implement the AM1 preprocessing path: mono downmix, 200 Hz high-pass,
-  4.5 kHz low-pass, compressor, and limiter.
-- [ ] Run matched 4/8/12/16 kbit/s objective and blinded-listening sweeps before
-  freezing the default bitrate.
-- [ ] Finalize the v1 chunk registry and forward-compatibility policy.
+- [x] Implement deterministic AM1 preprocessing: stereo/mono ingest, mono 48 kHz
+  output, 200 Hz high-pass, 4.5 kHz low-pass, 3:1 compressor, and −1 dBFS
+  limiter.
+- [x] Run a reproducible 4/8/12/16 kbit/s objective sweep and publish separate
+  blind and concealed-key artifacts.
+- [ ] Conduct blinded listening on legally reusable speech before freezing the
+  default bitrate.
+- [ ] Finalize the v1 chunk registry and forward-compatibility policy across
+  JavaScript, Rust, browser, native-player, and VLC implementations.
 
 AM1 playback gate, workflow `30596274425`, code head
 `c5f76b05789e64645c3d532f819dbfd107e33858`:
@@ -135,6 +153,15 @@ AM1 playback gate, workflow `30596274425`, code head
 - decoded PCM: 192,000 bytes,
   `b7c875b16fb4673f806477679470b3d6fcde1c92df331a0ba4983c3c33da99a5`;
 - all five seek windows match full-decode slices byte-for-byte.
+
+AM1 preprocessing/bitrate workflow `30597112780`, code head
+`626792677a4d1ade2c81340448082571ed55f26a`:
+
+- deterministic stereo 44.1 kHz challenge source to canonical mono 48 kHz;
+- checked high-pass, low-pass, compression, limiter, and canonical WAV framing;
+- objective 4/8/12/16 kbit/s variants;
+- blind artifact `8780557547` and separately concealed key `8780557677`;
+- no bitrate frozen before genuine speech listening.
 
 ## Phase 3 — Rust and stable API
 
@@ -169,6 +196,7 @@ blocker, not a codec-design blocker.
 - [ ] Build the `.v64` demux and glyph-video decoder modules.
 - [ ] Route `AURN` packets through VLC's Opus decoder and synthesize exact
   `SILN` blocks.
+- [ ] Decode and composite `SUBT` exact-mask planes over base glyph video.
 - [ ] Expose persisted `v64-crt-scanlines`, enabled by default, using the shared
   playback profile.
 - [ ] Test duration, pause, seek, rate, EOF, repeated seeks, scanline default,
@@ -177,11 +205,11 @@ blocker, not a codec-design blocker.
 
 ## Next concrete step
 
-Implement the AM1 preprocessing path and a reproducible 4/8/12/16 kbit/s
-comparison. Preserve the current standard packet and `AURN` syntax while
-measuring size, decode integrity, band-limiting, peak control, and objective
-error before blinded listening.
+Build a browser seek-conformance harness for the retained two-second independent
+video groups. Require repeated seek results to reproduce exact decoded cell
+states, subtitle planes, audio PCM slices, and viewport-anchored scanline phase
+without carrying hidden state across group boundaries.
 
-In parallel, integrate the already-passed subtitle sequence as the versioned
-`SUBT` container extension. CRT scanlines remain mandatory and enabled by
-default for both the native player and VLC plugin.
+Keep the AM1 bitrate key sealed until genuine blinded speech listening is
+recorded. CRT scanlines remain mandatory and enabled by default for both the
+native player and VLC plugin.

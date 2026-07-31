@@ -22,15 +22,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let columns = parse_usize(&arguments[4], "columns")?;
     let rows = parse_usize(&arguments[5], "rows")?;
     let palette_depth = parse_usize(&arguments[6], "palette depth")?;
-    let raster = renderer::render_rgba(
-        &cells,
-        columns,
-        rows,
-        palette_depth,
-        &glyphs,
-        &palette,
-    )
-    .map_err(|message| IoError::new(ErrorKind::InvalidData, message))?;
+    let raster = renderer::render_rgba(&cells, columns, rows, palette_depth, &glyphs, &palette)
+        .map_err(|message| IoError::new(ErrorKind::InvalidData, message))?;
     fs::write(&arguments[7], &raster.rgba)?;
 
     println!(

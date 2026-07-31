@@ -9,9 +9,13 @@ on:
       - "crates/**"
       - "tests/golden/**"
       - "tools/write-video-golden-stream.mjs"
+      - "tools/write-grammar-b-fixture.mjs"
+      - "tools/decode-grammar-b-fixture.mjs"
       - "prototype/js/constants.mjs"
       - "prototype/js/container.mjs"
       - "prototype/js/commands.mjs"
+      - "prototype/js/grammar-b.mjs"
+      - "prototype/js/grammar-b-direct.mjs"
       - "prototype/js/varint.mjs"
   workflow_dispatch:
 
@@ -42,37 +46,60 @@ jobs:
       - name: Build and test v64-core
         run: cargo test --locked --workspace --all-targets
 
-      - name: Test optimized release parser and decoder
+      - name: Test optimized release parser and decoders
         run: cargo test --locked --workspace --all-targets --release
 
-      - name: Generate JavaScript decoded-state stream
+      - name: Generate JavaScript Phase-1 decoded-state stream
         run: >-
           node tools/write-video-golden-stream.mjs
           tests/golden/procedural.v64
-          target/javascript-video-states.bin
+          target/javascript-phase1-states.bin
 
-      - name: Generate Rust decoded-state stream
+      - name: Generate Rust Phase-1 decoded-state stream
         run: >-
           cargo run --locked --release --bin v64-golden-stream --
           tests/golden/procedural.v64
-          target/rust-video-states.bin
+          target/rust-phase1-states.bin
 
-      - name: Require byte-identical JavaScript and Rust states
+      - name: Generate deterministic Grammar B fixture
+        run: >-
+          node tools/write-grammar-b-fixture.mjs
+          tests/golden/procedural.v64
+          target/grammar-b-fixture.bin
+
+      - name: Decode Grammar B fixture in JavaScript
+        run: >-
+          node tools/decode-grammar-b-fixture.mjs
+          target/grammar-b-fixture.bin
+          target/javascript-grammar-b-states.bin
+
+      - name: Decode Grammar B fixture in Rust
+        run: >-
+          cargo run --locked --release --bin v64-grammar-b-golden --
+          target/grammar-b-fixture.bin
+          target/rust-grammar-b-states.bin
+
+      - name: Require three-way byte-identical decoded states
         shell: bash
         run: |
           set -euo pipefail
-          cmp target/javascript-video-states.bin target/rust-video-states.bin
-          sha256sum target/javascript-video-states.bin | tee target/video-state-sha256.txt
-          test "$(sha256sum target/javascript-video-states.bin | cut -d' ' -f1)" = \
-               "$(sha256sum target/rust-video-states.bin | cut -d' ' -f1)"
+          cmp target/javascript-phase1-states.bin target/rust-phase1-states.bin
+          cmp target/javascript-phase1-states.bin target/javascript-grammar-b-states.bin
+          cmp target/javascript-phase1-states.bin target/rust-grammar-b-states.bin
+          sha256sum target/javascript-phase1-states.bin | tee target/video-state-sha256.txt
+          sha256sum target/grammar-b-fixture.bin | tee target/grammar-b-fixture-sha256.txt
 
       - name: Upload cross-language state evidence
         uses: actions/upload-artifact@v4
         with:
           name: v64-rust-javascript-golden
           path: |
-            target/javascript-video-states.bin
-            target/rust-video-states.bin
+            target/javascript-phase1-states.bin
+            target/rust-phase1-states.bin
+            target/javascript-grammar-b-states.bin
+            target/rust-grammar-b-states.bin
+            target/grammar-b-fixture.bin
             target/video-state-sha256.txt
+            target/grammar-b-fixture-sha256.txt
           if-no-files-found: error
           retention-days: 30

@@ -1,0 +1,139 @@
+name: V64 browser two-second seek conformance
+
+on:
+  pull_request:
+    paths:
+      - "prototype/browser/**"
+      - "prototype/js/playback-effects.mjs"
+      - "prototype/js/container.mjs"
+      - "prototype/js/subtitle-run.mjs"
+      - "prototype/js/subtitle-mask-sm2.mjs"
+      - "tests/browser-seek.test.mjs"
+      - "tests/playback-effects.test.mjs"
+      - "tools/build-browser-seek-fixture.mjs"
+      - "package.json"
+      - ".github/workflows/browser-seek.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-browser-seek-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-seek:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Build deterministic browser seek fixture
+        run: node tools/build-browser-seek-fixture.mjs bench/generated/browser-seek
+
+      - name: Verify Node-derived golden manifest
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { verifyV64 } from "./prototype/js/container.mjs";
+          const directory = "bench/generated/browser-seek";
+          const manifest = JSON.parse(readFileSync(`${directory}/manifest.json`, "utf8"));
+          const file = readFileSync(`${directory}/browser-seek.v64`);
+          const pcm = readFileSync(`${directory}/browser-seek.pcm`);
+          assert.equal(manifest.format, "V64-BROWSER-SEEK-FIXTURE-1");
+          assert.equal(manifest.profile.groupFrames, 48);
+          assert.equal(manifest.profile.groupCount, 2);
+          assert.equal(manifest.profile.totalFrames, 96);
+          assert.equal(manifest.profile.frameTicks, 2500);
+          assert.equal(manifest.profile.durationTicks, 240000);
+          assert.equal(manifest.profile.audioSamplesPerFrame, 2000);
+          assert.equal(manifest.seekOrder.length, 12);
+          assert.equal(new Set(manifest.seekOrder).size, 8);
+          assert.equal(manifest.container.bytes, file.length);
+          assert.equal(manifest.audio.bytes, pcm.length);
+          assert.equal(manifest.container.verification.frames, 96);
+          assert.equal(manifest.container.verification.keyframes, 2);
+          assert.equal(manifest.container.verification.subtitleChunks, 2);
+          assert.equal(manifest.container.verification.subtitleFrames, 96);
+          assert.equal(verifyV64(file).frames, 96);
+          assert.equal(Object.keys(manifest.expected).length, 8);
+          NODE
+
+      - name: Run Chrome seek harness
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          test -n "$browser"
+          python3 -m http.server 8123 --bind 127.0.0.1 > browser-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8123/prototype/browser/seek-harness.html > /dev/null; then
+              break
+            fi
+            sleep 0.2
+          done
+          timeout 30s "$browser" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --run-all-compositor-stages-before-draw \
+            --virtual-time-budget=15000 \
+            --dump-dom \
+            http://127.0.0.1:8123/prototype/browser/seek-harness.html \
+            > bench/generated/browser-seek/browser-result.html
+          grep -q 'data-status="pass"' bench/generated/browser-seek/browser-result.html
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync, writeFileSync } from "node:fs";
+          const html = readFileSync("bench/generated/browser-seek/browser-result.html", "utf8");
+          const match = html.match(/<pre id="result">([^<]+)<\/pre>/);
+          assert.ok(match, "browser result payload is missing");
+          const text = match[1]
+            .replaceAll("&quot;", '"')
+            .replaceAll("&amp;", "&")
+            .replaceAll("&lt;", "<")
+            .replaceAll("&gt;", ">");
+          const result = JSON.parse(text);
+          assert.equal(result.valid, true);
+          assert.equal(result.seeks, 12);
+          assert.equal(result.uniqueFrames, 8);
+          assert.equal(result.groupFrames, 48);
+          assert.equal(result.groupCount, 2);
+          assert.equal(result.viewportY, 3);
+          assert.equal(result.repeatedSeekStable, true);
+          writeFileSync(
+            "bench/generated/browser-seek/browser-result.json",
+            `${JSON.stringify(result, null, 2)}\n`
+          );
+          NODE
+
+      - name: Upload browser seek evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-two-second-seek-conformance
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            bench/generated/browser-seek
+            browser-http.log

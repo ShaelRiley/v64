@@ -158,8 +158,34 @@ Full subtitle gate, workflow `30593087909`, code head
   blind and concealed-key artifacts.
 - [ ] Conduct blinded listening on legally reusable speech before freezing the
   default bitrate.
-- [ ] Finalize the v1 chunk registry and forward-compatibility policy across
-  JavaScript, Rust, browser, native-player, and VLC implementations.
+
+### V1 registry and forward compatibility
+
+- [x] Publish `spec/v64-v1-registry.json` as the machine-readable JavaScript
+  proof-profile registry.
+- [x] Register all eight known feature bits and all eight known chunk types.
+- [x] Require feature/chunk or feature/storage-flag presence agreement.
+- [x] Require bits `0x01`, `0x08`, and `0x10` (`0x19`) in every V1 proof file.
+- [x] Document and test unknown uppercase mandatory rejection and lowercase
+  optional-extension skipping after bounded framing checks.
+- [x] Generate an 18-scenario registry conformance matrix.
+- [x] Expose registry-bound file verification through `verifyV1File` and
+  `npm run verify:v1 -- INPUT.v64`.
+- [ ] Reproduce the registry in Rust, WebAssembly, native-player, and VLC
+  implementations before the final cross-implementation V1 freeze.
+
+V1 registry gate, workflow `30600260674`, checked code head
+`26f93df75912cc134496553d6a12a68fa7938a02`:
+
+- all 109 repository tests passed;
+- artifact `8781628600`;
+- registry: 4,058 bytes,
+  `7ea2c530b467c01f17bdea1021648388e008a6b6bc3fc2a3e91b06415f4585e9`;
+- known feature mask `0xFF`;
+- required feature mask `0x19`;
+- eight feature declarations and eight known chunk declarations;
+- 18/18 generated positive/negative scenarios matched expectation;
+- ordinary file verification now returns both codec and registry evidence.
 
 AM1 playback gate, workflow `30596274425`, code head
 `c5f76b05789e64645c3d532f819dbfd107e33858`:
@@ -223,11 +249,10 @@ blocker, not a codec-design blocker.
 
 ## Next concrete step
 
-Finalize a machine-readable V1 chunk and feature registry for the checked proof
-profile. Bind every mandatory feature bit to its required chunk presence,
-cardinality, timeline, alignment, and cross-chunk invariants; document optional
-lowercase chunk handling and unknown mandatory failure behavior; and generate a
-registry-driven conformance matrix before the Rust/WebAssembly ports begin.
+Implement scene-cut scoring and explicit rate-distortion target modes on the
+frozen two-second group profile. Then run the adaptive 16/32/64-glyph study and
+repeat the grammar/entropy comparison on the complete legally reusable mixed
+corpus before selecting final command syntax and compression backend.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

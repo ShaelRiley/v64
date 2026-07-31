@@ -17,6 +17,7 @@ on:
       - "prototype/js/grammar-b.mjs"
       - "prototype/js/grammar-b-direct.mjs"
       - "prototype/js/varint.mjs"
+      - "IMPLEMENTATION_LEDGER.md"
   workflow_dispatch:
 
 jobs:
@@ -79,7 +80,7 @@ jobs:
           target/grammar-b-fixture.bin
           target/rust-grammar-b-states.bin
 
-      - name: Require three-way byte-identical decoded states
+      - name: Require four-way byte-identical decoded states
         shell: bash
         run: |
           set -euo pipefail
@@ -101,5 +102,6 @@ jobs:
             target/grammar-b-fixture.bin
             target/video-state-sha256.txt
             target/grammar-b-fixture-sha256.txt
+            IMPLEMENTATION_LEDGER.md
           if-no-files-found: error
           retention-days: 30

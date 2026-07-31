@@ -13,10 +13,14 @@ bitstream notes; the linked document governs architectural intent.
 This repository currently contains the executable Phase 1 proof codec. It is a
 real binary `.v64` implementation, not a mock UI:
 
-- exact extracted 64-glyph `8×16` asset and immutable SHA-256 identity;
+- exact extracted 64-glyph `8×16` source asset and immutable SHA-256 identity;
+- a **32-glyph primary/default encoding budget**, with the complete 64-glyph
+  alphabet available as an explicit option;
 - all eleven legal cadences and all fourteen legal palette depths;
 - deterministic source-pixel analysis, glyph matching, palette quantization,
   cell rendering, and temporal hysteresis;
+- scene-cut-aware independent groups with a frozen two-second maximum;
+- explicit compact, balanced, and quality rate-distortion targets;
 - a bounded, checksummed, indexed binary container;
 - keyframes, delta frames, skip runs, repeated-token runs, rectangle fills,
   local token dictionaries, and repeat-frame spans;
@@ -68,14 +72,27 @@ npm run preview:human2
 npm run review:human2
 npm run bench:human2
 npm run palette:hyperreal
+npm run bench:rd-glyph
 ```
 
-Encode any FFmpeg-readable video:
+Encode any FFmpeg-readable video with the primary 32-glyph profile:
 
 ```bash
 node prototype/js/cli.mjs encode input.mp4 output.v64 \
-  --fps 24 --columns 80 --palette 32 --profile balanced
+  --fps 24 --columns 80 --palette 32 --glyphs 32 --target balanced
 ```
+
+`--glyphs 32` is the default and may be omitted. Use the complete source
+alphabet as an additional option when its quality gain is worth the extra rate:
+
+```bash
+node prototype/js/cli.mjs encode input.mp4 output-64.v64 \
+  --fps 24 --columns 80 --palette 32 --glyphs 64 --target quality
+```
+
+The project remains named **Video 64**, and files remain `.v64`; the default
+32-glyph budget is an encoder optimization profile rather than a change to the
+canonical alphabet or file identity.
 
 Decode to a conventional raster video:
 
@@ -115,6 +132,8 @@ duration decisions it does and does not support, is
 [`bench/HUMAN_RASTER_TRANCHE_1.md`](bench/HUMAN_RASTER_TRANCHE_1.md).
 The missing-class, candidate-3, subtitle-resolution, and blinded-review tranche
 is [`bench/HUMAN_RASTER_TRANCHE_2.md`](bench/HUMAN_RASTER_TRANCHE_2.md).
+The current scene-cut and glyph-budget profile is
+[`docs/RATE_DISTORTION_PROFILE.md`](docs/RATE_DISTORTION_PROFILE.md).
 
 See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for verified status,
 blockers, and the next concrete step. See

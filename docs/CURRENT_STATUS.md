@@ -63,7 +63,8 @@ Completed:
 - four-way JavaScript/Rust decoded-state agreement;
 - independent Rust `SUBT`/SM2 subtitle validation and canonicalization;
 - independent Rust `AURN`/`SILN` audio timing validation and canonicalization;
-- byte-identical JavaScript/Rust subtitle and audio semantic streams.
+- byte-identical JavaScript/Rust subtitle and audio semantic streams;
+- the first Rust hostile-input and process-resource gate.
 
 Checked video decoded-state stream:
 
@@ -78,29 +79,36 @@ Checked extension semantic streams:
 - `AURN`/`SILN` SHA-256:
   `6f9098e0a9b2218c648993af4266ed53daff0346f06f92675dcbb8cde2d2222b`.
 
-## Active hostile-input tranche
+## Checked hostile-input tranche
 
-The branch now contains `v64-hostile-gate` and a dedicated CI workflow. The
-first tranche requires:
+Workflow `30648764459` passed at code head
+`bbcd0fae408801369b66888ada14ae1749a41541`.
 
-- at least 24 deterministic malformed-input cases;
-- 64 identical rejections per case;
-- a successful valid-file reparse after every hostile case;
-- byte-identical reports across two complete runs;
-- a ten-second cap per complete run;
-- a 256 MiB process RSS ceiling.
+- malformed cases: 29;
+- repetitions per case: 64;
+- duplicate complete runs: byte-identical;
+- canonical report SHA-256:
+  `27b6494aab8f804adcb3290da46ad1b7c42c16c1c70a32eb1e2356f3e4375b0b`;
+- first-run wall time: 0.04 seconds;
+- first-run peak RSS: 2,672 KiB;
+- enforced cap: 10 seconds and 262,144 KiB per complete run;
+- valid parser fingerprint recovered after every hostile case:
+  `120000:49:1:11787:19564:40x11`;
+- artifact ID: `8800518126`;
+- artifact ZIP SHA-256:
+  `5c1d640ffa154b2ef8924c5b0205e9d3b3629236f35edac206604e15d764640a`.
 
-The first checked workflow is pending. This tranche does not yet finalize
-raw-DEFLATE worst-case expansion, complete transactional frame-rollback
-malformed vectors, or replace coverage-guided fuzzing.
+This tranche establishes deterministic parser rejection and stateless valid
+recovery for its corpus. It does not yet finalize raw-DEFLATE worst-case
+expansion, complete transactional frame-rollback malformed vectors, or replace
+coverage-guided fuzzing.
 
 ## Next mandatory gates
 
-1. Check and record the first hostile-input/resource workflow.
-2. Add parameterized decompression-expansion and transactional rollback cases.
-3. Add renderer and raster hash agreement.
-4. Add WebAssembly build and browser golden agreement.
-5. Add coverage-guided fuzz targets and an allocation-limit regression corpus.
-6. Expose the stable C ABI, then proceed toward the native player, Video64 Drop,
+1. Add parameterized decompression-expansion and transactional rollback cases.
+2. Add renderer and raster hash agreement.
+3. Add WebAssembly build and browser golden agreement.
+4. Add coverage-guided fuzz targets and an allocation-limit regression corpus.
+5. Expose the stable C ABI, then proceed toward the native player, Video64 Drop,
    and VLC integration.
-7. Complete genuine blinded AM1 speech listening before bitrate freeze.
+6. Complete genuine blinded AM1 speech listening before bitrate freeze.

@@ -132,6 +132,8 @@ test("AURN and SILN form one exact two-second container timeline", () => {
     audioRuns: 2,
     audioSilenceSpans: 2,
     audioKeptSamples: 50400,
+    subtitleChunks: 0,
+    subtitleFrames: 0,
     chunks: demuxed.chunks.length,
     durationTicks: 120000
   });

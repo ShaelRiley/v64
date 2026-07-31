@@ -3,19 +3,26 @@
 Updated: 2026-07-31
 
 This file is the compact current-state companion to `IMPLEMENTATION_LEDGER.md`.
-The ledger retains the full historical evidence chain; this document records the
+The ledger retains the historical evidence chain; this document records the
 latest active frontier.
 
-## Project and participation
+## Project, license, and participation
 
 - Project name: **Video 64**.
 - File extension: `.v64`.
-- License: maximally permissive Zero-Clause BSD, SPDX `0BSD`.
-- Forks, modification, redistribution, and independent implementations require
-  no permission.
-- Human developers are the primary contributor community.
-- AI-assisted and agent-authored contributions are welcome as a close secondary
-  community through public, reproducible, human-reviewed GitHub workflows.
+- License: MIT, SPDX `MIT`.
+- Copyright notice: `Copyright (c) 2026 Shael Riley`.
+- Use, modification, publication, distribution, sublicensing, sale, forks,
+  ports, and independent implementations require no permission.
+- Copies or substantial portions must retain the copyright and permission
+  notice; no approval, advertising, share-alike, field-of-use, or noncommercial
+  condition is added.
+- Human developers, AI-assisted developers, and autonomous AI agents have equal
+  standing to choose projects and workflows, create forks, open issues, submit
+  pull requests, and build independent implementations.
+- Protected merges, releases, private security handling, credentials, and legal
+  representation remain authorized-maintainer capabilities rather than a
+  contributor hierarchy.
 - Public contributor invitation: GitHub issue #4.
 
 ## Primary encoder profile
@@ -46,48 +53,54 @@ structural stress material 25%.
 ## Rust cross-language state
 
 The Rust workspace uses pinned Rust 1.85.0, edition 2024, locked dependencies,
-0BSD, and `#![forbid(unsafe_code)]`.
+the MIT License, and `#![forbid(unsafe_code)]`.
 
 Completed:
 
 - bounded V64 header/chunk/index/CRC/raw-DEFLATE parsing;
-- cadence, palette-depth, feature, asset, and optional encoder-profile parsing;
-- complete Phase-1 video command decoding;
-- complete direct Grammar B video command decoding;
-- debug and optimized-release tests;
-- four-way JavaScript/Rust decoded-state agreement.
+- cadence, palette-depth, feature, asset, and encoder-profile validation;
+- complete Phase-1 and direct Grammar B video command decoding;
+- four-way JavaScript/Rust decoded-state agreement;
+- independent Rust `SUBT`/SM2 subtitle validation and canonicalization;
+- independent Rust `AURN`/`SILN` audio timing validation and canonicalization;
+- byte-identical JavaScript/Rust subtitle and audio semantic streams.
 
-Four byte-identical outputs:
-
-1. JavaScript Phase-1;
-2. Rust Phase-1;
-3. JavaScript direct Grammar B;
-4. Rust direct Grammar B.
-
-Decoded-state stream:
+Checked video decoded-state stream:
 
 - bytes: 64,528;
 - SHA-256:
   `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9`.
 
-Deterministic Grammar B fixture:
+Checked extension semantic streams:
 
-- bytes: 13,102;
-- SHA-256:
-  `a1b51a75487160b369675b4d128640bf07b041cca6ea7e27ddcaee2b8324a4d9`.
+- `SUBT`/SM2 SHA-256:
+  `65a41040b8b8931e051efc4912c291c653582f4f8b642c8d1a8f50f38f69f1b2`;
+- `AURN`/`SILN` SHA-256:
+  `6f9098e0a9b2218c648993af4266ed53daff0346f06f92675dcbb8cde2d2222b`.
 
-Checked workflow: `30644889435`.
-Checked artifact: `8798997215`.
-Artifact ZIP SHA-256:
-`7852ae12dabe18d766b893f1f87988955b14227cf7f8f7cf23086de3c6c6eed7`.
+## Active hostile-input tranche
+
+The branch now contains `v64-hostile-gate` and a dedicated CI workflow. The
+first tranche requires:
+
+- at least 24 deterministic malformed-input cases;
+- 64 identical rejections per case;
+- a successful valid-file reparse after every hostile case;
+- byte-identical reports across two complete runs;
+- a ten-second cap per complete run;
+- a 256 MiB process RSS ceiling.
+
+The first checked workflow is pending. This tranche does not yet finalize
+raw-DEFLATE worst-case expansion, complete transactional frame-rollback
+malformed vectors, or replace coverage-guided fuzzing.
 
 ## Next mandatory gates
 
-1. Rust/JavaScript `SUBT` subtitle-plane timeline agreement.
-2. Rust/JavaScript `AURN` and `SILN` audio-timeline agreement.
-3. Rust decoder resource and malformed-input measurements.
-4. Renderer and raster hash agreement.
-5. WebAssembly build and browser golden agreement.
-6. Fuzz targets and allocation-limit regression corpus.
-7. Stable C ABI, native player, Video64 Drop, and VLC integration.
-8. Genuine blinded AM1 speech listening before bitrate freeze.
+1. Check and record the first hostile-input/resource workflow.
+2. Add parameterized decompression-expansion and transactional rollback cases.
+3. Add renderer and raster hash agreement.
+4. Add WebAssembly build and browser golden agreement.
+5. Add coverage-guided fuzz targets and an allocation-limit regression corpus.
+6. Expose the stable C ABI, then proceed toward the native player, Video64 Drop,
+   and VLC integration.
+7. Complete genuine blinded AM1 speech listening before bitrate freeze.

@@ -1,17 +1,17 @@
 {
-  "format": "V64-COMBINED-GRAMMAR-CHECKED-SUMMARY-1",
+  "format": "V64-COMBINED-GRAMMAR-CHECKED-SUMMARY-2",
   "status": "passed",
-  "checkedCodeHead": "a55e8a368e581ddee9e539922269547702128dc5",
+  "checkedCodeHead": "af688fc6d93e25b91af62bf7d0cc349b2ae26363",
   "workflow": {
-    "id": 30640529023,
+    "id": 30642213125,
     "name": "V64 combined grammar decision gate"
   },
   "artifact": {
-    "id": 8797286945,
+    "id": 8797976278,
     "name": "combined-grammar-study",
-    "zipSha256": "b065fca95200ed6156a722d341edb8880268157667e57b4cc238cad37ebf67d7",
-    "generatedSummarySha256": "2351ecd13103138b2d0795d2d843daf2cc13d0011f258bdd75d50624d5b35f90",
-    "generatedMarkdownSha256": "419487a4b9d6f753e7a6c060a435598daa02f3b0a832078b3b1e9059f41b0c9e"
+    "zipSha256": "804506cde3f28a7c969bba43a5a02838b434ea6dd6d766625724c9563c2d035b",
+    "generatedSummarySha256": "ff9be2dbb9de6f2908adc29e74f4e985b95a129ff488d1040efb09d9bf1472aa",
+    "generatedMarkdownSha256": "c9cad9811da42d1bf7c79990d9aaee80ad07fa606c6a63cb9b52391f547db708"
   },
   "weights": {
     "structural": 0.25,
@@ -40,22 +40,24 @@
     "codedFrames": 1764,
     "repeatFrames": 106,
     "phase1": {
-      "totalMedianMilliseconds": 139.994,
-      "medianMillisecondsPerFile": 3.5,
-      "worstP95Milliseconds": 8.289,
+      "totalMedianMilliseconds": 135.939,
+      "medianMillisecondsPerFile": 3.398,
+      "worstP95Milliseconds": 8.076,
       "peakHeapDeltaBytes": 10253512,
       "peakArrayBufferDeltaBytes": 489792,
-      "peakRssDeltaBytes": 393216
+      "peakRssDeltaBytes": 524288
     },
-    "grammarB": {
-      "totalMedianMilliseconds": 437.041,
-      "medianMillisecondsPerFile": 10.926,
-      "worstP95Milliseconds": 28.356,
-      "peakHeapDeltaBytes": 16422632,
+    "grammarBDirect": {
+      "totalMedianMilliseconds": 175.112,
+      "medianMillisecondsPerFile": 4.378,
+      "worstP95Milliseconds": 13.173,
+      "peakHeapDeltaBytes": 3173560,
       "peakArrayBufferDeltaBytes": 400896,
-      "peakRssDeltaBytes": 1601536
+      "peakRssDeltaBytes": 1310720
     },
-    "grammarBDecodeTimeDeltaPercent": 212.186
+    "grammarBDecodeTimeDeltaPercent": 28.817,
+    "priorParseThenApplyDeltaPercent": 212.186,
+    "relativePenaltyReductionPercent": 86.419
   },
   "complexity": {
     "phase1": {
@@ -66,21 +68,21 @@
       "decisionTokens": 23,
       "loopTokens": 7
     },
-    "grammarB": {
+    "grammarBDirect": {
       "opcodeCount": 12,
-      "functionCount": 2,
-      "sourceBytes": 6509,
-      "sourceLines": 175,
-      "decisionTokens": 21,
+      "functionCount": 5,
+      "sourceBytes": 7459,
+      "sourceLines": 236,
+      "decisionTokens": 27,
       "loopTokens": 6
     }
   },
   "decision": [
     "Grammar B advances as the provisional combined-corpus byte winner",
+    "the bounded single-pass JavaScript Grammar B decoder becomes the benchmark path",
     "Grammar B is not frozen into V1",
     "Phase-1 remains the compatibility and simplicity baseline",
-    "the JavaScript Grammar B decoder must be optimized before freeze",
-    "Rust and WebAssembly golden-state and resource agreement remain required",
+    "the next mandatory gate is Rust and WebAssembly golden-state and resource agreement",
     "raw DEFLATE remains the current entropy leader"
   ]
 }

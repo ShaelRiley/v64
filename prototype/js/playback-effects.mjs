@@ -11,6 +11,9 @@ function assertImage(image) {
       image.rgba.length !== image.width * image.height * 4) {
     throw new TypeError("Playback effect requires a complete RGBA image");
   }
+  if (image.viewportY !== undefined && !Number.isSafeInteger(image.viewportY)) {
+    throw new TypeError("Playback viewportY must be a safe integer");
+  }
 }
 
 export function normalizePlaybackEffects(input = {}) {
@@ -36,6 +39,10 @@ export function normalizePlaybackEffects(input = {}) {
   return Object.freeze(effects);
 }
 
+function positiveModulo(value, modulus) {
+  return ((value % modulus) + modulus) % modulus;
+}
+
 export function applyPlaybackEffects(image, input = {}) {
   assertImage(image);
   const effects = normalizePlaybackEffects(input);
@@ -45,7 +52,10 @@ export function applyPlaybackEffects(image, input = {}) {
   }
 
   const multiplier = 1 - effects.crtScanlineStrength;
-  for (let y = effects.crtScanlinePhase; y < image.height; y += effects.crtScanlinePeriod) {
+  const viewportY = image.viewportY ?? 0;
+  for (let y = 0; y < image.height; y += 1) {
+    if (positiveModulo(viewportY + y, effects.crtScanlinePeriod) !==
+        effects.crtScanlinePhase) continue;
     const rowStart = y * image.width * 4;
     const rowEnd = rowStart + image.width * 4;
     for (let offset = rowStart; offset < rowEnd; offset += 4) {

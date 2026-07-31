@@ -1,0 +1,108 @@
+name: One-time PR Rust resource and rollback implementation
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/implement-resource-rollback-pr-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out development branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/phase2-entropy-aware
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup default 1.85.0
+
+      - name: Apply and preflight the implementation
+        run: |
+          python3 tools/implement-resource-rollback-once.py
+          python3 tools/resource-rollback-preflight.py
+          cargo fmt --all
+          cargo fmt --all -- --check
+
+      - name: Test every Rust target
+        run: |
+          cargo test --locked --workspace --all-targets
+          cargo test --locked --workspace --all-targets --release
+
+      - name: Require deterministic resource and rollback reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/resource-rollback bench/results/rust-resource-rollback
+          cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-a.json
+          cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-b.json
+          cmp target/resource-rollback/resource-a.json target/resource-rollback/resource-b.json
+          cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-a.json
+          cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-b.json
+          cmp target/resource-rollback/rollback-a.json target/resource-rollback/rollback-b.json
+          cp target/resource-rollback/resource-a.json bench/results/rust-resource-rollback/resource.json
+          cp target/resource-rollback/rollback-a.json bench/results/rust-resource-rollback/rollback.json
+          (
+            cd bench/results/rust-resource-rollback
+            sha256sum resource.json rollback.json > SHA256SUMS
+          )
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("bench/results/rust-resource-rollback")
+          resource = json.loads((root / "resource.json").read_text())
+          rollback = json.loads((root / "rollback.json").read_text())
+          sums = (root / "SHA256SUMS").read_text().strip()
+          assert resource["format"] == "V64-RUST-RESOURCE-GATE-1"
+          assert resource["case_count"] == 3
+          assert resource["exact_boundary_accepted"] is True
+          assert rollback["format"] == "V64-RUST-FRAME-ROLLBACK-GATE-1"
+          assert rollback["case_count"] == 5
+          assert rollback["prior_state_immutable"] is True
+          assert rollback["valid_delta_recovery_after_each_failure"] is True
+          (root / "README.md").write_text(f"""# Rust resource and rollback gate
+
+This checked milestone adds a caller-selectable inflated-chunk ceiling beneath the immutable compiled hard ceiling, plus malformed Phase-1 frame vectors that perform partial internal writes before rejection.
+
+- Stored DEFLATE bytes: {resource['stored_bytes']}
+- Inflated bytes: {resource['inflated_bytes']}
+- Expansion ratio, milli-units: {resource['expansion_ratio_milli']}
+- Resource cases: {resource['case_count']} × {resource['iterations']} iterations
+- Rollback cases: {rollback['case_count']} × {rollback['iterations_per_case']} iterations
+- Exact configured boundary accepted: yes
+- Zero and above-hard-ceiling limits rejected: yes
+- Prior frame state remained immutable: yes
+- A valid delta decoded identically after every malformed vector: yes
+
+## SHA-256
+
+```text
+{sums}
+```
+
+Licensed under MIT. Copyright (c) 2026 Shael Riley.
+""")
+          PY
+
+      - name: Publish only after all checks pass
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm tools/implement-resource-rollback-once.py
+          rm tools/resource-rollback-preflight.py
+          rm .github/workflows/implement-resource-rollback-once.yml
+          rm .github/workflows/implement-resource-rollback-pr-once.yml
+          git diff --check
+          git config user.name "Video 64 Development Agent"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Add configurable inflate and frame rollback gates"
+          git push origin HEAD:agent/phase2-entropy-aware

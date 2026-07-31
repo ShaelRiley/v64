@@ -70,7 +70,13 @@ Completed:
   ceiling;
 - transactional Phase-1 frame decoding with prior-state immutability after
   malformed partial writes;
-- permanent read-only CI for the resource and rollback gate.
+- bounded deterministic RGBA rasterization from canonical glyph and palette
+  assets;
+- byte-identical JavaScript/Rust normative and synthetic-palette rasters;
+- a dependency-free `wasm32-unknown-unknown` renderer conformance module;
+- byte-identical Node and headless-Chrome WebAssembly raster reconstruction;
+- permanent read-only CI for resource, rollback, renderer, and WebAssembly
+  conformance.
 
 Checked video decoded-state stream:
 
@@ -126,11 +132,36 @@ Transactional rollback gate:
 Evidence artifact: `8801795192`; artifact ZIP SHA-256:
 `5a2a4c82ff714793651988369d898870f7f3c19b7cfaea2d2d09d6f3f4e10e3e`.
 
+## Checked renderer and WebAssembly tranche
+
+Permanent workflow `30655257956` passed at implementation head
+`6ac241c1a4ba6987060ec0145df9f0c32dcccac8`.
+
+- fixture: 8 × 8 cells containing all 64 canonical glyphs;
+- output: 64 × 128 RGBA, 32,768 bytes;
+- all 131 JavaScript tests passed;
+- every Rust target passed in debug and optimized release modes;
+- JavaScript and Rust normative raster: byte-identical;
+- two Rust synthetic-palette renders: byte-identical;
+- Node and headless Chrome reconstructed every WebAssembly output byte;
+- pixel mismatches: zero;
+- invalid bytes: zero;
+- out-of-range byte sentinel: 256;
+- normative RGBA SHA-256:
+  `22c5658edd3d14167d7b29a49beef58511ac5e0785e27b30a613fa0dfd560be0`;
+- synthetic RGBA SHA-256:
+  `751d51c7871fe9f545becc45ce5f3601300f824d61d4555decfac4cb8d988487`;
+- WebAssembly binary SHA-256:
+  `bfc4c0bc94dc706c99b777f5799345bccf1807b7499d1538176d5d43c866ed59`;
+- evidence artifact: `8802996633`;
+- artifact ZIP SHA-256:
+  `150ab65aca1e97b87949c2986ca3be62643726890340de837a4ffacb0962b3d7`.
+
 ## Next mandatory gates
 
-1. Add deterministic renderer and pixel-hash agreement.
-2. Add a checked WebAssembly decoder build and browser interface.
-3. Add coverage-guided fuzz targets and allocation-regression budgets.
-4. Expose the stable C ABI, then proceed toward the native player, Video64 Drop,
+1. Add coverage-guided fuzz targets for the container parser, frame decoder,
+   renderer boundary checks, subtitle/audio extensions, and WebAssembly surface.
+2. Add deterministic allocation-regression budgets and adversarial-size corpora.
+3. Expose the stable C ABI, then proceed toward the native player, Video64 Drop,
    and VLC integration.
-5. Complete genuine blinded AM1 speech listening before bitrate freeze.
+4. Complete genuine blinded AM1 speech listening before bitrate freeze.

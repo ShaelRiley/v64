@@ -1,0 +1,36 @@
+{
+  "case_count": 3,
+  "cases": [
+    {
+      "configured_limit_bytes": 65535,
+      "error": "Invalid or excessive compressed META payload",
+      "iterations": 64,
+      "name": "one_byte_below_expanded_size",
+      "valid_reparse_fingerprint": "2500:2:0:65540"
+    },
+    {
+      "configured_limit_bytes": 0,
+      "error": "Configured inflated-chunk limit lies outside the supported range",
+      "iterations": 64,
+      "name": "zero_disables_nothing",
+      "valid_reparse_fingerprint": "2500:2:0:65540"
+    },
+    {
+      "configured_limit_bytes": 1073741825,
+      "error": "Configured inflated-chunk limit lies outside the supported range",
+      "iterations": 64,
+      "name": "above_compiled_hard_ceiling",
+      "valid_reparse_fingerprint": "2500:2:0:65540"
+    }
+  ],
+  "compiled_hard_ceiling_bytes": 1073741824,
+  "copyright": "Copyright (c) 2026 Shael Riley",
+  "exact_boundary_accepted": true,
+  "expansion_ratio_milli": 829569,
+  "format": "V64-RUST-RESOURCE-GATE-1",
+  "inflated_bytes": 65536,
+  "iterations": 64,
+  "license": "MIT",
+  "stored_bytes": 79,
+  "valid_fingerprint": "2500:2:0:65540"
+}

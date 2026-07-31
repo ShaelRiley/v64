@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod frame;
+
 use flate2::read::DeflateDecoder;
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
@@ -102,6 +104,19 @@ pub struct ParseOptions {
     pub expected_palette_hash: Option<[u8; 32]>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ResourceLimits {
+    pub max_inflated_chunk_bytes: usize,
+}
+
+impl Default for ResourceLimits {
+    fn default() -> Self {
+        Self {
+            max_inflated_chunk_bytes: MAX_INFLATED_CHUNK,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Header {
     pub version_major: u8,
@@ -151,7 +166,11 @@ pub struct V64File {
 impl V64File {
     pub fn encoder_profile(&self) -> Result<Option<Value>> {
         let mut profile = None;
-        for chunk in self.chunks.iter().filter(|chunk| chunk.chunk_type == "META") {
+        for chunk in self
+            .chunks
+            .iter()
+            .filter(|chunk| chunk.chunk_type == "META")
+        {
             let value: Value = serde_json::from_slice(&chunk.payload)?;
             if value.get("format").and_then(Value::as_str) != Some("V64-ENCODER-PROFILE-1") {
                 continue;
@@ -170,6 +189,20 @@ pub fn parse(input: &[u8]) -> Result<V64File> {
 }
 
 pub fn parse_with_options(input: &[u8], options: ParseOptions) -> Result<V64File> {
+    parse_with_resource_limits(input, options, ResourceLimits::default())
+}
+
+pub fn parse_with_resource_limits(
+    input: &[u8],
+    options: ParseOptions,
+    limits: ResourceLimits,
+) -> Result<V64File> {
+    if limits.max_inflated_chunk_bytes == 0 || limits.max_inflated_chunk_bytes > MAX_INFLATED_CHUNK
+    {
+        return Err(Error::new(
+            "Configured inflated-chunk limit lies outside the supported range",
+        ));
+    }
     let header = parse_header(input, options)?;
     let declared_chunks = usize::try_from(header.chunk_count)
         .map_err(|_| Error::new("Chunk count exceeds platform range"))?;
@@ -203,7 +236,8 @@ pub fn parse_with_options(input: &[u8], options: ParseOptions) -> Result<V64File
                 "Truncated or oversized {chunk_type} payload"
             )));
         }
-        let payload_end = checked_add(chunk_header_end, stored_length_usize, "Chunk payload range")?;
+        let payload_end =
+            checked_add(chunk_header_end, stored_length_usize, "Chunk payload range")?;
         if payload_end > input.len() {
             return Err(Error::new(format!(
                 "Truncated or oversized {chunk_type} payload"
@@ -218,7 +252,7 @@ pub fn parse_with_options(input: &[u8], options: ParseOptions) -> Result<V64File
         }
 
         let payload = if flags & FLAG_DEFLATE != 0 {
-            inflate_bounded(stored, &chunk_type)?
+            inflate_bounded(stored, &chunk_type, limits.max_inflated_chunk_bytes)?
         } else {
             stored.to_vec()
         };
@@ -324,7 +358,10 @@ fn parse_header(input: &[u8], options: ParseOptions) -> Result<Header> {
     let duration_ticks = checked_js_safe(read_u64(input, 28)?, "Duration")?;
     let glyph_hash = read_array_32(input, 36)?;
     let palette_hash = read_array_32(input, 68)?;
-    if options.expected_glyph_hash.is_some_and(|expected| expected != glyph_hash) {
+    if options
+        .expected_glyph_hash
+        .is_some_and(|expected| expected != glyph_hash)
+    {
         return Err(Error::new("Canonical glyph asset hash mismatch"));
     }
     if options
@@ -435,14 +472,20 @@ fn validate_index(entries: &[IndexEntry], chunks: &[Chunk]) -> Result<()> {
     Ok(())
 }
 
-fn inflate_bounded(stored: &[u8], chunk_type: &str) -> Result<Vec<u8>> {
+fn inflate_bounded(
+    stored: &[u8],
+    chunk_type: &str,
+    max_inflated_chunk_bytes: usize,
+) -> Result<Vec<u8>> {
     let decoder = DeflateDecoder::new(stored);
-    let mut limited = decoder.take((MAX_INFLATED_CHUNK as u64) + 1);
+    let limit = u64::try_from(max_inflated_chunk_bytes)
+        .map_err(|_| Error::new("Inflated-chunk limit exceeds u64"))?;
+    let mut limited = decoder.take(limit + 1);
     let mut payload = Vec::new();
     limited
         .read_to_end(&mut payload)
         .map_err(|error| Error::new(format!("Invalid compressed {chunk_type} payload: {error}")))?;
-    if payload.len() > MAX_INFLATED_CHUNK {
+    if payload.len() > max_inflated_chunk_bytes {
         return Err(Error::new(format!(
             "Invalid or excessive compressed {chunk_type} payload"
         )));
@@ -538,13 +581,25 @@ mod tests {
     #[test]
     fn parses_the_javascript_golden_container() {
         let file = parse(PROCEDURAL).expect("golden fixture should parse");
-        assert_eq!((file.header.version_major, file.header.version_minor), (0, 1));
-        assert_eq!(file.header.cadence.frame_ticks, TICK_RATE / file.header.cadence.numerator);
+        assert_eq!(
+            (file.header.version_major, file.header.version_minor),
+            (0, 1)
+        );
+        assert_eq!(
+            file.header.cadence.frame_ticks,
+            TICK_RATE / file.header.cadence.numerator
+        );
         assert!(file.header.columns > 0);
         assert!(file.header.rows > 0);
-        assert_eq!(file.chunks.len(), usize::try_from(file.header.chunk_count).unwrap());
         assert_eq!(
-            file.chunks.iter().filter(|chunk| chunk.chunk_type == "INDX").count(),
+            file.chunks.len(),
+            usize::try_from(file.header.chunk_count).unwrap()
+        );
+        assert_eq!(
+            file.chunks
+                .iter()
+                .filter(|chunk| chunk.chunk_type == "INDX")
+                .count(),
             1
         );
         assert!(!file.index.is_empty());
@@ -580,7 +635,12 @@ mod tests {
     fn malformed_headers_and_trailing_data_fail_closed() {
         let mut magic = PROCEDURAL.to_vec();
         magic[0] ^= 0xff;
-        assert!(parse(&magic).unwrap_err().to_string().contains("magic mismatch"));
+        assert!(
+            parse(&magic)
+                .unwrap_err()
+                .to_string()
+                .contains("magic mismatch")
+        );
 
         let mut grid = PROCEDURAL.to_vec();
         grid[16] = 0;
@@ -589,7 +649,12 @@ mod tests {
 
         let mut trailing = PROCEDURAL.to_vec();
         trailing.push(0);
-        assert!(parse(&trailing).unwrap_err().to_string().contains("Trailing bytes"));
+        assert!(
+            parse(&trailing)
+                .unwrap_err()
+                .to_string()
+                .contains("Trailing bytes")
+        );
     }
 
     #[test]
@@ -597,18 +662,134 @@ mod tests {
         let mut corrupt = PROCEDURAL.to_vec();
         let last = corrupt.len() - 1;
         corrupt[last] ^= 0x01;
-        assert!(parse(&corrupt).unwrap_err().to_string().contains("CRC mismatch"));
+        assert!(
+            parse(&corrupt)
+                .unwrap_err()
+                .to_string()
+                .contains("CRC mismatch")
+        );
     }
 
     #[test]
     fn encoder_profile_inspection_is_bounded_and_optional() {
         let file = parse(PROCEDURAL).expect("golden fixture should parse");
-        let profile = file.encoder_profile().expect("metadata should be valid JSON when present");
+        let profile = file
+            .encoder_profile()
+            .expect("metadata should be valid JSON when present");
         if let Some(profile) = profile {
             assert_eq!(
                 profile.get("format").and_then(Value::as_str),
                 Some("V64-ENCODER-PROFILE-1")
             );
         }
+    }
+
+    #[test]
+    fn runtime_inflate_limit_accepts_the_boundary_and_rejects_one_byte_below() {
+        use flate2::Compression;
+        use flate2::write::DeflateEncoder;
+        use std::io::Write;
+
+        let expanded = vec![b'A'; 65_536];
+        let mut encoder = DeflateEncoder::new(Vec::new(), Compression::best());
+        encoder
+            .write_all(&expanded)
+            .expect("compression should succeed");
+        let compressed = encoder.finish().expect("compression should finish");
+        let container = compressed_meta_container(&compressed);
+
+        parse(&container).expect("default hard limit should accept the fixture");
+        parse_with_resource_limits(
+            &container,
+            ParseOptions::default(),
+            ResourceLimits {
+                max_inflated_chunk_bytes: expanded.len(),
+            },
+        )
+        .expect("the exact configured output boundary should be accepted");
+
+        let error = parse_with_resource_limits(
+            &container,
+            ParseOptions::default(),
+            ResourceLimits {
+                max_inflated_chunk_bytes: expanded.len() - 1,
+            },
+        )
+        .expect_err("one byte below the expanded size must fail closed");
+        assert!(
+            error
+                .to_string()
+                .contains("excessive compressed META payload")
+        );
+    }
+
+    #[test]
+    fn runtime_inflate_limit_cannot_disable_or_exceed_the_hard_ceiling() {
+        for limit in [0, MAX_INFLATED_CHUNK + 1] {
+            let error = parse_with_resource_limits(
+                PROCEDURAL,
+                ParseOptions::default(),
+                ResourceLimits {
+                    max_inflated_chunk_bytes: limit,
+                },
+            )
+            .expect_err("invalid resource limits must fail before parsing");
+            assert!(error.to_string().contains("outside the supported range"));
+        }
+    }
+
+    fn compressed_meta_container(compressed: &[u8]) -> Vec<u8> {
+        let index_payload = 0u32.to_le_bytes();
+        let index_offset = HEADER_SIZE + CHUNK_HEADER_SIZE + compressed.len();
+        let mut container = vec![0u8; HEADER_SIZE];
+        container[..MAGIC.len()].copy_from_slice(&MAGIC);
+        container[8] = 0;
+        container[9] = 1;
+        write_test_u16(&mut container, 10, u16::try_from(HEADER_SIZE).unwrap());
+        write_test_u16(&mut container, 16, 1);
+        write_test_u16(&mut container, 18, 1);
+        container[20] = 7;
+        container[21] = 0;
+        write_test_u32(&mut container, 24, TICK_RATE);
+        write_test_u64(&mut container, 28, 2_500);
+        write_test_u64(&mut container, 100, u64::try_from(index_offset).unwrap());
+        write_test_u32(
+            &mut container,
+            108,
+            u32::try_from(CHUNK_HEADER_SIZE + index_payload.len()).unwrap(),
+        );
+        write_test_u32(&mut container, 112, 2);
+        write_test_u32(
+            &mut container,
+            116,
+            u32::try_from(compressed.len().max(index_payload.len())).unwrap(),
+        );
+        write_test_u32(&mut container, 120, 1);
+        write_test_u32(&mut container, 124, 1);
+        append_test_chunk(&mut container, b"META", FLAG_CRC | FLAG_DEFLATE, compressed);
+        append_test_chunk(&mut container, b"INDX", FLAG_CRC, &index_payload);
+        container
+    }
+
+    fn append_test_chunk(container: &mut Vec<u8>, chunk_type: &[u8; 4], flags: u32, stored: &[u8]) {
+        let offset = container.len();
+        container.resize(offset + CHUNK_HEADER_SIZE, 0);
+        container[offset..offset + 4].copy_from_slice(chunk_type);
+        write_test_u32(container, offset + 4, flags);
+        write_test_u32(container, offset + 24, u32::try_from(stored.len()).unwrap());
+        write_test_u32(container, offset + 28, crc32(stored));
+        container.extend_from_slice(stored);
+    }
+
+    fn write_test_u16(bytes: &mut [u8], offset: usize, value: u16) {
+        bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn write_test_u32(bytes: &mut [u8], offset: usize, value: u32) {
+        bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn write_test_u64(bytes: &mut [u8], offset: usize, value: u64) {
+        bytes[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
     }
 }

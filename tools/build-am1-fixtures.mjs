@@ -126,6 +126,9 @@ const seekWindows = seekRanges.map(([startTick, endTick]) => {
     matchesFullDecode: window.pcm.equals(fullSlice)
   };
 });
+if (seekWindows.some((window) => !window.matchesFullDecode)) {
+  throw new Error("AM1 seek window diverged from the full PCM decode");
+}
 const manifest = {
   format: "V64-AM1-FIXTURE-4",
   sampleRate: fixture.sampleRate,

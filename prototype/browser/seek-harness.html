@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>V64 browser seek conformance</title>
+</head>
+<body data-status="running">
+  <pre id="result">running</pre>
+  <script type="module">
+    import { runSeekConformance } from "./seek-conformance.mjs";
+
+    const resultNode = document.querySelector("#result");
+    try {
+      const [manifest, v64, pcm] = await Promise.all([
+        fetch("../../bench/generated/browser-seek/manifest.json")
+          .then((response) => response.json()),
+        fetch("../../bench/generated/browser-seek/browser-seek.v64")
+          .then((response) => response.arrayBuffer())
+          .then((buffer) => new Uint8Array(buffer)),
+        fetch("../../bench/generated/browser-seek/browser-seek.pcm")
+          .then((response) => response.arrayBuffer())
+          .then((buffer) => new Uint8Array(buffer))
+      ]);
+      const result = await runSeekConformance(v64, pcm, manifest);
+      document.body.dataset.status = "pass";
+      resultNode.textContent = JSON.stringify(result);
+      document.title = "PASS: V64 browser seek conformance";
+    } catch (error) {
+      document.body.dataset.status = "fail";
+      resultNode.textContent = JSON.stringify({
+        valid: false,
+        message: error?.stack || String(error)
+      });
+      document.title = "FAIL: V64 browser seek conformance";
+    }
+  </script>
+</body>
+</html>

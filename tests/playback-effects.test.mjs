@@ -8,7 +8,7 @@ import {
   normalizePlaybackEffects
 } from "../prototype/js/playback-effects.mjs";
 
-function image(width = 2, height = 4, value = 200) {
+function image(width = 2, height = 4, value = 200, viewportY = undefined) {
   const rgba = Buffer.alloc(width * height * 4);
   for (let offset = 0; offset < rgba.length; offset += 4) {
     rgba[offset] = value;
@@ -16,7 +16,7 @@ function image(width = 2, height = 4, value = 200) {
     rgba[offset + 2] = value;
     rgba[offset + 3] = 255;
   }
-  return { width, height, rgba };
+  return { width, height, rgba, ...(viewportY === undefined ? {} : { viewportY }) };
 }
 
 test("native and VLC playback profiles default CRT scanlines on", () => {
@@ -43,6 +43,22 @@ test("scanlines are a non-mutating viewport-phase presentation effect", () => {
   }
 });
 
+test("scanline phase follows viewport Y rather than image-local Y", () => {
+  const atZero = applyPlaybackEffects(image(1, 4, 200, 0));
+  const atThree = applyPlaybackEffects(image(1, 4, 200, 3));
+  assert.deepEqual(
+    Array.from({ length: 4 }, (_, y) => atZero.rgba[y * 4]),
+    [200, 164, 200, 164]
+  );
+  assert.deepEqual(
+    Array.from({ length: 4 }, (_, y) => atThree.rgba[y * 4]),
+    [164, 200, 164, 200]
+  );
+
+  const negative = applyPlaybackEffects(image(1, 4, 200, -1));
+  assert.deepEqual(negative.rgba, atThree.rgba);
+});
+
 test("disabling scanlines reproduces the unfiltered decoded raster", () => {
   const source = image(3, 3, 137);
   const output = applyPlaybackEffects(source, { crtScanlines: false });
@@ -50,7 +66,7 @@ test("disabling scanlines reproduces the unfiltered decoded raster", () => {
   assert.notEqual(output.rgba, source.rgba, "presentation output must own its buffer");
 });
 
-test("invalid scanline strength, period, and phase are rejected", () => {
+test("invalid scanline strength, period, phase, and viewport are rejected", () => {
   assert.throws(
     () => normalizePlaybackEffects({ crtScanlineStrength: 0.8 }),
     /crtScanlineStrength/
@@ -62,5 +78,9 @@ test("invalid scanline strength, period, and phase are rejected", () => {
   assert.throws(
     () => normalizePlaybackEffects({ crtScanlinePeriod: 2, crtScanlinePhase: 2 }),
     /crtScanlinePhase/
+  );
+  assert.throws(
+    () => applyPlaybackEffects({ ...image(), viewportY: 0.5 }),
+    /viewportY/
   );
 });

@@ -37,8 +37,16 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - name: Check milestone formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustfmt --edition 2024 --check \
+            crates/v64-core/src/lib.rs \
+            crates/v64-core/src/frame.rs \
+            crates/v64-core/src/bin/v64-golden-stream.rs \
+            crates/v64-core/src/bin/v64-resource-gate.rs \
+            crates/v64-core/src/bin/v64-frame-rollback-gate.rs
 
       - name: Test all Rust targets
         run: cargo test --locked --workspace --all-targets

@@ -12,18 +12,32 @@ function entry(cellIndex) {
 function frame(cells) {
   return cells.map(entry);
 }
+function plain(frames) {
+  return frames.map((items) => items.map((item) => ({
+    cellIndex: item.cellIndex,
+    foreground: item.foreground,
+    background: item.background,
+    mask: [...item.mask]
+  })));
+}
 
 test("SM5 span stabilization preserves two changing captions", () => {
   const first = frame([10,11,12,13,14,15]);
   const second = frame([20,21,22,23,24,25]);
   const frames = [first, first, first, first, second, second, second, second];
-  const result = stabilizeSubtitleSpans(frames, {
+  const before = plain(frames);
+  const options = {
     cellCount: 80,
     paletteDepth: 2,
     boundarySimilarity: 0.4,
     minimumSpanFrames: 2,
     minimumFrameFraction: 0.5
-  });
+  };
+  const result = stabilizeSubtitleSpans(frames, options);
+  const repeated = stabilizeSubtitleSpans(frames, options);
+  assert.deepEqual(plain(frames), before, "SM5 must not mutate source frames");
+  assert.deepEqual(plain(result.frames), plain(repeated.frames), "SM5 output must be deterministic");
+  assert.deepEqual(result.spans, repeated.spans, "SM5 boundaries must be deterministic");
   assert.equal(result.spans.length, 2);
   assert.deepEqual(result.spans.map((span) => [span.startFrame, span.endFrame]), [[0,4],[4,8]]);
   assert.deepEqual(result.frames[0].map((item) => item.cellIndex), [10,11,12,13,14,15]);

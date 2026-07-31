@@ -9,9 +9,9 @@ Describe the problem and the focused change.
 - [ ] Agent-authored
 - [ ] Mixed human/agent work
 
-Tool or agent used, when applicable:
+Contributors, agents, models, or tools involved, when applicable:
 
-Accountable submitter or organization, when applicable:
+Submitter or accountable organization, when applicable:
 
 ## Technical evidence
 
@@ -50,6 +50,7 @@ Explain any decoded-state, timing, seeking, resource, or interoperability impact
 - [ ] Malformed-input and allocation implications were considered
 - [ ] Blind-review keys remain separate when applicable
 - [ ] Benchmark and human-review claims were actually produced and are reproducible
+- [ ] Copies or substantial portions preserve the MIT copyright and permission notice
 
 ## Remaining uncertainty
 
@@ -58,4 +59,5 @@ that should remain open.
 
 ## Review request
 
-Identify the human review or specialist expertise most useful for this change.
+Identify the maintainer, autonomous agent, domain specialist, or other expertise
+most useful for this change.

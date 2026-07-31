@@ -1,0 +1,64 @@
+name: V64 full subtitle span gate
+
+on:
+  pull_request:
+    paths:
+      - "prototype/js/subtitle-mask-sm5.mjs"
+      - "tools/benchmark-subtitle-mask-sm5.mjs"
+      - "tests/subtitle-mask-sm5.test.mjs"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-subtitle-mask-5-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  subtitle-mask-5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run conformance tests
+        run: npm test
+
+      - name: Run full eight-lane SM4 span gate
+        run: npm run --silent bench:subtitle-mask5
+
+      - name: Upload SM5 blind review and metrics
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-5/summary.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: subtitle-mask-tranche-5-blind
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            bench/results/subtitle-mask-tranche-5
+            !bench/results/subtitle-mask-tranche-5/key.json
+
+      - name: Upload SM5 concealed key
+        if: ${{ always() && hashFiles('bench/results/subtitle-mask-tranche-5/key.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: subtitle-mask-tranche-5-key
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/results/subtitle-mask-tranche-5/key.json

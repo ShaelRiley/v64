@@ -22,9 +22,15 @@ Command-line behavior:
 
 ## Independent groups
 
-The maximum independent-group duration remains **48 frames at 24 fps**, or two
-seconds. A scene cut may begin a new group earlier but may never extend a group
-past that maximum. Every group begins with a self-contained keyframe.
+The maximum independent-group duration is **two seconds**, derived from the
+selected cadence. Examples:
+
+- 48 frames at 24 fps;
+- 24 frames at 12 fps;
+- 12 frames at 6 fps.
+
+A scene cut may begin a new group earlier but may never extend a group past that
+cadence-derived maximum. Every group begins with a self-contained keyframe.
 
 The deterministic cut score combines:
 
@@ -59,7 +65,7 @@ The selected objective is:
 
 Ties resolve by lower distortion, lower byte count, and then lower glyph count.
 
-## Checked corpus result
+## Structural-corpus evidence
 
 Workflow `30633411868` evaluated all eleven deterministic CC0 structural classes,
 three fixed glyph budgets, and the original three adaptive target modes. The
@@ -71,13 +77,66 @@ That evidence showed:
   container bytes;
 - moving from 32 to 64 reduced distortion by a further 12.954% for 3.417% more
   bytes;
-- 32 glyphs is therefore the fixed-budget knee and is now the primary default;
-- Grammar B plus raw DEFLATE remains the current grammar/backend leader.
+- 32 glyphs was the fixed-budget knee;
+- Grammar B plus raw DEFLATE led on the synthetic structural corpus.
 
 The earlier study remains valid comparative evidence, but its adaptive mode
-labels predate the 32-primary product decision. New studies must report the
-current policy explicitly and treat 16 glyphs as research-only.
+labels predate the 32-primary product decision. New product-facing studies must
+report the current policy explicitly and treat 16 glyphs as research-only.
 
-These findings are not a final wire-format freeze. The same study must pass on
-the reusable human raster corpus, with decoder cost and allocation measurements,
-before the grammar or entropy backend becomes normative.
+## Human-raster evidence
+
+Workflow `30636581459`, checked head
+`df0708742300b344e522009a7d78a17e3f1e0359`, evaluated ten original CC0
+source/grid lanes under normative `V64-P256-1`. It generated and verified 40
+`.v64` files. Checked evidence is in `bench/results/human-rd-glyph/`.
+
+At matched quality settings, fixed 64 glyphs compared with fixed 32 glyphs:
+
+- cost **7.183%** more container bytes;
+- reduced mean distortion by only **3.482%**.
+
+The adaptive 32/64 quality path selected 32 glyphs on **all 480 frames**, making
+its bytes and distortion identical to fixed 32 quality. This directly supports
+32 as the primary/default budget and 64 as an explicit additional option.
+
+Balanced 32 used **2.766% fewer bytes** than quality 32 while accepting only
+**1.553% more distortion**, supporting balanced 32 as the ordinary default.
+
+## Grammar and entropy status
+
+The human corpus did not reproduce the synthetic Grammar B lead:
+
+- Phase-1 plus group DEFLATE: 874,752 bytes;
+- Grammar B plus group DEFLATE: 881,164 bytes;
+- Grammar B plus canonical Huffman: 988,292 bytes;
+- Grammar B plus Zstandard: 912,638 bytes.
+
+Grammar B is **0.733% larger** than Phase-1 on the human gate. Final command
+syntax therefore remains open pending a larger combined corpus and
+cross-implementation complexity measurements.
+
+Raw DEFLATE is **3.449% smaller** than Zstandard on the human Grammar B groups
+and remains the current entropy leader. Canonical Huffman remains
+noncompetitive.
+
+## Resource evidence
+
+Across valid human-gate files, worst decode p95 was 18.206 ms. The largest
+sampled heap delta was 16,420,128 bytes and the largest sampled ArrayBuffer
+delta was 2,859,280 bytes.
+
+All seven malformed classes were rejected. Worst hostile-input p95 was 1.682 ms,
+with 129,336 bytes sampled heap growth and 920,753 bytes sampled ArrayBuffer
+growth.
+
+## Current decisions
+
+- 32 glyphs is the primary/default encoder budget.
+- 64 glyphs is the explicit full-alphabet option.
+- balanced is the ordinary target; quality is opt-in.
+- 16 glyphs is research-only.
+- the independent-group ceiling is two seconds derived from cadence.
+- final grammar selection remains open.
+- raw DEFLATE remains the current entropy leader without a final
+  cross-implementation freeze.

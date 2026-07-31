@@ -8,8 +8,11 @@ on:
       - "Cargo.lock"
       - "crates/**"
       - "tests/golden/**"
+      - "tools/write-video-golden-stream.mjs"
       - "prototype/js/constants.mjs"
       - "prototype/js/container.mjs"
+      - "prototype/js/commands.mjs"
+      - "prototype/js/varint.mjs"
   workflow_dispatch:
 
 jobs:
@@ -21,6 +24,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Install pinned Rust toolchain
         shell: bash
@@ -34,5 +42,37 @@ jobs:
       - name: Build and test v64-core
         run: cargo test --locked --workspace --all-targets
 
-      - name: Test optimized release parser
+      - name: Test optimized release parser and decoder
         run: cargo test --locked --workspace --all-targets --release
+
+      - name: Generate JavaScript decoded-state stream
+        run: >-
+          node tools/write-video-golden-stream.mjs
+          tests/golden/procedural.v64
+          target/javascript-video-states.bin
+
+      - name: Generate Rust decoded-state stream
+        run: >-
+          cargo run --locked --release --bin v64-golden-stream --
+          tests/golden/procedural.v64
+          target/rust-video-states.bin
+
+      - name: Require byte-identical JavaScript and Rust states
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmp target/javascript-video-states.bin target/rust-video-states.bin
+          sha256sum target/javascript-video-states.bin | tee target/video-state-sha256.txt
+          test "$(sha256sum target/javascript-video-states.bin | cut -d' ' -f1)" = \
+               "$(sha256sum target/rust-video-states.bin | cut -d' ' -f1)"
+
+      - name: Upload cross-language state evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-rust-javascript-golden
+          path: |
+            target/javascript-video-states.bin
+            target/rust-video-states.bin
+            target/video-state-sha256.txt
+          if-no-files-found: error
+          retention-days: 30

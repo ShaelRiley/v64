@@ -120,6 +120,12 @@ test("repeated audio seeks equal exact slices of a full decode", () => {
       first.pcm,
       full.pcm.subarray(first.startSample * 2, first.endSample * 2)
     );
+    if (startTick === 15000 && endTick === 39000) {
+      assert.equal(allZero(first.pcm), true);
+    }
+    if (startTick === 0 && endTick === 15000) {
+      assert.equal(allZero(first.pcm), false);
+    }
   }
 });
 

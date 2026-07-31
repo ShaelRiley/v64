@@ -1,0 +1,219 @@
+name: V64 Rust renderer and WebAssembly gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-renderer-wasm.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/v64-core/src/renderer.rs"
+      - "crates/v64-core/src/bin/v64-renderer-golden.rs"
+      - "crates/v64-wasm/**"
+      - "assets/glyphs/video64-v1.bin"
+      - "assets/palettes/**"
+      - "prototype/js/assets.mjs"
+      - "prototype/js/palette-registry.mjs"
+      - "prototype/js/video64.mjs"
+      - "prototype/browser/wasm-renderer-harness.html"
+      - "tools/hyperreal-palette-generator.mjs"
+      - "tools/hyperreal-candidate-6-generator.mjs"
+      - "tools/write-renderer-golden.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-rust-renderer-wasm-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  renderer-wasm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pinned Rust toolchain and WebAssembly target
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.85.0
+          rustup target add wasm32-unknown-unknown --toolchain 1.85.0
+          rustup default 1.85.0
+          rustc --version
+          cargo --version
+
+      - name: Check milestone formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustfmt --edition 2024 --check \
+            crates/v64-core/src/renderer.rs \
+            crates/v64-core/src/bin/v64-renderer-golden.rs \
+            crates/v64-wasm/src/lib.rs
+
+      - name: Run JavaScript repository tests
+        run: npm test
+
+      - name: Test every Rust target
+        run: cargo test --locked --workspace --all-targets
+
+      - name: Test optimized Rust targets
+        run: cargo test --locked --workspace --all-targets --release
+
+      - name: Build deterministic renderer fixtures
+        run: node tools/write-renderer-golden.mjs target/renderer-golden
+
+      - name: Require Rust and JavaScript normative raster identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --locked --release --bin v64-renderer-golden -- \
+            target/renderer-golden/cells.bin \
+            target/renderer-golden/video64-v1.bin \
+            target/renderer-golden/v64-p256-1.rgb \
+            8 8 256 \
+            target/renderer-golden/rust-normative-atlas.rgba \
+            | tee target/renderer-golden/rust-normative-report.json
+          cmp \
+            target/renderer-golden/javascript-normative-atlas.rgba \
+            target/renderer-golden/rust-normative-atlas.rgba
+
+      - name: Require Rust and JavaScript synthetic raster identity twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --locked --release --bin v64-renderer-golden -- \
+            target/renderer-golden/cells.bin \
+            target/renderer-golden/video64-v1.bin \
+            target/renderer-golden/synthetic-p256.rgb \
+            8 8 256 \
+            target/renderer-golden/rust-synthetic-atlas-a.rgba \
+            | tee target/renderer-golden/rust-synthetic-report-a.json
+          cargo run --locked --release --bin v64-renderer-golden -- \
+            target/renderer-golden/cells.bin \
+            target/renderer-golden/video64-v1.bin \
+            target/renderer-golden/synthetic-p256.rgb \
+            8 8 256 \
+            target/renderer-golden/rust-synthetic-atlas-b.rgba \
+            | tee target/renderer-golden/rust-synthetic-report-b.json
+          cmp \
+            target/renderer-golden/javascript-synthetic-atlas.rgba \
+            target/renderer-golden/rust-synthetic-atlas-a.rgba
+          cmp \
+            target/renderer-golden/rust-synthetic-atlas-a.rgba \
+            target/renderer-golden/rust-synthetic-atlas-b.rgba
+          cmp \
+            target/renderer-golden/rust-synthetic-report-a.json \
+            target/renderer-golden/rust-synthetic-report-b.json
+
+      - name: Build dependency-free WebAssembly conformance shim
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked --release --package v64-wasm --target wasm32-unknown-unknown
+          mkdir -p target/v64-wasm
+          cp \
+            target/wasm32-unknown-unknown/release/v64_wasm.wasm \
+            target/v64-wasm/v64_wasm.wasm
+          python3 - <<'PY'
+          from pathlib import Path
+          wasm = Path("target/v64-wasm/v64_wasm.wasm").read_bytes()
+          assert len(wasm) > 8
+          assert wasm[:8] == b"\0asm\x01\0\0\0"
+          PY
+
+      - name: Run headless Chrome WebAssembly raster agreement
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          test -n "$browser"
+          python3 -m http.server 8124 --bind 127.0.0.1 > target/renderer-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent \
+              http://127.0.0.1:8124/prototype/browser/wasm-renderer-harness.html \
+              > /dev/null; then
+              break
+            fi
+            sleep 0.2
+          done
+          timeout 30s "$browser" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --run-all-compositor-stages-before-draw \
+            --virtual-time-budget=15000 \
+            --dump-dom \
+            http://127.0.0.1:8124/prototype/browser/wasm-renderer-harness.html \
+            > target/renderer-golden/browser-result.html
+          grep -q 'data-status="pass"' target/renderer-golden/browser-result.html
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync, writeFileSync } from "node:fs";
+          const html = readFileSync("target/renderer-golden/browser-result.html", "utf8");
+          const match = html.match(/<pre id="result">([^<]+)<\/pre>/);
+          assert.ok(match, "browser renderer result is missing");
+          const result = JSON.parse(match[1]
+            .replaceAll("&quot;", '"')
+            .replaceAll("&amp;", "&")
+            .replaceAll("&lt;", "<")
+            .replaceAll("&gt;", ">"));
+          assert.equal(result.valid, true);
+          assert.equal(result.abiVersion, 1);
+          assert.equal(result.width, 64);
+          assert.equal(result.height, 128);
+          assert.equal(result.bytes, 32768);
+          assert.equal(result.firstMismatch, -1);
+          assert.equal(result.invalidByte, -1);
+          assert.equal(result.outOfRangeSentinel, 256);
+          writeFileSync(
+            "target/renderer-golden/browser-result.json",
+            `${JSON.stringify(result, null, 2)}\n`
+          );
+          NODE
+
+      - name: Hash and validate renderer evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const manifest = JSON.parse(readFileSync("target/renderer-golden/manifest.json", "utf8"));
+          const browser = JSON.parse(readFileSync("target/renderer-golden/browser-result.json", "utf8"));
+          assert.equal(manifest.format, "V64-RENDERER-GOLDEN-1");
+          assert.equal(manifest.glyphSha256, "9a75062711504dc9b2d473cdc261e0a8e34ff349ed9a8e1dc293467e9215da2b");
+          assert.equal(manifest.normativePaletteSha256, "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105");
+          assert.equal(browser.sha256, manifest.syntheticRgbaSha256);
+          NODE
+          sha256sum \
+            target/renderer-golden/javascript-normative-atlas.rgba \
+            target/renderer-golden/javascript-synthetic-atlas.rgba \
+            target/v64-wasm/v64_wasm.wasm \
+            target/renderer-golden/browser-result.json \
+            | tee target/renderer-golden/SHA256SUMS
+
+      - name: Upload renderer and WebAssembly evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-rust-renderer-wasm
+          path: |
+            target/renderer-golden
+            target/v64-wasm
+            target/renderer-http.log
+          if-no-files-found: error
+          retention-days: 30

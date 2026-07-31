@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { demuxV64, verifyV64 } from "./container.mjs";
 
 const registryUrl = new URL("../../spec/v64-v1-registry.json", import.meta.url);
 export const V1_REGISTRY = Object.freeze(
@@ -95,5 +96,15 @@ export function validateV1Registry(demuxed, registry = V1_REGISTRY) {
     chunkCounts: Object.fromEntries(
       registry.chunks.map((chunk) => [chunk.type, counts.get(chunk.type) || 0])
     )
+  };
+}
+
+export function verifyV1File(input, registry = V1_REGISTRY) {
+  const bytes = Buffer.from(input);
+  const codec = verifyV64(bytes);
+  const declarations = validateV1Registry(demuxV64(bytes), registry);
+  return {
+    ...codec,
+    registry: declarations
   };
 }

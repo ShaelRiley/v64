@@ -105,84 +105,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p target/resource-rollback bench/results/rust-resource-rollback
+          mkdir -p target/resource-rollback
           cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-a.json
           cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-b.json
           cmp target/resource-rollback/resource-a.json target/resource-rollback/resource-b.json
           cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-a.json
           cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-b.json
           cmp target/resource-rollback/rollback-a.json target/resource-rollback/rollback-b.json
-          cp target/resource-rollback/resource-a.json bench/results/rust-resource-rollback/resource.json
-          cp target/resource-rollback/rollback-a.json bench/results/rust-resource-rollback/rollback.json
-          (
-            cd bench/results/rust-resource-rollback
-            sha256sum resource.json rollback.json > SHA256SUMS
-          )
-
-      - name: Validate hardening evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          root = Path("bench/results/rust-resource-rollback")
-          resource = json.loads((root / "resource.json").read_text())
-          rollback = json.loads((root / "rollback.json").read_text())
-          sums = (root / "SHA256SUMS").read_text().strip()
-
-          assert resource["format"] == "V64-RUST-RESOURCE-GATE-1"
-          assert resource["exact_boundary_accepted"] is True
-          assert resource["case_count"] == 3
-          assert rollback["format"] == "V64-RUST-FRAME-ROLLBACK-GATE-1"
-          assert rollback["case_count"] == 5
-          assert rollback["prior_state_immutable"] is True
-          assert rollback["valid_delta_recovery_after_each_failure"] is True
-
-          (root / "README.md").write_text(f"""# Rust resource and rollback gate
-
-This checked milestone adds a caller-selectable inflated-chunk ceiling beneath the immutable compiled hard ceiling, plus malformed Phase-1 frame vectors that perform partial internal writes before rejection.
-
-- Stored DEFLATE bytes: {resource['stored_bytes']}
-- Inflated bytes: {resource['inflated_bytes']}
-- Expansion ratio, milli-units: {resource['expansion_ratio_milli']}
-- Resource cases: {resource['case_count']} × {resource['iterations']} iterations
-- Rollback cases: {rollback['case_count']} × {rollback['iterations_per_case']} iterations
-- Exact configured boundary accepted: yes
-- Zero and above-hard-ceiling limits rejected: yes
-- Prior frame state remained immutable: yes
-- A valid delta decoded identically after every malformed vector: yes
-
-## SHA-256
-
-```text
-{sums}
-```
-
-Licensed under MIT. Copyright (c) 2026 Shael Riley.
-""")
-          PY
+          python3 -c 'import json,pathlib; r=json.loads(pathlib.Path("target/resource-rollback/resource-a.json").read_text()); b=json.loads(pathlib.Path("target/resource-rollback/rollback-a.json").read_text()); assert r["format"]=="V64-RUST-RESOURCE-GATE-1" and r["case_count"]==3 and r["exact_boundary_accepted"] is True; assert b["format"]=="V64-RUST-FRAME-ROLLBACK-GATE-1" and b["case_count"]==5 and b["prior_state_immutable"] is True and b["valid_delta_recovery_after_each_failure"] is True'
+          sha256sum target/resource-rollback/resource-a.json target/resource-rollback/rollback-a.json > target/resource-rollback/SHA256SUMS
 
       - name: Package checked implementation patch
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p target/resource-patch
-          tar -czf target/resource-patch/v64-resource-rollback-patch.tar.gz \
-            crates/v64-core/src/lib.rs \
-            crates/v64-core/src/frame.rs \
-            crates/v64-core/src/bin/v64-golden-stream.rs \
-            crates/v64-core/src/bin/v64-resource-gate.rs \
-            crates/v64-core/src/bin/v64-frame-rollback-gate.rs \
-            .github/workflows/rust-resource-rollback.yml \
-            bench/results/rust-resource-rollback
-          sha256sum target/resource-patch/v64-resource-rollback-patch.tar.gz \
-            > target/resource-patch/PATCH_SHA256
-          git diff -- \
-            crates/v64-core/src/lib.rs \
-            crates/v64-core/src/bin/v64-golden-stream.rs \
-            > target/resource-patch/resource-rollback.patch
+          tar -czf target/resource-patch/v64-resource-rollback-patch.tar.gz crates/v64-core/src/lib.rs crates/v64-core/src/frame.rs crates/v64-core/src/bin/v64-golden-stream.rs crates/v64-core/src/bin/v64-resource-gate.rs crates/v64-core/src/bin/v64-frame-rollback-gate.rs .github/workflows/rust-resource-rollback.yml target/resource-rollback
+          sha256sum target/resource-patch/v64-resource-rollback-patch.tar.gz > target/resource-patch/PATCH_SHA256
 
       - name: Upload checked resource patch
         uses: actions/upload-artifact@v4

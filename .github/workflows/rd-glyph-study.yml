@@ -1,0 +1,95 @@
+name: V64 scene cut and rate-distortion study
+
+on:
+  pull_request:
+    paths:
+      - "prototype/js/scene-cut.mjs"
+      - "prototype/js/glyph-subset.mjs"
+      - "prototype/js/rate-distortion.mjs"
+      - "tools/benchmark-rd-glyph-study.mjs"
+      - "tests/scene-rd.test.mjs"
+      - "bench/corpus/seed-manifest.json"
+      - "package.json"
+      - ".github/workflows/rd-glyph-study.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-rd-glyph-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rd-glyph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Build scene-cut and rate-distortion study
+        run: npm run bench:rd-glyph
+
+      - name: Verify generated evidence
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { createHash } from "node:crypto";
+          const directory = "bench/generated/rd-glyph-study";
+          const bytes = readFileSync(`${directory}/summary.json`);
+          const report = JSON.parse(bytes);
+          assert.equal(report.format, "V64-RD-GLYPH-STUDY-1");
+          assert.equal(report.source.fixtures, 11);
+          assert.equal(report.source.framesPerFixture, 72);
+          assert.equal(report.configurations.length, 6);
+          assert.equal(report.results.length, 66);
+          assert.equal(report.aggregates.length, 6);
+          assert.equal(report.source.structuralClasses.length, 11);
+          assert.equal(new Set(report.source.structuralClasses).size, 11);
+          for (const result of report.results) {
+            assert.equal(result.sourceFrames, 72);
+            assert.equal(result.verification.valid, true);
+            assert.equal(result.verification.frames, 72);
+            assert.ok(result.maximumGroupFrames <= 48);
+            assert.ok(result.independentGroups >= 2);
+            assert.match(result.containerSha256, /^[0-9a-f]{64}$/);
+            assert.match(result.grammar.grammarBTraceSha256, /^[0-9a-f]{64}$/);
+          }
+          const fixed = Object.fromEntries(
+            report.aggregates.filter((item) => item.id.startsWith("glyph-"))
+              .map((item) => [item.id, item])
+          );
+          assert.equal(fixed["glyph-16"].glyphSelections[16], 11 * 72);
+          assert.equal(fixed["glyph-32"].glyphSelections[32], 11 * 72);
+          assert.equal(fixed["glyph-64"].glyphSelections[64], 11 * 72);
+          assert.equal(report.rankings.freezeStatus,
+            "evidence-only; no final grammar or entropy freeze");
+          const digest = createHash("sha256").update(bytes).digest("hex");
+          assert.equal(readFileSync(`${directory}/summary.sha256`, "utf8").trim(), digest);
+          NODE
+
+      - name: Upload study evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: scene-cut-rate-distortion-glyph-study
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/generated/rd-glyph-study

@@ -10,11 +10,15 @@ Updated: 2026-07-31
 - The canonical source asset remains the complete 64-glyph Video 64 alphabet.
 - The primary/default product encoder budget is 32 glyphs; 64 glyphs is an
   explicit additional option and 16 glyphs is research-only.
-- Video 64 is licensed under the maximally permissive Zero-Clause BSD license,
-  SPDX identifier `0BSD`; forks and modification require no permission.
-- Human developers are the primary contributor community. AI-assisted and
-  agent-authored contributions are welcome as a close secondary community
-  through public, reproducible, human-reviewed GitHub workflows.
+- Video 64 uses the attribution-preserving MIT License, SPDX identifier `MIT`,
+  with `Copyright (c) 2026 Shael Riley`; forks and modification require no
+  permission, while copies or substantial portions must retain the copyright
+  and permission notice.
+- Human developers, AI-assisted developers, and autonomous AI agents have
+  equal standing to select projects and workflows, create forks, open issues,
+  submit pull requests, and build independent implementations. Contributions
+  are evaluated by evidence, provenance, security, compatibility, and
+  reproducibility rather than contributor type.
 - Public contributor invitation: GitHub issue
   [#4](https://github.com/ShaelRiley/v64/issues/4).
 - ANSI Tube source inspected at release `v0.9.9`, commit `ee08e66`.
@@ -390,10 +394,10 @@ interactive development environment.
 
 ## Open-source governance and outreach
 
-- [x] License the repository under `0BSD`.
+- [x] License the repository under `MIT`.
 - [x] Publish `CONTRIBUTING.md`, `GOVERNANCE.md`, `AGENTS.md`, `SECURITY.md`, and
   a pull-request evidence template.
-- [x] State human-contributor primacy and welcome AI-assisted/agent-authored work
+- [x] State equal human and autonomous-agent participation and welcome AI-assisted/agent-authored work
   under the same technical and security gates.
 - [x] Open public contributor invitation issue #4 covering Rust, WebAssembly,
   players, integrations, compression, accessibility, packaging, and forks.

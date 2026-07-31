@@ -49,10 +49,28 @@ Candidate 1. Any palette-byte change requires a new normative identifier.
 - [x] Complete deterministic CC0 coverage of all eleven required raster classes.
 - [x] Add blind still/motion reviews with separately uploaded concealed keys.
 - [x] Retain two-second independent groups as the prototype default.
-- [ ] Validate two-second group seeks in the browser before a normative duration
-  freeze.
+- [x] Validate two-second group seeks in headless Chrome across cell state,
+  subtitle planes, composite raster, audio windows, and viewport scanline phase.
+- [x] Freeze two-second independent groups for the JavaScript proof profile.
 - [ ] Complete scene-cut scoring, rate-distortion modes, the adaptive glyph-count
   study, and final grammar/entropy selection.
+
+Browser seek gate, workflow `30599518584`, checked code head
+`a53109205a6effc0ab0e4c4bcf15ae8388ba88d0`:
+
+- all 101 repository tests passed;
+- artifact `8781381629`;
+- four-second fixture: 1,500 bytes,
+  `fb718b18ca33daee5626e2d3727e47f2393a3b8f74db5b38b20fcd40311aa1e1`;
+- two 48-frame / two-second independent groups;
+- 96 video frames, two keyframes, 12 repeat spans;
+- two `SUBT` chunks covering all 96 subtitle frames;
+- companion 48 kHz PCM: 192,000 samples,
+  `8846750d2fe20c1c86ca9c3a37b1d6f28cf8471719e99e7d688fef3d9eec9310`;
+- Chrome reproduced Node-derived cell, subtitle, composite, scanline, and PCM
+  hashes for thirteen out-of-order seeks across eight unique frames;
+- repeated targets were byte-stable and no prior-group state was carried across
+  the two-second boundary.
 
 ### Subtitle side plane
 
@@ -205,10 +223,11 @@ blocker, not a codec-design blocker.
 
 ## Next concrete step
 
-Build a browser seek-conformance harness for the retained two-second independent
-video groups. Require repeated seek results to reproduce exact decoded cell
-states, subtitle planes, audio PCM slices, and viewport-anchored scanline phase
-without carrying hidden state across group boundaries.
+Finalize a machine-readable V1 chunk and feature registry for the checked proof
+profile. Bind every mandatory feature bit to its required chunk presence,
+cardinality, timeline, alignment, and cross-chunk invariants; document optional
+lowercase chunk handling and unknown mandatory failure behavior; and generate a
+registry-driven conformance matrix before the Rust/WebAssembly ports begin.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

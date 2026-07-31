@@ -16,6 +16,7 @@ import {
 } from "../prototype/js/audio-am1.mjs";
 import { encodeSegmentedAm1Runs } from "../prototype/js/audio-opus.mjs";
 import {
+  AURN_PROFILE,
   decodeAurnPayload,
   encodeAurnPayload,
   validateAurnChunk
@@ -72,6 +73,18 @@ function buildFile(audioChunks) {
     paletteDepthId: video.paletteDepthId
   }, [...video.chunks, ...audioChunks]);
 }
+
+test("AURN profile fixes mono 48 kHz standard Opus bounds", () => {
+  assert.deepEqual(AURN_PROFILE, {
+    version: 1,
+    sampleRate: 48000,
+    channels: 1,
+    headerBytes: 32,
+    descriptorBytes: 4,
+    maximumPacketBytes: 1275,
+    maximumPacketCount: 65535
+  });
+});
 
 test("AURN payloads round-trip standard Opus packets and trim accounting", () => {
   const { runs } = fixtureParts();

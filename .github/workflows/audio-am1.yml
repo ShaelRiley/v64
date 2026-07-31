@@ -1,0 +1,66 @@
+name: V64 AM1 audio primitives
+
+on:
+  pull_request:
+    paths:
+      - "prototype/js/audio-am1.mjs"
+      - "tests/audio-am1.test.mjs"
+      - "tools/build-am1-fixtures.mjs"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-audio-am1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audio-am1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Generate deterministic AM1 fixture
+        run: npm run --silent audio:fixtures
+
+      - name: Verify generated manifest
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const manifest = JSON.parse(readFileSync("bench/generated/am1/manifest.json", "utf8"));
+          assert.equal(manifest.format, "V64-AM1-FIXTURE-1");
+          assert.equal(manifest.sampleRate, 48000);
+          assert.equal(manifest.channels, 1);
+          assert.deepEqual(manifest.silenceSpans, [
+            { startSample: 12000, endSample: 31200 },
+            { startSample: 69600, endSample: 96000 }
+          ]);
+          assert.deepEqual(manifest.silenceChunks, [
+            { type: "SILN", timestamp: 15000, duration: 24000, payloadBytes: 0 },
+            { type: "SILN", timestamp: 87000, duration: 33000, payloadBytes: 0 }
+          ]);
+          NODE
+
+      - name: Upload deterministic AM1 fixture
+        uses: actions/upload-artifact@v4
+        with:
+          name: am1-deterministic-fixture
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/generated/am1

@@ -1,0 +1,53 @@
+{
+  "format": "V64-V1-REGISTRY-CHECKED-RESULT-1",
+  "checkedHead": "26f93df75912cc134496553d6a12a68fa7938a02",
+  "workflowRun": 30600260674,
+  "artifact": {
+    "id": 8781628600,
+    "name": "v1-registry-conformance",
+    "archiveDigest": "sha256:340fab7e894cdbe936ee0c767bdda97918fa5b441e0c85897088ff507dafc573",
+    "expiresAt": "2026-08-30T02:57:55Z"
+  },
+  "repositoryTests": {
+    "total": 109,
+    "passed": 109,
+    "failed": 0
+  },
+  "registry": {
+    "filename": "spec/v64-v1-registry.json",
+    "format": "V64-V1-REGISTRY-1",
+    "bytes": 4058,
+    "sha256": "7ea2c530b467c01f17bdea1021648388e008a6b6bc3fc2a3e91b06415f4585e9",
+    "knownFeatureMask": 255,
+    "requiredFeatureMask": 25,
+    "featureCount": 8,
+    "chunkCount": 8
+  },
+  "matrix": {
+    "format": "V64-V1-REGISTRY-MATRIX-1",
+    "scenarios": 18,
+    "passedExpectations": 18,
+    "positiveScenarios": 4,
+    "negativeScenarios": 14
+  },
+  "features": [
+    { "bit": 1, "hex": "0x01", "id": "core-video", "required": true },
+    { "bit": 2, "hex": "0x02", "id": "explicit-silence", "required": false },
+    { "bit": 4, "hex": "0x04", "id": "particle-events", "required": false },
+    { "bit": 8, "hex": "0x08", "id": "seek-index", "required": true },
+    { "bit": 16, "hex": "0x10", "id": "canonical-assets", "required": true },
+    { "bit": 32, "hex": "0x20", "id": "raw-deflate-storage", "required": false },
+    { "bit": 64, "hex": "0x40", "id": "opus-audio-runs", "required": false },
+    { "bit": 128, "hex": "0x80", "id": "subtitle-mask-planes", "required": false }
+  ],
+  "chunks": ["VFRM", "RPTF", "AURN", "SILN", "SUBT", "PLIT", "META", "INDX"],
+  "commands": {
+    "matrix": "npm run registry:matrix",
+    "verifyFile": "npm run verify:v1 -- INPUT.v64"
+  },
+  "decision": {
+    "status": "checked JavaScript V1 registry",
+    "scope": "Machine-readable declarations, registry-bound file verification, and generated declaration/cardinality matrix.",
+    "remaining": "Rust, WebAssembly, native-player, and VLC implementations must consume or reproduce this registry before final cross-implementation V1 freeze."
+  }
+}

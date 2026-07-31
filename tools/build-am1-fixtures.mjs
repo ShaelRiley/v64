@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { PALETTE_DEPTHS } from "../prototype/js/constants.mjs";
 import {
   detectSilenceSpans,
   encodePcm16Wav,
@@ -9,6 +10,13 @@ import {
   synthesizeAm1Fixture
 } from "../prototype/js/audio-am1.mjs";
 import { encodeSegmentedAm1Runs } from "../prototype/js/audio-opus.mjs";
+import { encodeAurnPayload } from "../prototype/js/audio-run.mjs";
+import {
+  encodeCellTimeline,
+  makeChunk,
+  muxV64,
+  verifyV64
+} from "../prototype/js/container.mjs";
 
 const outputDirectory = resolve(process.argv[2] || "bench/generated/am1");
 mkdirSync(outputDirectory, { recursive: true });
@@ -23,13 +31,20 @@ const detected = detectSilenceSpans(fixture.samples, {
   minimumSilenceMs: 120,
   hangoverMs: 40
 });
-const chunks = silenceSpansToChunks(detected.spans, fixture.sampleRate);
+const silenceChunks = silenceSpansToChunks(detected.spans, fixture.sampleRate);
 const runs = encodeSegmentedAm1Runs(
   fixture.samples,
   fixture.sampleRate,
   detected.spans,
   { bitrateKbps: 8, frameDurationMs: 20 }
 );
+const aurnChunks = runs.map((run) => makeChunk(
+  "AURN",
+  run.timestamp,
+  run.duration,
+  encodeAurnPayload(run),
+  { compress: false }
+));
 const runManifest = runs.map((run, index) => {
   const filename = `run-${String(index).padStart(2, "0")}.opuspackets`;
   writeFileSync(resolve(outputDirectory, filename), run.packetStreamBytes);
@@ -46,7 +61,8 @@ const runManifest = runs.map((run, index) => {
     packets: run.packets.length,
     packetSamples: run.packetSamples,
     packetStreamBytes: run.packetStreamBytes.length,
-    packetStreamSha256: run.packetStreamSha256
+    packetStreamSha256: run.packetStreamSha256,
+    aurnPayloadBytes: encodeAurnPayload(run).length
   };
 });
 const silenceSamples = detected.spans.reduce(
@@ -57,8 +73,31 @@ const accountedSamples = silenceSamples + runManifest.reduce(
   (sum, run) => sum + run.keptSamples,
   0
 );
+
+const columns = 4;
+const rows = 3;
+const cadenceId = 7;
+const paletteDepthId = PALETTE_DEPTHS.indexOf(16);
+const videoFrames = Array.from(
+  { length: 48 },
+  () => Buffer.alloc(columns * rows * 3)
+);
+const videoChunks = encodeCellTimeline(videoFrames, {
+  columns,
+  rows,
+  cadenceId,
+  paletteDepthId,
+  keyframeInterval: 24
+});
+const audioChunks = [...aurnChunks, ...silenceChunks]
+  .sort((a, b) => a.timestamp - b.timestamp);
+const v64 = muxV64(
+  { columns, rows, cadenceId, paletteDepthId },
+  [...videoChunks, ...audioChunks]
+);
+const verification = verifyV64(v64);
 const manifest = {
-  format: "V64-AM1-FIXTURE-2",
+  format: "V64-AM1-FIXTURE-3",
   sampleRate: fixture.sampleRate,
   channels: fixture.channels,
   samples: fixture.samples.length,
@@ -68,7 +107,7 @@ const manifest = {
   segments: fixture.segments,
   detector: detected.diagnostics,
   silenceSpans: detected.spans,
-  silenceChunks: chunks.map((chunk) => ({
+  silenceChunks: silenceChunks.map((chunk) => ({
     type: chunk.type,
     timestamp: chunk.timestamp,
     duration: chunk.duration,
@@ -84,10 +123,19 @@ const manifest = {
     runs: runManifest,
     silenceSamples,
     accountedSamples
+  },
+  container: {
+    filename: "am1-container.v64",
+    bytes: v64.length,
+    sha256: createHash("sha256").update(v64).digest("hex"),
+    featureFlags: v64.readUInt32LE(12),
+    audioFeatureDeclared: Boolean(v64.readUInt32LE(12) & 64),
+    verification
   }
 };
 
 writeFileSync(resolve(outputDirectory, "am1-hysteresis.wav"), wav);
+writeFileSync(resolve(outputDirectory, "am1-container.v64"), v64);
 writeFileSync(
   resolve(outputDirectory, "manifest.json"),
   `${JSON.stringify(manifest, null, 2)}\n`

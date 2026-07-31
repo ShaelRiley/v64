@@ -4,7 +4,10 @@ import { GLYPH_MASKS } from "../prototype/js/assets.mjs";
 import { cadenceFromId, PALETTE_DEPTHS } from "../prototype/js/constants.mjs";
 import { muxV64, verifyV64 } from "../prototype/js/container.mjs";
 import {
+  VIDEO64_DEFAULT_GLYPH_COUNT,
+  VIDEO64_PRIMARY_GLYPH_COUNTS,
   glyphSubsetMap,
+  primaryGlyphCountFromValue,
   remapCellsToGlyphCount
 } from "../prototype/js/glyph-subset.mjs";
 import {
@@ -59,27 +62,37 @@ test("scene cuts can shorten but never exceed the frozen group maximum", () => {
   assert.equal(plan.maximumBoundaries, 1);
 });
 
+test("32 glyphs is the primary default and 64 is the optional primary path", () => {
+  assert.equal(VIDEO64_DEFAULT_GLYPH_COUNT, 32);
+  assert.deepEqual(VIDEO64_PRIMARY_GLYPH_COUNTS, [32, 64]);
+  assert.equal(primaryGlyphCountFromValue(), 32);
+  assert.equal(primaryGlyphCountFromValue("64"), 64);
+  assert.throws(() => primaryGlyphCountFromValue(16), /must be 32 or 64/);
+});
+
 test("glyph subset maps are deterministic and keep all emitted glyphs in range", () => {
-  const map = glyphSubsetMap(16);
+  const map = glyphSubsetMap(32);
   assert.equal(map.length, 64);
-  for (let glyph = 0; glyph < 16; glyph += 1) assert.equal(map[glyph], glyph);
-  for (let glyph = 16; glyph < 64; glyph += 1) assert.ok(map[glyph] < 16);
+  for (let glyph = 0; glyph < 32; glyph += 1) assert.equal(map[glyph], glyph);
+  for (let glyph = 32; glyph < 64; glyph += 1) assert.ok(map[glyph] < 32);
   const cells = Buffer.from([63, 1, 0, 31, 2, 0, 15, 3, 0]);
-  const remapped = remapCellsToGlyphCount(cells, 16);
-  assert.ok(remapped[0] < 16);
-  assert.ok(remapped[3] < 16);
+  const remapped = remapCellsToGlyphCount(cells, 32);
+  assert.ok(remapped[0] < 32);
+  assert.equal(remapped[3], 31);
   assert.equal(remapped[6], 15);
   assert.equal(GLYPH_MASKS.length, 64);
 });
 
-test("target modes make explicit rate-versus-distortion choices", () => {
+test("target modes make explicit 32-primary rate-versus-distortion choices", () => {
   const candidates = [
-    { glyphCount: 16, rateBytes: 10, distortion: 0.2, cellCount: 10 },
+    { glyphCount: 32, rateBytes: 10, distortion: 0.2, cellCount: 10 },
     { glyphCount: 64, rateBytes: 14, distortion: 0.01, cellCount: 10 }
   ];
-  assert.equal(selectRateDistortionCandidate(candidates, "compact").glyphCount, 16);
+  assert.equal(selectRateDistortionCandidate(candidates, "compact").glyphCount, 32);
   assert.equal(selectRateDistortionCandidate(candidates, "quality").glyphCount, 64);
-  assert.deepEqual(rateDistortionModeFromValue("balanced").glyphCounts, [16, 32]);
+  assert.deepEqual(rateDistortionModeFromValue("compact").glyphCounts, [32]);
+  assert.deepEqual(rateDistortionModeFromValue("balanced").glyphCounts, [32]);
+  assert.deepEqual(rateDistortionModeFromValue("quality").glyphCounts, [32, 64]);
   assert.throws(() => rateDistortionModeFromValue("unbounded"), /Unknown rate-distortion mode/);
 });
 
@@ -106,7 +119,6 @@ test("scene-aware rate-distortion analysis emits independently verifiable groups
   ];
   const analysis = analyzeRateDistortionTimeline(rawFrames, {
     mode: "quality",
-    glyphCounts: [16, 32, 64],
     width,
     height,
     columns: 1,
@@ -118,6 +130,8 @@ test("scene-aware rate-distortion analysis emits independently verifiable groups
     minimumGroupFrames: 2,
     sceneCutThreshold: 0.4
   });
+  assert.equal(analysis.defaultGlyphCount, 32);
+  assert.ok(analysis.selections.every((item) => item.glyphCount === 32 || item.glyphCount === 64));
   assert.deepEqual(analysis.plan.starts, [0, 2]);
   assert.equal(analysis.frameTicks, cadenceFromId(cadenceId).frameTicks);
   const chunks = encodeSceneAwareCellTimeline(analysis);
@@ -139,7 +153,7 @@ test("scene and rate-distortion options reject malformed bounds", () => {
   assert.throws(() => glyphSubsetMap(0), /Glyph subset size/);
   assert.throws(
     () => selectRateDistortionCandidate([
-      { glyphCount: 16, rateBytes: -1, distortion: 0, cellCount: 1 }
+      { glyphCount: 32, rateBytes: -1, distortion: 0, cellCount: 1 }
     ]),
     /must be nonnegative/
   );

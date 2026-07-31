@@ -74,8 +74,11 @@ test("AURN reconstructs deterministic Ogg Opus framing", () => {
     const second = buildOggOpusFromAurn(run);
     assert.deepEqual(first, second);
     assert.equal(first.toString("ascii", 0, 4), "OggS");
+    assert.equal(first.readUInt32LE(14), OGG_OPUS_WRAPPER.serial);
+    assert.equal(first[5] & 0x02, 0x02);
     assert.ok(first.includes(Buffer.from("OpusHead")));
     assert.ok(first.includes(Buffer.from("OpusTags")));
+    assert.ok(first.length > run.packets.reduce((sum, packet) => sum + packet.length, 0));
   }
 });
 

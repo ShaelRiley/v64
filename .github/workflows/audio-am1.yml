@@ -1,4 +1,4 @@
-name: V64 AM1 audio and container
+name: V64 AM1 audio, container, and playback
 
 on:
   pull_request:
@@ -6,11 +6,13 @@ on:
       - "prototype/js/audio-am1.mjs"
       - "prototype/js/audio-opus.mjs"
       - "prototype/js/audio-run.mjs"
+      - "prototype/js/audio-decode.mjs"
       - "prototype/js/opus-packet.mjs"
       - "prototype/js/container.mjs"
       - "tests/audio-am1.test.mjs"
       - "tests/audio-opus.test.mjs"
       - "tests/audio-run.test.mjs"
+      - "tests/audio-decode.test.mjs"
       - "tools/build-am1-fixtures.mjs"
       - "package.json"
   workflow_dispatch:

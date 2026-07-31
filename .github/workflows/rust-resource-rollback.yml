@@ -1,0 +1,94 @@
+name: V64 Rust resource and rollback gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-resource-rollback.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/v64-core/**"
+      - "bench/results/rust-resource-rollback/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-rust-resource-rollback-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resource-rollback:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.85.0
+          rustup default 1.85.0
+          rustc --version
+          cargo --version
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Test all Rust targets
+        run: cargo test --locked --workspace --all-targets
+
+      - name: Test optimized Rust targets
+        run: cargo test --locked --workspace --all-targets --release
+
+      - name: Run resource gate twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/resource-rollback
+          cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-a.json
+          cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-b.json
+          cmp target/resource-rollback/resource-a.json target/resource-rollback/resource-b.json
+
+      - name: Run frame rollback gate twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-a.json
+          cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-b.json
+          cmp target/resource-rollback/rollback-a.json target/resource-rollback/rollback-b.json
+
+      - name: Validate and hash reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          resource = json.loads(Path("target/resource-rollback/resource-a.json").read_text())
+          rollback = json.loads(Path("target/resource-rollback/rollback-a.json").read_text())
+          assert resource["format"] == "V64-RUST-RESOURCE-GATE-1"
+          assert resource["exact_boundary_accepted"] is True
+          assert resource["case_count"] == 3
+          assert rollback["format"] == "V64-RUST-FRAME-ROLLBACK-GATE-1"
+          assert rollback["case_count"] == 5
+          assert rollback["prior_state_immutable"] is True
+          assert rollback["valid_delta_recovery_after_each_failure"] is True
+          PY
+          sha256sum \
+            target/resource-rollback/resource-a.json \
+            target/resource-rollback/rollback-a.json \
+            | tee target/resource-rollback/SHA256SUMS
+
+      - name: Upload hardening evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-rust-resource-rollback
+          path: target/resource-rollback
+          if-no-files-found: error
+          retention-days: 30

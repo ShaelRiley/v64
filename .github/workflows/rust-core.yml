@@ -32,15 +32,7 @@ jobs:
           cargo --version
 
       - name: Build and test v64-core
-        run: cargo test --workspace --all-targets
+        run: cargo test --locked --workspace --all-targets
 
       - name: Test optimized release parser
-        run: cargo test --workspace --all-targets --release
-
-      - name: Record dependency lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: v64-rust-cargo-lock
-          path: Cargo.lock
-          if-no-files-found: error
-          retention-days: 30
+        run: cargo test --locked --workspace --all-targets --release

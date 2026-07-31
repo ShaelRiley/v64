@@ -93,7 +93,7 @@ Browser seek gate, workflow `30599518584`, checked code head
 - all 101 repository tests passed;
 - artifact `8781381629`;
 - four-second fixture: 1,500 bytes,
-  `fb718b18ca33daee562dcc9ec46f2393a3b8f74db5b38b20fcd40311aa1e1`;
+  `fb718b18ca33daee5626e2d3727e47f2393a3b8f74db5b38b20fcd40311aa1e1`;
 - two 48-frame / two-second independent groups;
 - 96 video frames, two keyframes, 12 repeat spans;
 - two `SUBT` chunks covering all 96 subtitle frames;

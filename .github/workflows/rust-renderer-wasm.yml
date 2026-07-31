@@ -42,6 +42,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
       - name: Install pinned Rust toolchain and WebAssembly target
         shell: bash
         run: |

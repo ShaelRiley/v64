@@ -80,7 +80,7 @@ test("encoder profile rejects non-primary and overlong group declarations", () =
     /must be 32 or 64/
   );
   assert.throws(
-    () => encodeEncoderProfilePayload({ glyphCount: 32, cadenceId: 6, maximumGroupFrames: 25 }),
+    () => encodeEncoderProfilePayload({ glyphCount: 32, cadenceId: 5, maximumGroupFrames: 25 }),
     /exceed the two-second cadence bound/
   );
 });

@@ -6,6 +6,10 @@ Updated: 2026-07-31
 
 - Authoritative design:
   [public V64 / Video64 Drop Google Doc](https://docs.google.com/document/d/1qP6a9f6OSggPun4t1wATHRrC1yPgLngblZwlZdrk1Tg/edit?usp=sharing)
+- The project remains **Video 64** and encoded files remain `.v64`.
+- The canonical source asset remains the complete 64-glyph Video 64 alphabet.
+- The primary/default product encoder budget is 32 glyphs; 64 glyphs is an
+  explicit additional option and 16 glyphs is research-only.
 - ANSI Tube source inspected at release `v0.9.9`, commit `ee08e66`.
 - Canonical ANSI Tube source blob: `core.js`
   `29fd2065612454a66a92e431213731c41d5dc28c`.
@@ -41,27 +45,36 @@ Candidate 1. Any palette-byte change requires a new normative identifier.
 - [x] Implement the v0.1 binary header and chunk framing.
 - [x] Validate magic, version, feature bits, reserved fields, dimensions,
   cadence, palette depth, asset hashes, lengths, CRC-32, and bounded DEFLATE.
-- [x] Implement keyframes, deltas, repeat-frame spans, and a keyframe seek index.
+- [x] Implement keyframes, delta frames, repeat-frame spans, and a keyframe seek
+  index.
 - [x] Implement the canonical command set and deterministic dynamic-programming
   command selection.
 - [x] Add deterministic raster ingest, rendering, CLI encode/decode/inspect/
   verify commands, and reproducible corpus benchmarking.
 - [x] Complete deterministic CC0 coverage of all eleven required raster classes.
 - [x] Add blind still/motion reviews with separately uploaded concealed keys.
-- [x] Retain two-second independent groups as the prototype default.
 - [x] Validate two-second group seeks in headless Chrome across cell state,
   subtitle planes, composite raster, audio windows, and viewport scanline phase.
-- [x] Freeze two-second independent groups as the maximum duration for the
+- [x] Freeze two seconds as the maximum independent-group duration for the
   JavaScript proof profile.
+- [x] Derive the maximum frame count from cadence: 48 frames at 24 fps, 24 at
+  12 fps, 12 at 6 fps, and equivalent values for every supported cadence.
 - [x] Add deterministic scene-cut scoring that may begin shorter independent
-  groups without exceeding the 48-frame maximum.
+  groups without exceeding the cadence-derived two-second maximum.
 - [x] Add explicit `compact`, `balanced`, and `quality` rate-distortion modes.
-- [x] Complete the deterministic 16/32/64-glyph study and repeat the Phase-1,
-  Grammar B, DEFLATE, Huffman, and Zstandard comparison on all eleven structural
-  classes.
-- [ ] Repeat the study on legally reusable human raster material and add decoder
-  time, peak allocation, and malformed-input resource-limit evidence before a
-  final grammar or entropy-backend freeze.
+- [x] Complete the deterministic 16/32/64-glyph structural-corpus study.
+- [x] Make 32 glyphs the executable default and primary optimization target.
+- [x] Retain 64 glyphs as an explicit product option through `--glyphs 64`.
+- [x] Restrict 16 glyphs to comparative research rather than ordinary product
+  encoding.
+- [x] Complete the human-raster 32/64 study with valid-file decoder timing,
+  sampled allocations, and malformed-input resource-limit measurements.
+- [x] Add deterministic `V64-ENCODER-PROFILE-1` metadata in optional `META`
+  chunks and expose it through `inspect` and `verify`.
+- [ ] Select final command syntax on a broader combined structural/human corpus;
+  Phase-1 and Grammar B currently disagree by corpus.
+- [ ] Freeze an entropy backend only after Rust/WebAssembly/native decoder cost
+  and interoperability measurements.
 
 Browser seek gate, workflow `30599518584`, checked code head
 `a53109205a6effc0ab0e4c4bcf15ae8388ba88d0`:
@@ -80,8 +93,9 @@ Browser seek gate, workflow `30599518584`, checked code head
 - repeated targets were byte-stable and no prior-group state was carried across
   the two-second boundary.
 
-Scene-cut / rate-distortion / glyph-budget gate, workflow `30633411868`,
-checked code head `2a802f851a716c83b4288820ec2e8632533ddd47`:
+Structural scene-cut / rate-distortion / glyph-budget gate, workflow
+`30633411868`, checked code head
+`2a802f851a716c83b4288820ec2e8632533ddd47`:
 
 - complete repository suite passed;
 - artifact `8794322086`;
@@ -92,21 +106,71 @@ checked code head `2a802f851a716c83b4288820ec2e8632533ddd47`:
 - eleven deterministic CC0 structural classes;
 - 72 frames per class, six configurations, 66 matched cases;
 - every generated container passed ordinary verification;
-- no independent group exceeded 48 frames;
 - fixed 16 glyphs: 85,967 bytes, distortion 0.011532598;
 - fixed 32 glyphs: 88,671 bytes, distortion 0.006832271;
 - fixed 64 glyphs: 91,701 bytes, distortion 0.005947205;
-- balanced mode: 88,161 bytes, distortion 0.007886214, with 402/390
-  selections at 16/32 glyphs;
-- quality mode: 90,510 bytes, distortion 0.006508797, with 48 early
-  scene-cut boundaries and 204/282/306 selections at 16/32/64 glyphs;
-- 32 glyphs is the provisional fixed-budget knee;
-- Grammar B plus group DEFLATE used 100,896 bytes versus 156,061 for Phase-1
-  plus group DEFLATE;
+- 16 → 32 cost 3.145% more bytes and reduced distortion 40.757%;
+- 32 → 64 cost another 3.417% and reduced distortion 12.954%;
+- 32 glyphs emerged as the fixed-budget knee;
+- Grammar B plus group DEFLATE used 100,896 bytes versus 156,061 for Phase-1;
 - Grammar B plus Zstandard used 104,852 bytes and canonical Huffman used
-  418,966 bytes;
-- Grammar B and raw DEFLATE advance as benchmark leaders, but remain unfrozen
-  pending human-raster and decoder-resource evidence.
+  418,966 bytes.
+
+Human-raster 32-primary gate, workflow `30636581459`, checked code head
+`df0708742300b344e522009a7d78a17e3f1e0359`:
+
+- complete repository suite passed;
+- artifact `8795660692`;
+- artifact ZIP SHA-256:
+  `c9209d2378fba31218ea39a49fa6e6d36873986dbd9553e1395156cb166238f6`;
+- full generated summary SHA-256:
+  `b381ed29dc1afb3920ec00ee5f41fde48f08e28ffac5ceb133f673a04df3f660`;
+- ten original CC0 source/grid lanes normalized to `V64-P256-1`;
+- four configurations and 40 verified `.v64` files;
+- primary 32 balanced: 249,578 bytes, distortion 0.018299704;
+- fixed 32 quality: 256,482 bytes, distortion 0.018015554;
+- optional 64 quality: 274,904 bytes, distortion 0.017388208;
+- adaptive 32/64 quality selected 32 on all 480 frames and exactly matched the
+  fixed-32 quality result;
+- fixed 64 quality cost 7.183% more bytes than fixed 32 quality for only 3.482%
+  lower distortion;
+- balanced 32 used 2.766% fewer bytes than quality 32 for only 1.553% more
+  distortion;
+- worst valid-file decode p95: 18.206 ms;
+- largest sampled heap delta: 16,420,128 bytes;
+- largest sampled ArrayBuffer delta: 2,859,280 bytes;
+- all seven malformed classes were rejected;
+- worst hostile-input p95: 1.682 ms;
+- worst hostile sampled heap delta: 129,336 bytes;
+- worst hostile sampled ArrayBuffer delta: 920,753 bytes;
+- Phase-1 plus group DEFLATE used 874,752 bytes;
+- Grammar B plus group DEFLATE used 881,164 bytes, making Grammar B 0.733%
+  larger on the human corpus;
+- Grammar B plus Zstandard used 912,638 bytes and canonical Huffman used
+  988,292 bytes;
+- raw DEFLATE remains 3.449% smaller than Zstandard on these human groups.
+
+Decision: 32 glyphs is frozen as the primary/default JavaScript encoder budget,
+64 remains the explicit full-alphabet option, balanced is the ordinary target,
+and final grammar selection is reopened because the structural and human
+corpora disagree slightly.
+
+### Encoder profile metadata
+
+- [x] Add deterministic `V64-ENCODER-PROFILE-1` JSON carried in optional `META`.
+- [x] Record Video 64 identity, `.v64`, canonical source alphabet size 64,
+  selected glyph count 32/64, target mode, cadence, scene-cut policy,
+  cadence-derived two-second group bound, and dictionary selection.
+- [x] Preserve legacy compatibility: files without the record remain valid and
+  report `encoderProfile: null`.
+- [x] Reject malformed JSON, non-primary glyph counts, unknown targets,
+  cadence disagreement, overlong group declarations, and multiple profile
+  records during profile inspection.
+- [x] Emit the profile from ordinary CLI encoding and expose it through
+  `v64 inspect` and `v64 verify`.
+
+The profile reports an encoder decision; it does not replace the canonical
+64-glyph asset hash or change the core container feature mask.
 
 ### Subtitle side plane
 
@@ -261,6 +325,8 @@ blocker, not a codec-design blocker.
 - [ ] Source/V64 decoded split preview.
 - [ ] Representative-sample estimator, calibration history, per-file overrides,
   and six-stage progress reporting.
+- [ ] Expose 32-glyph balanced as the primary preset and 64-glyph quality as the
+  explicit additional option.
 - [ ] `apps/v64-player`: native standalone player.
 - [x] Specify and test renderer-neutral CRT scanlines at strength 0.18, period 2,
   and phase 1.
@@ -285,11 +351,12 @@ blocker, not a codec-design blocker.
 
 ## Next concrete step
 
-Run the identical scene-cut, rate-distortion, 16/32/64-glyph, grammar, and
-entropy-backend evaluation on the legally reusable human raster corpus. Add
-repeatable decoder-time, peak-allocation, and malformed-input resource-limit
-measurements. Only freeze final command syntax and compression backend if those
-results agree with the deterministic structural-corpus evidence.
+Build the combined structural-plus-human grammar decision gate, including
+weighted corpus reporting and decoder-complexity comparisons for Phase-1 versus
+Grammar B. In parallel, begin the Rust core/container implementation so the
+32-glyph primary profile, optional 64-glyph profile, cadence-derived group
+limits, optional encoder `META`, registry semantics, raster state, subtitle
+planes, and audio timing can be checked against JavaScript golden identities.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

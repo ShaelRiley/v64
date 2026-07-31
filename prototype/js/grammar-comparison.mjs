@@ -2,11 +2,12 @@ import { performance } from "node:perf_hooks";
 import { applyFrameCommands, OPCODE } from "./commands.mjs";
 import { decodeVideoTimeline } from "./container.mjs";
 import {
-  applyPackedCommands,
+  applyPackedCommandsDirect,
+  grammarBDirectDecoderComplexity
+} from "./grammar-b-direct.mjs";
+import {
   buildCommandTrace,
-  encodePackedCommands,
-  PACKED_OPCODE,
-  parsePackedCommands
+  encodePackedCommands
 } from "./grammar-b.mjs";
 
 function equalBytes(left, right) {
@@ -51,10 +52,7 @@ function decoderSourceMetrics(functions, opcodes) {
 export function grammarDecoderComplexity() {
   return {
     phase1: decoderSourceMetrics([applyFrameCommands], OPCODE),
-    grammarB: decoderSourceMetrics(
-      [parsePackedCommands, applyPackedCommands],
-      PACKED_OPCODE
-    )
+    grammarB: grammarBDirectDecoderComplexity()
   };
 }
 
@@ -128,7 +126,9 @@ export function decodePreparedGrammar(prepared, grammar, options = {}) {
     }
 
     const commandBytes = grammar === "phase1" ? frame.phase1 : frame.grammarB;
-    const apply = grammar === "phase1" ? applyFrameCommands : applyPackedCommands;
+    const apply = grammar === "phase1"
+      ? applyFrameCommands
+      : applyPackedCommandsDirect;
     const decoded = apply(commandBytes, prior, {
       columns: prepared.columns,
       rows: prepared.rows,

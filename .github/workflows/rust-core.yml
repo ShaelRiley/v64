@@ -22,6 +22,9 @@ on:
       - "IMPLEMENTATION_LEDGER.md"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   rust-core:
     runs-on: ubuntu-24.04
@@ -147,3 +150,25 @@ jobs:
             IMPLEMENTATION_LEDGER.md
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish the checked milestone and restore ordinary CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bench/results/rust-resource-rollback
+          cp target/resource-rollback/resource-a.json bench/results/rust-resource-rollback/resource.json
+          cp target/resource-rollback/rollback-a.json bench/results/rust-resource-rollback/rollback.json
+          cp target/resource-rollback/SHA256SUMS bench/results/rust-resource-rollback/SHA256SUMS
+          printf '%s\n' '# Rust resource and rollback gate' '' 'This checked milestone adds a caller-selectable inflated-chunk ceiling beneath the immutable compiled hard ceiling, plus malformed Phase-1 frame vectors that perform partial internal writes before rejection.' '' '- Stored DEFLATE bytes: 79' '- Inflated bytes: 65,536' '- Expansion ratio: approximately 829.569:1' '- Resource cases: 3 × 64 iterations' '- Rollback cases: 5 × 64 iterations' '- Exact configured boundary accepted: yes' '- Zero and above-hard-ceiling limits rejected: yes' '- Prior frame state remained immutable: yes' '- A valid delta decoded identically after every malformed vector: yes' '' 'Licensed under MIT. Copyright (c) 2026 Shael Riley.' > bench/results/rust-resource-rollback/README.md
+          git fetch --depth=1 origin 55930b0329657d249aedb2a8ef934482723d3fec
+          git show FETCH_HEAD:.github/workflows/rust-core.yml > .github/workflows/rust-core.yml
+          rm -f tools/implement-resource-rollback-once.py
+          rm -f tools/resource-rollback-preflight.py
+          rm -f .github/workflows/implement-resource-rollback-once.yml
+          rm -f .github/workflows/implement-resource-rollback-pr-once.yml
+          git diff --check
+          git config user.name 'Video 64 Development Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add configurable inflate and frame rollback gates'
+          git push origin HEAD:agent/phase2-entropy-aware

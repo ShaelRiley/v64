@@ -5,7 +5,8 @@ import {
   applyPackedCommands,
   buildCommandTrace,
   encodePackedCommands,
-  PACKED_OPCODE
+  PACKED_OPCODE,
+  parsePackedCommands
 } from "./grammar-b.mjs";
 
 function equalBytes(left, right) {
@@ -33,12 +34,13 @@ function updatePeak(peak, sample) {
   peak.rss = Math.max(peak.rss, sample.rss);
 }
 
-function decoderSourceMetrics(fn, opcodes) {
-  const source = fn.toString();
+function decoderSourceMetrics(functions, opcodes) {
+  const source = functions.map((fn) => fn.toString()).join("\n");
   const decisionTokens = source.match(/\b(?:if|switch|case)\b/g) ?? [];
   const loopTokens = source.match(/\b(?:for|while)\b/g) ?? [];
   return {
     opcodeCount: Object.keys(opcodes).length,
+    functionCount: functions.length,
     sourceBytes: Buffer.byteLength(source),
     sourceLines: source.split("\n").length,
     decisionTokens: decisionTokens.length,
@@ -48,8 +50,11 @@ function decoderSourceMetrics(fn, opcodes) {
 
 export function grammarDecoderComplexity() {
   return {
-    phase1: decoderSourceMetrics(applyFrameCommands, OPCODE),
-    grammarB: decoderSourceMetrics(applyPackedCommands, PACKED_OPCODE)
+    phase1: decoderSourceMetrics([applyFrameCommands], OPCODE),
+    grammarB: decoderSourceMetrics(
+      [parsePackedCommands, applyPackedCommands],
+      PACKED_OPCODE
+    )
   };
 }
 

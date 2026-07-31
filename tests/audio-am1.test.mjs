@@ -86,10 +86,17 @@ test("AM1 silence spans become exact SILN timeline chunks", () => {
   assert.equal(verifyV64(file).valid, true);
 });
 
-test("AM1 rejects malformed WAV and inexact sample boundaries", () => {
+test("AM1 rejects malformed WAV and invalid sample spans", () => {
   assert.throws(() => decodePcm16Wav(Buffer.from("not a wave")), /Invalid WAV/);
   assert.throws(
     () => silenceSpansToChunks([{ startSample: 1, endSample: 4 }], 48000),
     /not exactly representable/
+  );
+  assert.throws(
+    () => silenceSpansToChunks([
+      { startSample: 0, endSample: 4800 },
+      { startSample: 2400, endSample: 7200 }
+    ], 48000),
+    /overlap or are out of order/
   );
 });

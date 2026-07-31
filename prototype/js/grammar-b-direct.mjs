@@ -210,7 +210,12 @@ export function applyPackedCommandsDirect(commandInput, priorInput, options) {
     const pairComponent = op === "SET_COLOR_PAIR" || op === "REPEAT_COLOR_PAIR";
     const usedBits = glyphComponent ? 6 : (pairComponent ? 2 * paletteBits : paletteBits);
     const payload = requirePayload(usedBits);
-    const first = readPackedValue(commandBytes, payload.byteStart, 0, glyphComponent ? 6 : paletteBits);
+    const first = readPackedValue(
+      commandBytes,
+      payload.byteStart,
+      0,
+      glyphComponent ? 6 : paletteBits
+    );
     const second = pairComponent
       ? readPackedValue(commandBytes, payload.byteStart, paletteBits, paletteBits)
       : null;
@@ -221,7 +226,8 @@ export function applyPackedCommandsDirect(commandInput, priorInput, options) {
       payload.byteLength
     );
 
-    if (!glyphComponent && (first >= paletteDepth || (pairComponent && second >= paletteDepth))) {
+    if (!glyphComponent &&
+        (first >= paletteDepth || (pairComponent && second >= paletteDepth))) {
       throw new Error("Palette index exceeds declared depth");
     }
 
@@ -246,4 +252,23 @@ export function applyPackedCommandsDirect(commandInput, priorInput, options) {
     throw new Error("Trailing bytes after packed frame END");
   }
   return state;
+}
+
+export function grammarBDirectDecoderComplexity() {
+  const functions = [
+    checkedGrid,
+    readPackedValue,
+    requireZeroPadding,
+    validateToken,
+    applyPackedCommandsDirect
+  ];
+  const source = functions.map((fn) => fn.toString()).join("\n");
+  return {
+    opcodeCount: Object.keys(PACKED_OPCODE).length,
+    functionCount: functions.length,
+    sourceBytes: Buffer.byteLength(source),
+    sourceLines: source.split("\n").length,
+    decisionTokens: (source.match(/\b(?:if|switch|case)\b/g) ?? []).length,
+    loopTokens: (source.match(/\b(?:for|while)\b/g) ?? []).length
+  };
 }

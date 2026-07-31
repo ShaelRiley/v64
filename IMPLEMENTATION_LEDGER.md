@@ -1,6 +1,6 @@
 # V64 implementation ledger
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 ## Ground truth
 
@@ -51,9 +51,17 @@ Candidate 1. Any palette-byte change requires a new normative identifier.
 - [x] Retain two-second independent groups as the prototype default.
 - [x] Validate two-second group seeks in headless Chrome across cell state,
   subtitle planes, composite raster, audio windows, and viewport scanline phase.
-- [x] Freeze two-second independent groups for the JavaScript proof profile.
-- [ ] Complete scene-cut scoring, rate-distortion modes, the adaptive glyph-count
-  study, and final grammar/entropy selection.
+- [x] Freeze two-second independent groups as the maximum duration for the
+  JavaScript proof profile.
+- [x] Add deterministic scene-cut scoring that may begin shorter independent
+  groups without exceeding the 48-frame maximum.
+- [x] Add explicit `compact`, `balanced`, and `quality` rate-distortion modes.
+- [x] Complete the deterministic 16/32/64-glyph study and repeat the Phase-1,
+  Grammar B, DEFLATE, Huffman, and Zstandard comparison on all eleven structural
+  classes.
+- [ ] Repeat the study on legally reusable human raster material and add decoder
+  time, peak allocation, and malformed-input resource-limit evidence before a
+  final grammar or entropy-backend freeze.
 
 Browser seek gate, workflow `30599518584`, checked code head
 `a53109205a6effc0ab0e4c4bcf15ae8388ba88d0`:
@@ -71,6 +79,34 @@ Browser seek gate, workflow `30599518584`, checked code head
   hashes for thirteen out-of-order seeks across eight unique frames;
 - repeated targets were byte-stable and no prior-group state was carried across
   the two-second boundary.
+
+Scene-cut / rate-distortion / glyph-budget gate, workflow `30633411868`,
+checked code head `2a802f851a716c83b4288820ec2e8632533ddd47`:
+
+- complete repository suite passed;
+- artifact `8794322086`;
+- artifact ZIP SHA-256:
+  `c7afbf5cb4c2a85a7e7cf9eefb57a3213983875c54e48bb73548bca033f16ed4`;
+- full generated summary SHA-256:
+  `afbaeef137c932602b14a234c8652b348184d46d63adbce221332fbc4755be00`;
+- eleven deterministic CC0 structural classes;
+- 72 frames per class, six configurations, 66 matched cases;
+- every generated container passed ordinary verification;
+- no independent group exceeded 48 frames;
+- fixed 16 glyphs: 85,967 bytes, distortion 0.011532598;
+- fixed 32 glyphs: 88,671 bytes, distortion 0.006832271;
+- fixed 64 glyphs: 91,701 bytes, distortion 0.005947205;
+- balanced mode: 88,161 bytes, distortion 0.007886214, with 402/390
+  selections at 16/32 glyphs;
+- quality mode: 90,510 bytes, distortion 0.006508797, with 48 early
+  scene-cut boundaries and 204/282/306 selections at 16/32/64 glyphs;
+- 32 glyphs is the provisional fixed-budget knee;
+- Grammar B plus group DEFLATE used 100,896 bytes versus 156,061 for Phase-1
+  plus group DEFLATE;
+- Grammar B plus Zstandard used 104,852 bytes and canonical Huffman used
+  418,966 bytes;
+- Grammar B and raw DEFLATE advance as benchmark leaders, but remain unfrozen
+  pending human-raster and decoder-resource evidence.
 
 ### Subtitle side plane
 
@@ -249,10 +285,11 @@ blocker, not a codec-design blocker.
 
 ## Next concrete step
 
-Implement scene-cut scoring and explicit rate-distortion target modes on the
-frozen two-second group profile. Then run the adaptive 16/32/64-glyph study and
-repeat the grammar/entropy comparison on the complete legally reusable mixed
-corpus before selecting final command syntax and compression backend.
+Run the identical scene-cut, rate-distortion, 16/32/64-glyph, grammar, and
+entropy-backend evaluation on the legally reusable human raster corpus. Add
+repeatable decoder-time, peak-allocation, and malformed-input resource-limit
+measurements. Only freeze final command syntax and compression backend if those
+results agree with the deterministic structural-corpus evidence.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

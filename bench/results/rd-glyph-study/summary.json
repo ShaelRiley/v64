@@ -1,0 +1,43 @@
+{
+  "format": "V64-RD-GLYPH-STUDY-CHECKED-1",
+  "status": "passed",
+  "checkedCodeHead": "2a802f851a716c83b4288820ec2e8632533ddd47",
+  "workflowRun": 30633411868,
+  "artifact": {
+    "id": 8794322086,
+    "name": "scene-cut-rate-distortion-glyph-study",
+    "zipSha256": "c7afbf5cb4c2a85a7e7cf9eefb57a3213983875c54e48bb73548bca033f16ed4",
+    "fullSummarySha256": "afbaeef137c932602b14a234c8652b348184d46d63adbce221332fbc4755be00"
+  },
+  "source": {
+    "manifest": "bench/corpus/seed-manifest.json",
+    "manifestSha256": "1e8f2651f75d6dbabecbda109b2814f6b40da353467e9b5b80ba0bb3ed445eab",
+    "license": "CC0-1.0",
+    "structuralClasses": 11,
+    "framesPerFixture": 72,
+    "configurations": 6,
+    "cases": 66
+  },
+  "aggregates": [
+    {"id":"glyph-16","containerBytes":85967,"independentGroups":22,"sceneCuts":0,"meanDistortion":0.011532598,"meanPsnr":23.937921,"glyphSelections":{"16":792,"32":0,"64":0}},
+    {"id":"glyph-32","containerBytes":88671,"independentGroups":22,"sceneCuts":0,"meanDistortion":0.006832271,"meanPsnr":26.600956,"glyphSelections":{"16":0,"32":792,"64":0}},
+    {"id":"glyph-64","containerBytes":91701,"independentGroups":22,"sceneCuts":0,"meanDistortion":0.005947205,"meanPsnr":27.201746,"glyphSelections":{"16":0,"32":0,"64":792}},
+    {"id":"rd-compact","containerBytes":85967,"independentGroups":22,"sceneCuts":0,"meanDistortion":0.011532598,"meanPsnr":23.937921,"glyphSelections":{"16":792,"32":0,"64":0}},
+    {"id":"rd-balanced","containerBytes":88161,"independentGroups":22,"sceneCuts":0,"meanDistortion":0.007886214,"meanPsnr":26.083268,"glyphSelections":{"16":402,"32":390,"64":0}},
+    {"id":"rd-quality","containerBytes":90510,"independentGroups":67,"sceneCuts":48,"meanDistortion":0.006508797,"meanPsnr":26.914203,"glyphSelections":{"16":204,"32":282,"64":306}}
+  ],
+  "grammarTotals": {
+    "phase1Deflate": 156061,
+    "grammarBDeflate": 100896,
+    "grammarBHuffman": 418966,
+    "grammarBZstandard": 104852
+  },
+  "rankings": {
+    "smallestMode": "rd-compact",
+    "lowestDistortionMode": "rd-quality",
+    "provisionalFixedGlyphKnee": 32,
+    "provisionalGrammarWinner": "grammar-b",
+    "provisionalEntropyWinner": "raw-deflate",
+    "freezeStatus": "evidence-only; no final grammar or entropy freeze"
+  }
+}

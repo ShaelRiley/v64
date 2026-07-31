@@ -14,6 +14,18 @@ function assertInteger(value, label, minimum, maximum = Number.MAX_SAFE_INTEGER)
   }
 }
 
+function decodeRawPcm16(input) {
+  const bytes = Buffer.from(input);
+  if (!bytes.length || bytes.length % 2) {
+    throw new Error("AM1 preprocessing produced malformed raw PCM16");
+  }
+  const samples = new Int16Array(bytes.length / 2);
+  for (let index = 0; index < samples.length; index += 1) {
+    samples[index] = bytes.readInt16LE(index * 2);
+  }
+  return samples;
+}
+
 export const AM1_PREPROCESS_PROFILE = Object.freeze({
   outputChannels: 1,
   outputSampleRate: 48000,
@@ -43,7 +55,7 @@ export function preprocessAm1Wav(input, options = {}) {
     "-map_metadata", "-1", "-vn", "-af", FILTER,
     "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le",
     "-fflags", "+bitexact", "-flags:a", "+bitexact",
-    "-f", "wav", "pipe:1"
+    "-f", "s16le", "pipe:1"
   ], {
     input: Buffer.from(input),
     encoding: null,
@@ -55,14 +67,18 @@ export function preprocessAm1Wav(input, options = {}) {
       `ffmpeg AM1 preprocessing failed (${result.status}): ${result.stderr.toString("utf8").trim()}`
     );
   }
-  const decoded = decodePcm16Wav(result.stdout);
-  if (decoded.channels !== 1 || decoded.sampleRate !== 48000) {
-    throw new Error("AM1 preprocessing produced the wrong output profile");
+  const samples = decodeRawPcm16(result.stdout);
+  const expectedSamples = Math.round(source.samples.length / source.channels *
+    48000 / source.sampleRate);
+  if (Math.abs(samples.length - expectedSamples) > 1) {
+    throw new Error(
+      `AM1 preprocessing sample count ${samples.length} disagrees with expected ${expectedSamples}`
+    );
   }
-  const canonicalWav = encodePcm16Wav(decoded.samples, 48000, 1);
+  const canonicalWav = encodePcm16Wav(samples, 48000, 1);
   return {
     wav: canonicalWav,
-    samples: decoded.samples,
+    samples,
     sampleRate: 48000,
     channels: 1,
     inputSampleRate: source.sampleRate,

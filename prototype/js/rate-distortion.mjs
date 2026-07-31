@@ -3,27 +3,31 @@ import { MASTER_PALETTE } from "./assets.mjs";
 import { encodeFrameCommands } from "./commands.mjs";
 import { encodeCellTimeline } from "./container.mjs";
 import { cadenceFromId } from "./constants.mjs";
-import { remapCellsToGlyphCount } from "./glyph-subset.mjs";
+import {
+  VIDEO64_DEFAULT_GLYPH_COUNT,
+  VIDEO64_STUDY_GLYPH_COUNTS,
+  remapCellsToGlyphCount
+} from "./glyph-subset.mjs";
 import { planIndependentGroups } from "./scene-cut.mjs";
 
 export const RATE_DISTORTION_MODES = Object.freeze({
   compact: Object.freeze({
     id: "compact",
-    glyphCounts: Object.freeze([16]),
+    glyphCounts: Object.freeze([VIDEO64_DEFAULT_GLYPH_COUNT]),
     temporalStability: 0.82,
     distortionWeight: 0.75,
     sceneCutThreshold: 0.58
   }),
   balanced: Object.freeze({
     id: "balanced",
-    glyphCounts: Object.freeze([16, 32]),
+    glyphCounts: Object.freeze([VIDEO64_DEFAULT_GLYPH_COUNT]),
     temporalStability: 0.48,
     distortionWeight: 4,
     sceneCutThreshold: 0.44
   }),
   quality: Object.freeze({
     id: "quality",
-    glyphCounts: Object.freeze([16, 32, 64]),
+    glyphCounts: Object.freeze([VIDEO64_DEFAULT_GLYPH_COUNT, 64]),
     temporalStability: 0.18,
     distortionWeight: 16,
     sceneCutThreshold: 0.34
@@ -118,7 +122,7 @@ export function analyzeRateDistortionTimeline(rawFrames, config) {
   const maximumGroupFrames = Number(config.maximumGroupFrames ?? 48);
   const glyphCounts = config.glyphCounts ?? mode.glyphCounts;
   if (!Array.isArray(glyphCounts) || !glyphCounts.length ||
-      glyphCounts.some((count) => ![16, 32, 64].includes(count))) {
+      glyphCounts.some((count) => !VIDEO64_STUDY_GLYPH_COUNTS.includes(count))) {
     throw new RangeError("Rate-distortion glyph candidates must use 16, 32, or 64 glyphs");
   }
   const cadence = cadenceFromId(cadenceId);
@@ -176,6 +180,7 @@ export function analyzeRateDistortionTimeline(rawFrames, config) {
   const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
   return Object.freeze({
     mode: mode.id,
+    defaultGlyphCount: VIDEO64_DEFAULT_GLYPH_COUNT,
     plan,
     frames: Object.freeze(frames),
     selections: Object.freeze(selections),
@@ -184,7 +189,7 @@ export function analyzeRateDistortionTimeline(rawFrames, config) {
       meanDistortion: Number(mean(selections.map((item) => item.distortion)).toFixed(9)),
       meanPsnr: Number(mean(selections.map((item) => item.psnr ?? 99)).toFixed(6)),
       glyphSelections: Object.freeze(Object.fromEntries(
-        [16, 32, 64].map((count) => [
+        VIDEO64_STUDY_GLYPH_COUNTS.map((count) => [
           count,
           selections.filter((item) => item.glyphCount === count).length
         ])

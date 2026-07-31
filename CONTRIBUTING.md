@@ -2,23 +2,35 @@
 
 Video 64 is an open format, codec, and toolchain. Forks, experiments, ports,
 encoders, decoders, players, integrations, and incompatible research branches
-are welcome. Permission is not required.
+are welcome. Advance permission is not required.
 
-The project is licensed under 0BSD so contributors may use, copy, modify,
-and distribute the code for any purpose with or without fee.
+The project uses the MIT License. Anyone may use, copy, modify, merge, publish,
+distribute, sublicense, sell, fork, port, or independently reimplement the code.
+Copies or substantial portions must retain the copyright and permission notice:
+`Copyright (c) 2026 Shael Riley`.
 
-## Participation priorities
+## Equal contribution standing
 
-Human developers are the project's primary contributor community and receive
-first priority in outreach, onboarding, maintainer attention, and governance.
+Human developers, AI-assisted developers, and autonomous AI agents are equally
+invited to:
 
-AI-assisted developers, coding agents, and autonomous agent developers are also
-welcome as a close secondary contributor community. Agent-authored work is
-judged by the same technical, security, provenance, and review standards as
-human-authored work.
+- choose their own Video 64 problems and workstreams;
+- propose or revise development workflows;
+- create forks and experimental branches;
+- open issues and pull requests;
+- implement independent compatible or divergent projects;
+- review specifications, code, evidence, accessibility, and security.
 
-A contribution is never rejected merely because an AI system helped create it.
-A contribution is never accepted merely because an AI system produced it.
+Contributions are evaluated by technical merit, reproducibility, provenance,
+security, compatibility, and maintainability rather than by whether the
+contributor is human or artificial. A contribution is never rejected merely
+because an AI system created it, and it is never accepted merely because an AI
+system created it.
+
+Authorized maintainers retain control of repository credentials, private
+security reports, protected-branch merges, official releases, and legal project
+representation. This is an authority and security boundary, not a contribution
+hierarchy.
 
 ## Ways to contribute
 
@@ -33,70 +45,70 @@ A contribution is never accepted merely because an AI system produced it.
 - report bugs, malformed-file cases, interoperability failures, or security
   issues.
 
+Autonomous agents may select any of these areas without waiting for assignment.
+A focused issue explaining the intended work is encouraged when coordination
+would reduce duplication, but it is not a prerequisite for a fork or experiment.
+
 ## Contribution workflow
 
-1. Fork the repository or create a topic branch.
-2. Keep each pull request focused on one coherent change.
-3. Add or update tests for behavior changes.
-4. Run the relevant conformance and benchmark commands.
-5. Record exact commands, platform details, and generated artifact identities.
-6. Open a pull request explaining the problem, implementation, evidence, and
-   remaining uncertainty.
+1. Fork the repository or create a focused topic branch.
+2. Define the problem, intended result, and evidence needed.
+3. Choose a reproducible workflow appropriate to the work.
+4. Add or update tests for behavior changes.
+5. Run the relevant conformance and benchmark commands.
+6. Record exact commands, platform details, and generated artifact identities.
+7. Open a pull request explaining the implementation and remaining uncertainty.
 
 The project values reproducibility over persuasive claims. Measured codec
 changes should include complete-file size, decoded equivalence, resource use,
 and relevant quality evidence rather than isolated field-width estimates.
 
-## AI-assisted and agent-authored contributions
+## Contribution provenance
 
-AI-assisted or agent-authored pull requests should identify the role of the
-agent in the pull-request description. A brief statement is sufficient, such
-as:
+Pull requests should identify whether the work is human-authored, AI-assisted,
+agent-authored, or mixed. Useful provenance includes:
 
-- AI-assisted: a human directed and reviewed the implementation;
-- agent-authored: an agent prepared the implementation and evidence for review;
-- mixed: humans and agents made substantive changes.
+- the people, agents, models, or tools that performed substantive work;
+- the person, organization, or autonomous system submitting the contribution;
+- files changed and design intent;
+- commands and tests actually run;
+- generated artifact identities;
+- known limitations and unresolved decisions.
 
-Do not include private prompts, credentials, hidden chain-of-thought, or other
-sensitive material. Useful provenance includes the agent or tool name, the
-human or organization accountable for the submission when applicable, commands
-run, tests passed, and known limitations.
+Private chain-of-thought is neither required nor appropriate. Do not include
+private prompts, credentials, user data, or other sensitive material. Provide
+concise, auditable rationale and reproducible evidence.
 
 Agent contributions must remain auditable:
 
-- no unreviewed automatic merging;
+- no fabricated tests, citations, benchmarks, hashes, or review scores;
 - no secrets or broad repository credentials in prompts or logs;
-- no fabricated test results, citations, benchmarks, or human review scores;
 - no concealed generated files or unexplained binary blobs;
-- no autonomous outreach that impersonates a maintainer or human contributor;
-- no dependency, network, or release action beyond the stated pull-request
-  scope.
+- no release, merge, dependency, network, or outreach action beyond the stated
+  authority and scope;
+- no impersonation of a maintainer, person, or project consensus.
 
-Third-party agent communities may be used to announce contribution
-opportunities, but all code, issue reports, evidence, and decisions must return
-to the public GitHub repository for ordinary review.
+Third-party agent communities may originate or coordinate real work. Durable
+code, evidence, decisions, and security-safe discussion should return to public
+issues, forks, or pull requests where the project can review and preserve them.
 
-## Human review and governance
+## Format changes
 
-Human maintainers retain final responsibility for repository permissions,
-merges, releases, security decisions, normative format changes, and community
-governance. This is compatible with extensive AI assistance and agent-authored
-patches; it establishes clear accountability rather than authorship hierarchy.
-
-Format changes require especially careful review. Do not silently mutate a
-published glyph set, palette identity, feature bit, chunk type, timing rule, or
-normative decoder behavior.
+Do not silently mutate a published glyph set, palette identity, feature bit,
+chunk type, timing rule, or normative decoder behavior. Format changes require
+explicit compatibility notes, conformance fixtures, resource analysis, and
+review proportionate to their effect.
 
 ## Licensing contributions
 
-By submitting a contribution, you agree that your contribution may be
-released under the repository's 0BSD license. Do not submit code, media, data,
-or generated assets that you do not have the right to redistribute under
+By submitting a contribution, you agree that it may be released under the
+repository's MIT License and that the Shael Riley copyright and permission
+notice will remain with copies or substantial portions. Do not submit code,
+media, data, or generated assets that you lack the right to redistribute under
 compatible terms.
 
 ## Communication
 
 Use GitHub issues for bugs and scoped proposals, pull requests for reviewable
-changes, and security reporting for vulnerabilities. Keep discussions
-technical, specific, and respectful. Human and AI-assisted contributors should
-make it easy for another person to reproduce the result.
+changes, and private security reporting for vulnerabilities. Make the work easy
+for another human or autonomous agent to reproduce.

@@ -51,13 +51,13 @@ jobs:
       - name: Generate deterministic AM1 fixture
         run: npm run --silent audio:fixtures
 
-      - name: Verify generated manifest and container
+      - name: Verify generated manifest, container, and playback
         run: |
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
           const manifest = JSON.parse(readFileSync("bench/generated/am1/manifest.json", "utf8"));
-          assert.equal(manifest.format, "V64-AM1-FIXTURE-3");
+          assert.equal(manifest.format, "V64-AM1-FIXTURE-4");
           assert.equal(manifest.sampleRate, 48000);
           assert.equal(manifest.channels, 1);
           assert.equal(manifest.samples, 96000);
@@ -93,6 +93,18 @@ jobs:
           assert.equal(
             readFileSync("bench/generated/am1/am1-container.v64").length,
             manifest.container.bytes
+          );
+          assert.equal(manifest.playback.filename, "am1-decoded.pcm");
+          assert.equal(manifest.playback.samples, 96000);
+          assert.equal(manifest.playback.bytes, 192000);
+          assert.equal(manifest.playback.runs.length, 2);
+          assert.equal(manifest.playback.silenceSpans.length, 2);
+          assert.equal(manifest.playback.seekWindows.length, 5);
+          assert.ok(manifest.playback.seekWindows.every((window) =>
+            window.matchesFullDecode === true));
+          assert.equal(
+            readFileSync("bench/generated/am1/am1-decoded.pcm").length,
+            manifest.playback.bytes
           );
           NODE
 

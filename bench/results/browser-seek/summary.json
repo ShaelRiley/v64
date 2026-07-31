@@ -1,0 +1,95 @@
+{
+  "format": "V64-BROWSER-SEEK-CHECKED-RESULT-1",
+  "checkedHead": "a53109205a6effc0ab0e4c4bcf15ae8388ba88d0",
+  "workflowRun": 30599518584,
+  "artifact": {
+    "id": 8781381629,
+    "name": "browser-two-second-seek-conformance",
+    "archiveDigest": "sha256:bccd597f24e4de9fbf45bccf3ebdb7c2818e7dbb9a3192117c8d0bfd118b67b0",
+    "expiresAt": "2026-08-30T02:40:27Z"
+  },
+  "repositoryTests": {
+    "total": 101,
+    "passed": 101,
+    "failed": 0
+  },
+  "container": {
+    "filename": "browser-seek.v64",
+    "bytes": 1500,
+    "sha256": "fb718b18ca33daee5626e2d3727e47f2393a3b8f74db5b38b20fcd40311aa1e1",
+    "featureFlags": 153,
+    "verification": {
+      "valid": true,
+      "frames": 96,
+      "keyframes": 2,
+      "repeatSpans": 12,
+      "audioRuns": 0,
+      "audioSilenceSpans": 0,
+      "audioKeptSamples": 0,
+      "subtitleChunks": 2,
+      "subtitleFrames": 96,
+      "chunks": 27,
+      "durationTicks": 240000
+    }
+  },
+  "audioGolden": {
+    "filename": "browser-seek.pcm",
+    "sampleRate": 48000,
+    "channels": 1,
+    "samples": 192000,
+    "bytes": 384000,
+    "sha256": "8846750d2fe20c1c86ca9c3a37b1d6f28cf8471719e99e7d688fef3d9eec9310",
+    "scope": "Companion PCM slicing in Chrome; standard AURN/Opus decode is covered by the separate AM1 playback gate."
+  },
+  "profile": {
+    "columns": 4,
+    "rows": 2,
+    "cellCount": 8,
+    "cadenceId": 7,
+    "frameTicks": 2500,
+    "durationTicks": 240000,
+    "paletteDepthId": 6,
+    "paletteDepth": 16,
+    "totalFrames": 96,
+    "groupFrames": 48,
+    "groupSeconds": 2,
+    "groupCount": 2,
+    "audioSamplesPerFrame": 2000
+  },
+  "scanlines": {
+    "viewportY": 3,
+    "strength": 0.18,
+    "period": 2,
+    "phase": 1
+  },
+  "seekOrder": [0, 47, 48, 49, 95, 48, 0, 72, 73, 24, 73, 47, 95],
+  "browserResult": {
+    "valid": true,
+    "seeks": 13,
+    "uniqueFrames": 8,
+    "groupFrames": 48,
+    "groupCount": 2,
+    "viewportY": 3,
+    "repeatedSeekStable": true,
+    "first": {
+      "frameIndex": 0,
+      "cellsSha256": "a1e0ae1fdca5e32f82848a27a3d08aaf76d14828c5647712d158b0fc735f9ac6",
+      "subtitleSha256": "384c0b729c70a4485a6341e37173b9faf723ada3876e3d9b7073805f3bd9dc98",
+      "compositeSha256": "6bb807ccd43c5d0b6b686adc389cae8cdf6df5d47f2e894ee92d773a8ee85bed",
+      "scanlineSha256": "01b8576d9f5a985bb0a852f6516af308a58c65b1b5bcc95d86d4d2db981740e6",
+      "audioSha256": "462889df2e4a981b89c246d49541f6156c4aecee915c27c44788937c1d502d09"
+    },
+    "last": {
+      "frameIndex": 95,
+      "cellsSha256": "9ce0f44421859bd190318b08bd9c33c05f5d7425ab660bcc4135d4707f9c313d",
+      "subtitleSha256": "4478c60ba40932358bee649c414d2a429c8df5c607eb13e589f4f668432e4680",
+      "compositeSha256": "dc489f6c63fce24ce179d5dc2f6c4d22bb1793a65c0eb19ae39105975837ef03",
+      "scanlineSha256": "045542e69cc8e33ef34f5a86e8aec8ea38c54ddf0a4bef0a43fc4ec6a13fd9f6",
+      "audioSha256": "6870547639ae148fa63b1a8a8dc72d49bd94a80a545c96713a714862bf536db7"
+    }
+  },
+  "decision": {
+    "twoSecondIndependentGroups": "frozen for the JavaScript proof profile",
+    "reason": "Chrome reproduced exact Node-derived cell, subtitle, composite, scanline, and PCM-window hashes across both group boundaries and repeated out-of-order seeks without hidden prior-group state."
+  }
+}

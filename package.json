@@ -27,6 +27,7 @@
     "review:human4": "npm run --silent corpus:human4 > /dev/null && node tools/build-blind-review.mjs bench/corpus/human-raster-tranche-4-manifest.json bench/previews/human-tranche-4 bench/reviews/human-tranche-4 && node tools/build-blind-motion-review.mjs bench/corpus/human-raster-tranche-4-manifest.json bench/previews/human-tranche-4/motion bench/reviews/human-tranche-4",
     "review:human5": "npm run --silent corpus:human5 > /dev/null && node tools/build-blind-review.mjs bench/corpus/human-raster-tranche-5-manifest.json bench/previews/human-tranche-5 bench/reviews/human-tranche-5 && node tools/build-blind-motion-review.mjs bench/corpus/human-raster-tranche-5-manifest.json bench/previews/human-tranche-5/motion bench/reviews/human-tranche-5",
     "audio:fixtures": "node tools/build-am1-fixtures.mjs bench/generated/am1",
+    "subt:fixtures": "node tools/build-subt-fixture.mjs bench/generated/subt",
     "bench:audio-bitrates": "node tools/benchmark-am1-bitrates.mjs bench/results/am1-bitrate-sweep",
     "test": "node --test tests/*.test.mjs",
     "sample": "node prototype/js/cli.mjs make-sample tests/golden",

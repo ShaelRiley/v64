@@ -11,6 +11,8 @@ on:
       - "tools/write-video-golden-stream.mjs"
       - "tools/write-grammar-b-fixture.mjs"
       - "tools/decode-grammar-b-fixture.mjs"
+      - "tools/implement-resource-rollback-once.py"
+      - "tools/resource-rollback-preflight.py"
       - "prototype/js/constants.mjs"
       - "prototype/js/container.mjs"
       - "prototype/js/commands.mjs"
@@ -23,7 +25,7 @@ on:
 jobs:
   rust-core:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out pull-request head
         uses: actions/checkout@v4
@@ -43,6 +45,15 @@ jobs:
           rustup default 1.85.0
           rustc --version
           cargo --version
+
+      - name: Build proposed resource and rollback patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/implement-resource-rollback-once.py
+          python3 tools/resource-rollback-preflight.py
+          cargo fmt --all
+          cargo fmt --all -- --check
 
       - name: Build and test v64-core
         run: cargo test --locked --workspace --all-targets
@@ -89,6 +100,97 @@ jobs:
           cmp target/javascript-phase1-states.bin target/rust-grammar-b-states.bin
           sha256sum target/javascript-phase1-states.bin | tee target/video-state-sha256.txt
           sha256sum target/grammar-b-fixture.bin | tee target/grammar-b-fixture-sha256.txt
+
+      - name: Run resource and rollback gates twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/resource-rollback bench/results/rust-resource-rollback
+          cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-a.json
+          cargo run --locked --release --bin v64-resource-gate -- target/resource-rollback/resource-b.json
+          cmp target/resource-rollback/resource-a.json target/resource-rollback/resource-b.json
+          cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-a.json
+          cargo run --locked --release --bin v64-frame-rollback-gate -- target/resource-rollback/rollback-b.json
+          cmp target/resource-rollback/rollback-a.json target/resource-rollback/rollback-b.json
+          cp target/resource-rollback/resource-a.json bench/results/rust-resource-rollback/resource.json
+          cp target/resource-rollback/rollback-a.json bench/results/rust-resource-rollback/rollback.json
+          (
+            cd bench/results/rust-resource-rollback
+            sha256sum resource.json rollback.json > SHA256SUMS
+          )
+
+      - name: Validate hardening evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("bench/results/rust-resource-rollback")
+          resource = json.loads((root / "resource.json").read_text())
+          rollback = json.loads((root / "rollback.json").read_text())
+          sums = (root / "SHA256SUMS").read_text().strip()
+
+          assert resource["format"] == "V64-RUST-RESOURCE-GATE-1"
+          assert resource["exact_boundary_accepted"] is True
+          assert resource["case_count"] == 3
+          assert rollback["format"] == "V64-RUST-FRAME-ROLLBACK-GATE-1"
+          assert rollback["case_count"] == 5
+          assert rollback["prior_state_immutable"] is True
+          assert rollback["valid_delta_recovery_after_each_failure"] is True
+
+          (root / "README.md").write_text(f"""# Rust resource and rollback gate
+
+This checked milestone adds a caller-selectable inflated-chunk ceiling beneath the immutable compiled hard ceiling, plus malformed Phase-1 frame vectors that perform partial internal writes before rejection.
+
+- Stored DEFLATE bytes: {resource['stored_bytes']}
+- Inflated bytes: {resource['inflated_bytes']}
+- Expansion ratio, milli-units: {resource['expansion_ratio_milli']}
+- Resource cases: {resource['case_count']} × {resource['iterations']} iterations
+- Rollback cases: {rollback['case_count']} × {rollback['iterations_per_case']} iterations
+- Exact configured boundary accepted: yes
+- Zero and above-hard-ceiling limits rejected: yes
+- Prior frame state remained immutable: yes
+- A valid delta decoded identically after every malformed vector: yes
+
+## SHA-256
+
+```text
+{sums}
+```
+
+Licensed under MIT. Copyright (c) 2026 Shael Riley.
+""")
+          PY
+
+      - name: Package checked implementation patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/resource-patch
+          tar -czf target/resource-patch/v64-resource-rollback-patch.tar.gz \
+            crates/v64-core/src/lib.rs \
+            crates/v64-core/src/frame.rs \
+            crates/v64-core/src/bin/v64-golden-stream.rs \
+            crates/v64-core/src/bin/v64-resource-gate.rs \
+            crates/v64-core/src/bin/v64-frame-rollback-gate.rs \
+            .github/workflows/rust-resource-rollback.yml \
+            bench/results/rust-resource-rollback
+          sha256sum target/resource-patch/v64-resource-rollback-patch.tar.gz \
+            > target/resource-patch/PATCH_SHA256
+          git diff -- \
+            crates/v64-core/src/lib.rs \
+            crates/v64-core/src/bin/v64-golden-stream.rs \
+            > target/resource-patch/resource-rollback.patch
+
+      - name: Upload checked resource patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-resource-rollback-patch
+          path: target/resource-patch
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Upload cross-language state evidence
         uses: actions/upload-artifact@v4

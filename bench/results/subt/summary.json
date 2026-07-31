@@ -1,0 +1,77 @@
+{
+  "format": "V64-SUBT-CHECKED-RESULT-1",
+  "checkedHead": "c710c8b5e85399d5d1d35ed65ca6829755a0a7d3",
+  "workflowRun": 30598259834,
+  "artifact": {
+    "id": 8780957363,
+    "name": "subt-deterministic-fixture",
+    "archiveDigest": "sha256:242202312ea35b4de3a8b67e8706df0bdb9596c18d4022a768f21bc1a44d8f11",
+    "expiresAt": "2026-08-30T02:11:32Z"
+  },
+  "container": {
+    "filename": "subt-container.v64",
+    "bytes": 528,
+    "sha256": "2535ea2368fe562dcc9ec46b6b6cdb216ad797a7f1b735753719101180b9935a",
+    "featureFlags": 185,
+    "subtitleFeatureBit": 128,
+    "verification": {
+      "valid": true,
+      "frames": 6,
+      "keyframes": 2,
+      "repeatSpans": 2,
+      "audioRuns": 0,
+      "audioSilenceSpans": 0,
+      "audioKeptSamples": 0,
+      "subtitleChunks": 2,
+      "subtitleFrames": 5,
+      "chunks": 7,
+      "durationTicks": 15000
+    }
+  },
+  "profile": {
+    "columns": 8,
+    "rows": 4,
+    "cellCount": 32,
+    "cadenceId": 7,
+    "frameTicks": 2500,
+    "paletteDepthId": 6,
+    "paletteDepth": 16,
+    "videoFrames": 6,
+    "subtitleFrames": 5,
+    "sparseGapFrames": 1
+  },
+  "subtitleChunks": [
+    {
+      "timestamp": 0,
+      "duration": 5000,
+      "frameCount": 2,
+      "payloadBytes": 58,
+      "payloadSha256": "0037a6902862233547dba0d1172eb2b1fc59cb4d0c48890bf1e298cd5ca2857a"
+    },
+    {
+      "timestamp": 7500,
+      "duration": 7500,
+      "frameCount": 3,
+      "payloadBytes": 81,
+      "payloadSha256": "d7fca9882e79402058bc0aba902dcf7096f57c5a77e30a948a1b0aac86d8ed52"
+    }
+  ],
+  "conformance": {
+    "tests": 96,
+    "passed": 96,
+    "failed": 0,
+    "requirements": [
+      "mandatory SUBT chunk registration",
+      "feature bit 0x80 presence agreement",
+      "canonical SM2 full/repeat/delta decoding",
+      "whole-frame timestamp and duration alignment",
+      "frame-count and duration agreement",
+      "grid cell-count agreement",
+      "palette-depth agreement",
+      "declared-duration bounds",
+      "sparse non-overlapping coverage",
+      "malformed and noncanonical payload rejection",
+      "unknown mandatory feature rejection above 0x80"
+    ]
+  }
+}

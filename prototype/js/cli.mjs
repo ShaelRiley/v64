@@ -7,7 +7,7 @@ import {
   cadenceFromValue, deriveRows, paletteDepthFromValue, PALETTE_DEPTHS
 } from "./constants.mjs";
 import {
-  cadenceRational, decodeVideoTimeline, demuxV64, muxV64, verifyV64
+  cadenceRational, decodeVideoTimeline, demuxV64, makeChunk, muxV64, verifyV64
 } from "./container.mjs";
 import { makeGlyphAtlas, renderCells } from "./video64.mjs";
 import { GLYPH_META, PALETTE_META } from "./assets.mjs";
@@ -26,6 +26,10 @@ import {
   VIDEO64_DEFAULT_GLYPH_COUNT,
   primaryGlyphCountFromValue
 } from "./glyph-subset.mjs";
+import {
+  encodeEncoderProfilePayload,
+  encoderProfileFromDemuxed
+} from "./encoder-profile.mjs";
 
 const PROFILES = Object.freeze({
   smallest: { target: "compact", dictionary: true },
@@ -109,6 +113,7 @@ function encodeVideo(inputPath, outputPath, rawOptions = {}) {
   const glyphCount = primaryGlyphCountFromValue(
     rawOptions.glyphs ?? VIDEO64_DEFAULT_GLYPH_COUNT
   );
+  const dictionary = rawOptions.dictionary ?? profile.dictionary;
   const source = probeVideo(inputPath);
   const rows = deriveRows(columns, source.width / source.height);
   const proxyWidth = columns * 4;
@@ -138,20 +143,30 @@ function encodeVideo(inputPath, outputPath, rawOptions = {}) {
     paletteDepth: depth,
     paletteDepthId,
     cadenceId: cadence.id,
-    maximumGroupFrames: 48,
     minimumGroupFrames: 2,
-    useDictionary: rawOptions.dictionary ?? profile.dictionary
+    useDictionary: dictionary
   });
   const chunks = encodeSceneAwareCellTimeline(analysis);
+  const encoderProfilePayload = encodeEncoderProfilePayload({
+    glyphCount,
+    targetMode,
+    cadenceId: cadence.id,
+    maximumGroupFrames: analysis.metrics.maximumGroupFrames,
+    sceneCutAware: true,
+    dictionary
+  });
+  chunks.push(makeChunk("META", 0, 0, encoderProfilePayload, { compress: true }));
   const file = muxV64({ columns, rows, cadenceId: cadence.id, paletteDepthId }, chunks);
   writeFileSync(outputPath, file);
   const verified = verifyV64(file);
+  const demuxed = demuxV64(file);
+  const encoderProfile = encoderProfileFromDemuxed(demuxed);
   const duration = verified.durationTicks / 60_000;
   return {
     input: resolve(inputPath), output: resolve(outputPath), columns, rows,
     rasterWidth: columns * 8, rasterHeight: rows * 16,
     cadence: cadence.label, paletteDepth: depth, profile: profileName,
-    targetMode, glyphCount,
+    targetMode, glyphCount, encoderProfile,
     sourceDurationSeconds: source.duration || null, encodedDurationSeconds: duration,
     frames: frameCount,
     changedCellPercentage: Number(changedCellPercentage(analysis.frames).toFixed(3)),
@@ -227,6 +242,7 @@ function inspect(inputPath) {
       glyphAsset: GLYPH_META.id,
       paletteAsset: PALETTE_META.id
     },
+    encoderProfile: encoderProfileFromDemuxed(demuxed),
     chunkDistribution: distribution,
     seekEntries: demuxed.index.length,
     commandMetrics
@@ -321,7 +337,8 @@ Usage:
   v64 make-sample OUTPUT_DIRECTORY
 
 The primary/default glyph budget is 32. Use --glyphs 64 for the optional
-full-alphabet path. The older profile names remain aliases for target modes.
+full-alphabet path. Encoded files include deterministic META profile metadata.
+The older profile names remain aliases for target modes.
 
 Legal cadences: 0.10, 0.5, 1, 3, 6, 12, 15, 24, 30, 48, 60
 Legal palette depths: ${PALETTE_DEPTHS.join(", ")}`;
@@ -358,7 +375,12 @@ async function main() {
     result = writeCommandTrace(positional[0], positional[1]);
   } else if (command === "verify") {
     if (positional.length !== 1) throw new Error("verify requires INPUT.v64");
-    result = verifyV64(readFileSync(positional[0]));
+    const file = readFileSync(positional[0]);
+    const demuxed = demuxV64(file);
+    result = {
+      ...verifyV64(file),
+      encoderProfile: encoderProfileFromDemuxed(demuxed)
+    };
   } else if (command === "atlas") {
     if (positional.length !== 1) throw new Error("atlas requires OUTPUT.ppm");
     writePpm(positional[0], makeGlyphAtlas(2));

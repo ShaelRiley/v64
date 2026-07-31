@@ -17,6 +17,8 @@ const REPEAT_FOREGROUND: u8 = 9;
 const REPEAT_BACKGROUND: u8 = 10;
 const REPEAT_COLOR_PAIR: u8 = 11;
 
+type DecodeResult<T> = Result<T, String>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Frame {
     timestamp: u64,
@@ -33,35 +35,35 @@ fn main() -> Result<(), Box<dyn Error>> {
     if arguments.next().is_some() {
         return Err("usage: v64-grammar-b-golden INPUT.bin OUTPUT.bin".into());
     }
-    let bytes = fs::read(input)?;
-    let (columns, rows, frames) = decode_fixture(&bytes)?;
+    let input = fs::read(input)?;
+    let (columns, rows, frames) = decode_fixture(&input)?;
     fs::write(output, encode_golden_stream(columns, rows, &frames)?)?;
     Ok(())
 }
 
-fn decode_fixture(input: &[u8]) -> Result<(u16, u16, Vec<Frame>), String> {
+fn decode_fixture(input: &[u8]) -> DecodeResult<(u16, u16, Vec<Frame>)> {
     if input.len() < 20 || input.get(..8) != Some(b"V64GBD1\0") {
         return Err("Grammar B fixture magic mismatch".to_owned());
     }
     let columns = read_u16(input, 8)?;
     let rows = read_u16(input, 10)?;
     let palette_depth = usize::from(read_u16(input, 12)?);
-    if columns == 0 || rows == 0 || palette_depth < 2 || palette_depth > 256 {
+    if columns == 0 || rows == 0 || !(2..=256).contains(&palette_depth) {
         return Err("Invalid Grammar B fixture dimensions".to_owned());
     }
     if read_u16(input, 14)? != 0 {
         return Err("Nonzero Grammar B fixture reserved field".to_owned());
     }
-    let frame_count = usize::try_from(read_u32(input, 16)?)
-        .map_err(|_| "Grammar B fixture frame count exceeds platform range".to_owned())?;
+    let count = usize::try_from(read_u32(input, 16)?)
+        .map_err(|_| "Grammar B frame count exceeds platform range".to_owned())?;
     let mut offset = 20usize;
     let mut prior: Option<Vec<u8>> = None;
-    let mut frames = Vec::with_capacity(frame_count.min(4096));
+    let mut frames = Vec::with_capacity(count.min(4096));
 
-    for _ in 0..frame_count {
+    for _ in 0..count {
         let record_end = offset
             .checked_add(24)
-            .ok_or_else(|| "Grammar B fixture record overflow".to_owned())?;
+            .ok_or_else(|| "Grammar B record range overflow".to_owned())?;
         if record_end > input.len() {
             return Err("Truncated Grammar B fixture record".to_owned());
         }
@@ -88,12 +90,11 @@ fn decode_fixture(input: &[u8]) -> Result<(u16, u16, Vec<Frame>), String> {
         let keyframe = flags & 1 != 0;
         let repeat = flags & 2 != 0;
         let state = if repeat {
-            if keyframe || command_length != 0 {
+            if keyframe || !commands.is_empty() {
                 return Err("Invalid Grammar B repeat record".to_owned());
             }
             prior
-                .as_ref()
-                .cloned()
+                .clone()
                 .ok_or_else(|| "Invalid Grammar B repeat record".to_owned())?
         } else {
             apply_packed_commands(
@@ -121,17 +122,17 @@ fn decode_fixture(input: &[u8]) -> Result<(u16, u16, Vec<Frame>), String> {
 }
 
 fn apply_packed_commands(
-    command_bytes: &[u8],
+    bytes: &[u8],
     prior: Option<&[u8]>,
     columns: usize,
     rows: usize,
     palette_depth: usize,
     keyframe: bool,
-) -> Result<Vec<u8>, String> {
-    let cell_count = columns
+) -> DecodeResult<Vec<u8>> {
+    let cells = columns
         .checked_mul(rows)
         .ok_or_else(|| "Cell count overflow".to_owned())?;
-    let state_length = cell_count
+    let state_length = cells
         .checked_mul(3)
         .ok_or_else(|| "Cell-state length overflow".to_owned())?;
     let mut state = if keyframe {
@@ -143,76 +144,69 @@ fn apply_packed_commands(
         }
         prior.to_vec()
     };
-    let palette_bits = palette_index_bits(palette_depth)?;
-    let token_bits = 6usize + 2 * palette_bits;
-    let command_limit = cell_count
+    let palette_bits = palette_bits(palette_depth)?;
+    let token_bits = 6 + 2 * palette_bits;
+    let command_limit = cells
         .checked_mul(2)
         .and_then(|value| value.checked_add(1))
         .ok_or_else(|| "Frame command-count overflow".to_owned())?;
-    let mut command_count = 0usize;
     let mut offset = 0usize;
     let mut cursor = 0usize;
+    let mut command_count = 0usize;
     let mut ended = false;
 
-    while offset < command_bytes.len() {
+    while offset < bytes.len() {
         command_count += 1;
         if command_count > command_limit {
             return Err("Frame command count exceeds bound".to_owned());
         }
-        let opcode = command_bytes[offset];
+        let opcode = bytes[offset];
         offset += 1;
         if opcode == END {
             ended = true;
             break;
         }
-
         if opcode == SKIP {
-            let count = usize::try_from(read_varuint(command_bytes, &mut offset)?)
-                .map_err(|_| "Packed skip advances beyond grid".to_owned())?;
-            require_progress(cursor, count, cell_count, "Packed skip advances beyond grid")?;
+            let count = read_count(bytes, &mut offset)?;
+            require_range(cursor, count, cells, "Packed skip advances beyond grid")?;
             cursor += count;
             continue;
         }
-
         if opcode == LITERAL {
-            let count = usize::try_from(read_varuint(command_bytes, &mut offset)?)
-                .map_err(|_| "Packed token command advances beyond grid".to_owned())?;
-            require_progress(cursor, count, cell_count, "Packed token command advances beyond grid")?;
+            let count = read_count(bytes, &mut offset)?;
+            require_range(cursor, count, cells, "Packed token command advances beyond grid")?;
             let used_bits = count
                 .checked_mul(token_bits)
                 .ok_or_else(|| "Packed literal is too large".to_owned())?;
-            let payload = read_packed_payload(command_bytes, &mut offset, used_bits)?;
+            let payload = read_payload(bytes, &mut offset, used_bits)?;
             let mut bit = 0usize;
             for index in 0..count {
-                let glyph = read_packed_value(payload, bit, 6);
+                let glyph = read_bits(payload, bit, 6);
                 bit += 6;
-                let foreground = read_packed_value(payload, bit, palette_bits);
+                let foreground = read_bits(payload, bit, palette_bits);
                 bit += palette_bits;
-                let background = read_packed_value(payload, bit, palette_bits);
+                let background = read_bits(payload, bit, palette_bits);
                 bit += palette_bits;
-                validate_token(glyph, foreground, background, palette_depth)?;
                 write_token(
                     &mut state,
                     cursor + index,
                     glyph,
                     foreground,
                     background,
+                    palette_depth,
                 )?;
             }
             require_zero_padding(payload, used_bits)?;
             cursor += count;
             continue;
         }
-
         if opcode == REPEAT_TOKEN {
-            let count = usize::try_from(read_varuint(command_bytes, &mut offset)?)
-                .map_err(|_| "Packed token command advances beyond grid".to_owned())?;
-            require_progress(cursor, count, cell_count, "Packed token command advances beyond grid")?;
-            let payload = read_packed_payload(command_bytes, &mut offset, token_bits)?;
-            let glyph = read_packed_value(payload, 0, 6);
-            let foreground = read_packed_value(payload, 6, palette_bits);
-            let background = read_packed_value(payload, 6 + palette_bits, palette_bits);
-            validate_token(glyph, foreground, background, palette_depth)?;
+            let count = read_count(bytes, &mut offset)?;
+            require_range(cursor, count, cells, "Packed token command advances beyond grid")?;
+            let payload = read_payload(bytes, &mut offset, token_bits)?;
+            let glyph = read_bits(payload, 0, 6);
+            let foreground = read_bits(payload, 6, palette_bits);
+            let background = read_bits(payload, 6 + palette_bits, palette_bits);
             require_zero_padding(payload, token_bits)?;
             for index in 0..count {
                 write_token(
@@ -221,6 +215,7 @@ fn apply_packed_commands(
                     glyph,
                     foreground,
                     background,
+                    palette_depth,
                 )?;
             }
             cursor += count;
@@ -232,20 +227,18 @@ fn apply_packed_commands(
             REPEAT_GLYPH | REPEAT_FOREGROUND | REPEAT_BACKGROUND | REPEAT_COLOR_PAIR
         );
         let count = if repeating {
-            usize::try_from(read_varuint(command_bytes, &mut offset)?)
-                .map_err(|_| "Packed component command advances beyond grid".to_owned())?
+            read_count(bytes, &mut offset)?
         } else {
             1
         };
-        require_progress(
+        require_range(
             cursor,
             count,
-            cell_count,
+            cells,
             "Packed component command advances beyond grid",
         )?;
-
-        let glyph_component = matches!(opcode, SET_GLYPH | REPEAT_GLYPH);
-        let pair_component = matches!(opcode, SET_COLOR_PAIR | REPEAT_COLOR_PAIR);
+        let glyph = matches!(opcode, SET_GLYPH | REPEAT_GLYPH);
+        let pair = matches!(opcode, SET_COLOR_PAIR | REPEAT_COLOR_PAIR);
         if !matches!(
             opcode,
             SET_GLYPH
@@ -259,83 +252,78 @@ fn apply_packed_commands(
         ) {
             return Err(format!("Unknown mandatory packed opcode 0x{opcode:02x}"));
         }
-        let used_bits = if glyph_component {
+        let used_bits = if glyph {
             6
-        } else if pair_component {
-            2 * palette_bits
+        } else if pair {
+            palette_bits * 2
         } else {
             palette_bits
         };
-        let payload = read_packed_payload(command_bytes, &mut offset, used_bits)?;
-        let first_width = if glyph_component { 6 } else { palette_bits };
-        let first = read_packed_value(payload, 0, first_width);
-        let second = pair_component.then(|| read_packed_value(payload, palette_bits, palette_bits));
+        let payload = read_payload(bytes, &mut offset, used_bits)?;
+        let first = read_bits(payload, 0, if glyph { 6 } else { palette_bits });
+        let second = pair.then(|| read_bits(payload, palette_bits, palette_bits));
         require_zero_padding(payload, used_bits)?;
-        if glyph_component {
+        if glyph {
             if first >= 64 {
                 return Err("Glyph index exceeds canonical set".to_owned());
             }
         } else if first >= palette_depth || second.is_some_and(|value| value >= palette_depth) {
             return Err("Palette index exceeds declared depth".to_owned());
         }
-
         for index in 0..count {
-            let target = (cursor + index)
-                .checked_mul(3)
-                .ok_or_else(|| "Cell offset overflow".to_owned())?;
+            let target = (cursor + index) * 3;
             match opcode {
-                SET_GLYPH | REPEAT_GLYPH => state[target] = u8::try_from(first).unwrap(),
-                SET_FOREGROUND | REPEAT_FOREGROUND => {
-                    state[target + 1] = u8::try_from(first).unwrap();
-                }
-                SET_BACKGROUND | REPEAT_BACKGROUND => {
-                    state[target + 2] = u8::try_from(first).unwrap();
-                }
+                SET_GLYPH | REPEAT_GLYPH => state[target] = first as u8,
+                SET_FOREGROUND | REPEAT_FOREGROUND => state[target + 1] = first as u8,
+                SET_BACKGROUND | REPEAT_BACKGROUND => state[target + 2] = first as u8,
                 SET_COLOR_PAIR | REPEAT_COLOR_PAIR => {
-                    state[target + 1] = u8::try_from(first).unwrap();
-                    state[target + 2] = u8::try_from(second.unwrap()).unwrap();
+                    state[target + 1] = first as u8;
+                    state[target + 2] = second.unwrap() as u8;
                 }
                 _ => unreachable!(),
             }
         }
         cursor += count;
     }
-
     if !ended {
         return Err("Packed command stream has no END".to_owned());
     }
-    if offset != command_bytes.len() {
+    if offset != bytes.len() {
         return Err("Trailing bytes after packed frame END".to_owned());
     }
     Ok(state)
 }
 
-fn palette_index_bits(palette_depth: usize) -> Result<usize, String> {
-    if !(2..=256).contains(&palette_depth) {
+fn palette_bits(depth: usize) -> DecodeResult<usize> {
+    if !(2..=256).contains(&depth) {
         return Err("Palette depth must be an integer from 2 through 256".to_owned());
     }
-    Ok(usize::BITS as usize - (palette_depth - 1).leading_zeros() as usize)
+    Ok(usize::BITS as usize - (depth - 1).leading_zeros() as usize)
 }
 
-fn require_progress(cursor: usize, count: usize, cell_count: usize, message: &str) -> Result<(), String> {
-    if count == 0 || cursor.checked_add(count).is_none_or(|end| end > cell_count) {
+fn read_count(bytes: &[u8], offset: &mut usize) -> DecodeResult<usize> {
+    let value = read_varuint(bytes, offset)?;
+    if value == 0 {
+        return Err("Zero-progress command".to_owned());
+    }
+    usize::try_from(value).map_err(|_| "Command count exceeds platform range".to_owned())
+}
+
+fn require_range(cursor: usize, count: usize, cells: usize, message: &str) -> DecodeResult<()> {
+    if cursor.checked_add(count).is_none_or(|end| end > cells) {
         return Err(message.to_owned());
     }
     Ok(())
 }
 
-fn read_packed_payload<'a>(
-    bytes: &'a [u8],
-    offset: &mut usize,
-    used_bits: usize,
-) -> Result<&'a [u8], String> {
-    let byte_length = used_bits
+fn read_payload<'a>(bytes: &'a [u8], offset: &mut usize, bits: usize) -> DecodeResult<&'a [u8]> {
+    let length = bits
         .checked_add(7)
-        .ok_or_else(|| "Packed command payload overflow".to_owned())?
+        .ok_or_else(|| "Packed payload length overflow".to_owned())?
         / 8;
     let end = offset
-        .checked_add(byte_length)
-        .ok_or_else(|| "Packed command payload overflow".to_owned())?;
+        .checked_add(length)
+        .ok_or_else(|| "Packed payload range overflow".to_owned())?;
     let payload = bytes
         .get(*offset..end)
         .ok_or_else(|| "Truncated packed command payload".to_owned())?;
@@ -343,37 +331,22 @@ fn read_packed_payload<'a>(
     Ok(payload)
 }
 
-fn read_packed_value(bytes: &[u8], bit_start: usize, width: usize) -> usize {
+fn read_bits(bytes: &[u8], start: usize, width: usize) -> usize {
     let mut value = 0usize;
     for bit in 0..width {
-        let absolute_bit = bit_start + bit;
-        if bytes[absolute_bit >> 3] & (1 << (absolute_bit & 7)) != 0 {
+        let absolute = start + bit;
+        if bytes[absolute >> 3] & (1 << (absolute & 7)) != 0 {
             value |= 1usize << bit;
         }
     }
     value
 }
 
-fn require_zero_padding(bytes: &[u8], used_bits: usize) -> Result<(), String> {
+fn require_zero_padding(bytes: &[u8], used_bits: usize) -> DecodeResult<()> {
     for bit in used_bits..bytes.len() * 8 {
         if bytes[bit >> 3] & (1 << (bit & 7)) != 0 {
             return Err("Nonzero packed padding bits".to_owned());
         }
-    }
-    Ok(())
-}
-
-fn validate_token(
-    glyph: usize,
-    foreground: usize,
-    background: usize,
-    palette_depth: usize,
-) -> Result<(), String> {
-    if glyph >= 64 {
-        return Err("Glyph index exceeds canonical set".to_owned());
-    }
-    if foreground >= palette_depth || background >= palette_depth {
-        return Err("Palette index exceeds declared depth".to_owned());
     }
     Ok(())
 }
@@ -384,19 +357,24 @@ fn write_token(
     glyph: usize,
     foreground: usize,
     background: usize,
-) -> Result<(), String> {
+    palette_depth: usize,
+) -> DecodeResult<()> {
+    if glyph >= 64 {
+        return Err("Glyph index exceeds canonical set".to_owned());
+    }
+    if foreground >= palette_depth || background >= palette_depth {
+        return Err("Palette index exceeds declared depth".to_owned());
+    }
     let target = cell
         .checked_mul(3)
         .ok_or_else(|| "Cell offset overflow".to_owned())?;
-    state[target] = u8::try_from(glyph).map_err(|_| "Glyph conversion overflow".to_owned())?;
-    state[target + 1] =
-        u8::try_from(foreground).map_err(|_| "Palette conversion overflow".to_owned())?;
-    state[target + 2] =
-        u8::try_from(background).map_err(|_| "Palette conversion overflow".to_owned())?;
+    state[target] = glyph as u8;
+    state[target + 1] = foreground as u8;
+    state[target + 2] = background as u8;
     Ok(())
 }
 
-fn read_varuint(bytes: &[u8], offset: &mut usize) -> Result<u32, String> {
+fn read_varuint(bytes: &[u8], offset: &mut usize) -> DecodeResult<u32> {
     let start = *offset;
     let mut value = 0u32;
     let mut shift = 0u32;
@@ -411,22 +389,15 @@ fn read_varuint(bytes: &[u8], offset: &mut usize) -> Result<u32, String> {
         }
         value |= u32::from(byte & 0x7f) << shift;
         if byte & 0x80 == 0 {
-            let encoded_length = if value < (1 << 7) {
-                1
-            } else if value < (1 << 14) {
-                2
-            } else if value < (1 << 21) {
-                3
-            } else if value < (1 << 28) {
-                4
-            } else {
-                5
+            let canonical = match value {
+                0..=0x7f => 1,
+                0x80..=0x3fff => 2,
+                0x4000..=0x1f_ffff => 3,
+                0x20_0000..=0x0fff_ffff => 4,
+                _ => 5,
             };
-            if *offset - start != encoded_length {
+            if *offset - start != canonical {
                 return Err("Non-canonical varuint".to_owned());
-            }
-            if value == 0 {
-                return Err("Zero-progress command".to_owned());
             }
             return Ok(value);
         }
@@ -435,21 +406,21 @@ fn read_varuint(bytes: &[u8], offset: &mut usize) -> Result<u32, String> {
     Err("Varuint exceeds five bytes".to_owned())
 }
 
-fn read_u16(bytes: &[u8], offset: usize) -> Result<u16, String> {
+fn read_u16(bytes: &[u8], offset: usize) -> DecodeResult<u16> {
     let value = bytes
         .get(offset..offset + 2)
         .ok_or_else(|| "Truncated Grammar B fixture integer".to_owned())?;
     Ok(u16::from_le_bytes([value[0], value[1]]))
 }
 
-fn read_u32(bytes: &[u8], offset: usize) -> Result<u32, String> {
+fn read_u32(bytes: &[u8], offset: usize) -> DecodeResult<u32> {
     let value = bytes
         .get(offset..offset + 4)
         .ok_or_else(|| "Truncated Grammar B fixture integer".to_owned())?;
     Ok(u32::from_le_bytes([value[0], value[1], value[2], value[3]]))
 }
 
-fn read_u64(bytes: &[u8], offset: usize) -> Result<u64, String> {
+fn read_u64(bytes: &[u8], offset: usize) -> DecodeResult<u64> {
     let value = bytes
         .get(offset..offset + 8)
         .ok_or_else(|| "Truncated Grammar B fixture integer".to_owned())?;
@@ -458,23 +429,25 @@ fn read_u64(bytes: &[u8], offset: usize) -> Result<u64, String> {
     ]))
 }
 
-fn encode_golden_stream(columns: u16, rows: u16, frames: &[Frame]) -> Result<Vec<u8>, String> {
-    let frame_count = u32::try_from(frames.len())
+fn encode_golden_stream(columns: u16, rows: u16, frames: &[Frame]) -> DecodeResult<Vec<u8>> {
+    let count = u32::try_from(frames.len())
         .map_err(|_| "Golden frame count exceeds uint32".to_owned())?;
     let mut output = Vec::new();
     output.extend_from_slice(b"V64GOLD1");
     output.extend_from_slice(&columns.to_le_bytes());
     output.extend_from_slice(&rows.to_le_bytes());
-    output.extend_from_slice(&frame_count.to_le_bytes());
+    output.extend_from_slice(&count.to_le_bytes());
     for frame in frames {
         output.extend_from_slice(&frame.timestamp.to_le_bytes());
         output.extend_from_slice(&frame.duration.to_le_bytes());
         output.push(u8::from(frame.keyframe));
         output.push(u8::from(frame.repeat));
         output.extend_from_slice(&0u16.to_le_bytes());
-        let state_length = u32::try_from(frame.state.len())
-            .map_err(|_| "Golden state length exceeds uint32".to_owned())?;
-        output.extend_from_slice(&state_length.to_le_bytes());
+        output.extend_from_slice(
+            &u32::try_from(frame.state.len())
+                .map_err(|_| "Golden state length exceeds uint32".to_owned())?
+                .to_le_bytes(),
+        );
         output.extend_from_slice(&frame.state);
     }
     Ok(output)
@@ -485,18 +458,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn direct_decoder_handles_component_updates() {
+    fn decodes_component_updates() {
         let prior = vec![1, 2, 3, 4, 5, 6];
-        let commands = [SET_GLYPH, 7, SET_COLOR_PAIR, 8, 9, END];
+        let commands = [SET_GLYPH, 7, SET_COLOR_PAIR, 0x98, END];
         let state = apply_packed_commands(&commands, Some(&prior), 2, 1, 16, false)
             .expect("component updates should decode");
         assert_eq!(state, vec![7, 2, 3, 4, 8, 9]);
     }
 
     #[test]
-    fn direct_decoder_rejects_padding_and_trailing_bytes() {
-        let error = apply_packed_commands(&[SET_GLYPH, 0x40, END], Some(&[0, 0, 0]), 1, 1, 16, false)
-            .expect_err("padding must be zero");
+    fn rejects_padding_and_trailing_bytes() {
+        let error = apply_packed_commands(
+            &[SET_GLYPH, 0x40, END],
+            Some(&[0, 0, 0]),
+            1,
+            1,
+            16,
+            false,
+        )
+        .expect_err("padding must be zero");
         assert!(error.contains("padding"));
 
         let error = apply_packed_commands(&[END, 0], None, 1, 1, 16, true)

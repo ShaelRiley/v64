@@ -43,6 +43,11 @@ test("AM1 preprocessing downmixes, resamples, filters, compresses, and limits de
   assert.equal(first.channels, 1);
   assert.equal(first.samples.length, 96000);
   assert.equal(first.wav.length, 192044);
+  assert.equal(first.wav.toString("ascii", 0, 4), "RIFF");
+  assert.equal(first.wav.readUInt32LE(4), 192036);
+  assert.equal(first.wav.toString("ascii", 8, 12), "WAVE");
+  assert.equal(first.wav.toString("ascii", 36, 40), "data");
+  assert.equal(first.wav.readUInt32LE(40), 192000);
   assert.deepEqual(first.wav, second.wav);
   assert.deepEqual(first.samples, second.samples);
   const decoded = decodePcm16Wav(first.wav);

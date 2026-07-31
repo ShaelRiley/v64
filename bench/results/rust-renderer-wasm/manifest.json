@@ -1,0 +1,35 @@
+{
+  "format": "V64-RUST-RENDERER-WASM-EVIDENCE-1",
+  "workflow_run": 30655257956,
+  "implementation_head": "6ac241c1a4ba6987060ec0145df9f0c32dcccac8",
+  "fixture": {
+    "columns": 8,
+    "rows": 8,
+    "width": 64,
+    "height": 128,
+    "cell_bytes": 192,
+    "rgba_bytes": 32768,
+    "glyph_count": 64,
+    "palette_depth": 256
+  },
+  "sha256": {
+    "glyph_asset": "9a75062711504dc9b2d473cdc261e0a8e34ff349ed9a8e1dc293467e9215da2b",
+    "normative_palette": "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105",
+    "normative_rgba": "22c5658edd3d14167d7b29a49beef58511ac5e0785e27b30a613fa0dfd560be0",
+    "synthetic_rgba": "751d51c7871fe9f545becc45ce5f3601300f824d61d4555decfac4cb8d988487",
+    "wasm_binary": "bfc4c0bc94dc706c99b777f5799345bccf1807b7499d1538176d5d43c866ed59",
+    "node_result": "4e125f2512c9845c7be4bb76dedf13782dd7d6e4cbcfb79e84af36415401ef28",
+    "browser_result": "4632970d22c8301f277612ff2884e95634627e93a12a3b1c46604641c3cdd977",
+    "artifact_zip": "150ab65aca1e97b87949c2986ca3be62643726890340de837a4ffacb0962b3d7"
+  },
+  "fnv1a64": {
+    "normative_rgba": "df686791d877a76f",
+    "synthetic_rgba": "00bf8840a3a1ec6f"
+  },
+  "artifact_id": 8802996633,
+  "node_valid": true,
+  "browser_valid": true,
+  "first_mismatch": -1,
+  "invalid_byte": -1,
+  "out_of_range_sentinel": 256
+}

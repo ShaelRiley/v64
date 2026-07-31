@@ -41,6 +41,8 @@ real binary `.v64` implementation, not a mock UI:
 - original CC0 human-content tranches with matched palette previews, temporal
   metrics, independent-group seek/size sweeps, 60/80-column subtitle lanes, and
   deterministic blinded-review worksheets;
+- a combined structural/human grammar gate that charges decoder time,
+  allocation, opcode surface, and implementation complexity;
 - Node conformance tests and golden hashes.
 
 Audio Opus, Rust, Video64 Drop's desktop shell, the native player, and VLC
@@ -73,6 +75,8 @@ npm run review:human2
 npm run bench:human2
 npm run palette:hyperreal
 npm run bench:rd-glyph
+npm run bench:human-rd-glyph
+npm run bench:combined-grammar
 ```
 
 Encode any FFmpeg-readable video with the primary 32-glyph profile:
@@ -140,10 +144,29 @@ blockers, and the next concrete step. See
 [`spec/V64-v0.1-bitstream.md`](spec/V64-v0.1-bitstream.md) for the implemented
 binary layout.
 
-## Attribution and licensing status
+## Contributing and forks
+
+Human developers are the primary contributor community. AI-assisted developers,
+coding agents, and autonomous-agent developers are also welcome through the
+same public review, provenance, security, and conformance gates.
+
+Forks, ports, alternate encoders, players, integrations, artistic variants, and
+incompatible research branches are welcome without advance permission.
+
+Read:
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution workflow and AI-assisted
+  submission guidance;
+- [`GOVERNANCE.md`](GOVERNANCE.md) for human-first governance and outreach;
+- [`AGENTS.md`](AGENTS.md) for coding-agent operating rules;
+- [`SECURITY.md`](SECURITY.md) for vulnerability reporting.
+
+## License and authorship
+
+Video 64 is released under the maximally permissive
+[Zero-Clause BSD license](LICENSE), SPDX identifier `0BSD`. It may be used,
+copied, modified, forked, and distributed for any purpose with or without fee.
 
 The canonical Video 64 masks originated in ANSI Tube and were created by Shael
-Riley. The inspected ANSI Tube repository has no root license. This repository
-therefore records provenance and does not choose a redistribution license on
-Shael's behalf. A project license remains a governance decision before public
-binary distribution.
+Riley. Contributions are accepted under 0BSD and must include compatible rights
+for submitted code, media, data, and generated assets.

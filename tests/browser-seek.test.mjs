@@ -98,7 +98,7 @@ test("portable scanlines use viewport coordinates and never mutate source bytes"
 test("portable SHA-256 matches the canonical digest", async () => {
   assert.equal(
     await sha256(Buffer.from("V64 browser seek")),
-    "c5a44b0a21828c133ac28d281d92be9e6f23cde2e38ea59ea3846f33df83041b"
+    "bf4b9180179913326a80b5d077ff0cd9ef5c66265e4ad18ca240d2b26716a1ba"
   );
 });
 

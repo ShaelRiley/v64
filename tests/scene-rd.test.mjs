@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { GLYPH_MASKS } from "../prototype/js/assets.mjs";
-import { cadenceFromId, PALETTE_DEPTHS } from "../prototype/js/constants.mjs";
+import { cadenceFromId, cadenceFromValue, PALETTE_DEPTHS } from "../prototype/js/constants.mjs";
 import { muxV64, verifyV64 } from "../prototype/js/container.mjs";
 import {
   VIDEO64_DEFAULT_GLYPH_COUNT,
@@ -15,7 +15,8 @@ import {
   encodeSceneAwareCellTimeline,
   measureProxyDistortion,
   rateDistortionModeFromValue,
-  selectRateDistortionCandidate
+  selectRateDistortionCandidate,
+  twoSecondGroupFrames
 } from "../prototype/js/rate-distortion.mjs";
 import {
   planIndependentGroups,
@@ -60,6 +61,12 @@ test("scene cuts can shorten but never exceed the frozen group maximum", () => {
   assert.deepEqual(plan.groups.map((group) => group.frames), [2, 3, 1]);
   assert.equal(plan.sceneCuts, 1);
   assert.equal(plan.maximumBoundaries, 1);
+});
+
+test("the two-second frame ceiling follows cadence", () => {
+  assert.equal(twoSecondGroupFrames(cadenceFromValue("24").id), 48);
+  assert.equal(twoSecondGroupFrames(cadenceFromValue("12").id), 24);
+  assert.equal(twoSecondGroupFrames(cadenceFromValue("6").id), 12);
 });
 
 test("32 glyphs is the primary default and 64 is the optional primary path", () => {

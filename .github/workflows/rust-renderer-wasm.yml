@@ -136,6 +136,56 @@ jobs:
           assert wasm[:8] == b"\0asm\x01\0\0\0"
           PY
 
+      - name: Validate WebAssembly exports in Node
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync, writeFileSync } from "node:fs";
+          import { createHash } from "node:crypto";
+          const wasm = readFileSync("target/v64-wasm/v64_wasm.wasm");
+          const expected = readFileSync("target/renderer-golden/javascript-synthetic-atlas.rgba");
+          const { instance } = await WebAssembly.instantiate(wasm, {});
+          const exports = instance.exports;
+          const required = [
+            "v64_renderer_abi_version",
+            "v64_renderer_fixture_width",
+            "v64_renderer_fixture_height",
+            "v64_renderer_fixture_len",
+            "v64_renderer_fixture_byte",
+            "v64_renderer_fixture_fnv_lo",
+            "v64_renderer_fixture_fnv_hi"
+          ];
+          for (const name of required) {
+            assert.equal(typeof exports[name], "function", `missing WebAssembly export ${name}`);
+          }
+          const length = exports.v64_renderer_fixture_len();
+          const actual = Buffer.alloc(length);
+          for (let index = 0; index < length; index += 1) {
+            const value = exports.v64_renderer_fixture_byte(index);
+            assert.ok(value <= 255, `invalid WebAssembly byte at ${index}`);
+            actual[index] = value;
+          }
+          assert.equal(exports.v64_renderer_abi_version(), 1);
+          assert.equal(exports.v64_renderer_fixture_width(), 64);
+          assert.equal(exports.v64_renderer_fixture_height(), 128);
+          assert.equal(length, 32768);
+          assert.deepEqual(actual, expected);
+          assert.equal(exports.v64_renderer_fixture_byte(length), 256);
+          const result = {
+            valid: true,
+            exports: required,
+            width: 64,
+            height: 128,
+            bytes: length,
+            sha256: createHash("sha256").update(actual).digest("hex")
+          };
+          writeFileSync(
+            "target/renderer-golden/node-wasm-result.json",
+            `${JSON.stringify(result, null, 2)}\n`
+          );
+          console.log(JSON.stringify(result));
+          NODE
+
       - name: Run headless Chrome WebAssembly raster agreement
         shell: bash
         run: |
@@ -163,6 +213,7 @@ jobs:
             --dump-dom \
             http://127.0.0.1:8124/prototype/browser/wasm-renderer-harness.html \
             > target/renderer-golden/browser-result.html
+          cat target/renderer-golden/browser-result.html
           grep -q 'data-status="pass"' target/renderer-golden/browser-result.html
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
@@ -197,20 +248,24 @@ jobs:
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
           const manifest = JSON.parse(readFileSync("target/renderer-golden/manifest.json", "utf8"));
+          const node = JSON.parse(readFileSync("target/renderer-golden/node-wasm-result.json", "utf8"));
           const browser = JSON.parse(readFileSync("target/renderer-golden/browser-result.json", "utf8"));
           assert.equal(manifest.format, "V64-RENDERER-GOLDEN-1");
           assert.equal(manifest.glyphSha256, "9a75062711504dc9b2d473cdc261e0a8e34ff349ed9a8e1dc293467e9215da2b");
           assert.equal(manifest.normativePaletteSha256, "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105");
+          assert.equal(node.sha256, manifest.syntheticRgbaSha256);
           assert.equal(browser.sha256, manifest.syntheticRgbaSha256);
           NODE
           sha256sum \
             target/renderer-golden/javascript-normative-atlas.rgba \
             target/renderer-golden/javascript-synthetic-atlas.rgba \
             target/v64-wasm/v64_wasm.wasm \
+            target/renderer-golden/node-wasm-result.json \
             target/renderer-golden/browser-result.json \
             | tee target/renderer-golden/SHA256SUMS
 
       - name: Upload renderer and WebAssembly evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: v64-rust-renderer-wasm

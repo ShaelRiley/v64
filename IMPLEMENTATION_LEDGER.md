@@ -81,9 +81,8 @@ Candidate 1. Any palette-byte change requires a new normative identifier.
 - [x] Complete the weighted combined structural/human grammar decision gate with
   direct Phase-1 versus Grammar B decoder-time, allocation, and source-surface
   measurements.
-- [ ] Optimize the JavaScript Grammar B decoder before any V1 grammar freeze;
-  its checked combined-corpus size win currently carries a 212.186% decode-time
-  regression.
+- [x] Replace the allocation-heavy Grammar B parse-then-apply benchmark path with
+  a bounded transactional single-pass decoder.
 - [ ] Freeze an entropy backend only after Rust/WebAssembly/native decoder cost
   and interoperability measurements.
 
@@ -166,34 +165,33 @@ Decision: 32 glyphs is frozen as the primary/default JavaScript encoder budget,
 and final grammar selection is reopened because the structural and human
 corpora disagree slightly.
 
-Combined grammar decision gate, workflow `30640529023`, checked code head
-`a55e8a368e581ddee9e539922269547702128dc5`:
+Optimized combined grammar gate, workflow `30642213125`, checked code head
+`af688fc6d93e25b91af62bf7d0cc349b2ae26363`:
 
 - complete repository suite and both source-corpus rebuilds passed;
-- artifact `8797286945`;
+- artifact `8797976278`;
 - artifact ZIP SHA-256:
-  `b065fca95200ed6156a722d341edb8880268157667e57b4cc238cad37ebf67d7`;
-- human material receives 75% decision weight and structural stress material
-  receives 25%;
-- Grammar B must save at least 1% weighted and may not regress either corpus by
-  more than 1%;
+  `804506cde3f28a7c969bba43a5a02838b434ea6dd6d766625724c9563c2d035b`;
 - structural Phase-1/Grammar B group-DEFLATE bytes: 155,992 / 100,761,
   a 35.406% Grammar B saving;
 - human Phase-1/Grammar B group-DEFLATE bytes: 874,752 / 881,164,
   a 0.733% Grammar B regression;
-- weighted Grammar B saving: 8.302%;
+- human-heavy weighted Grammar B saving: 8.302%;
 - decoder comparison covered 40 human files and 1,870 nominal frames;
-- Phase-1 total median decode time: 139.994 ms, worst p95 8.289 ms;
-- Grammar B total median decode time: 437.041 ms, worst p95 28.356 ms;
-- Grammar B decode-time delta: +212.186%;
+- Phase-1 total median decode time: 135.939 ms, worst p95 8.076 ms;
+- direct Grammar B total median decode time: 175.112 ms, worst p95 13.173 ms;
+- direct Grammar B decode-time delta: +28.817%, down from +212.186%;
+- direct Grammar B peak sampled heap delta: 3,173,560 bytes, down from
+  16,422,632 bytes in the prior parse-then-apply path;
 - Phase-1 decoder surface: 7 opcodes, one function, 3,850 source bytes;
-- Grammar B decoder surface: 12 opcodes, parser plus apply functions,
-  6,509 source bytes.
+- direct Grammar B decoder surface: 12 opcodes, five conservatively counted
+  functions, 7,459 source bytes.
 
-Decision: Grammar B advances as the provisional combined-corpus byte winner but
-is not frozen. Phase-1 remains the compatibility and simplicity baseline.
-Optimize Grammar B's JavaScript parser/apply path and require Rust/WebAssembly
-golden-state and resource agreement before final command selection.
+Decision: Grammar B advances as the provisional combined-corpus byte winner and
+the bounded single-pass JavaScript decoder becomes the benchmark path. Phase-1
+remains the compatibility and simplicity baseline. The next mandatory gate is
+Rust and WebAssembly golden-state and resource agreement before final command
+and entropy selection.
 
 ### Encoder profile metadata
 
@@ -356,8 +354,9 @@ AM1 preprocessing/bitrate workflow `30597112780`, code head
 - [ ] JavaScript/Rust golden-state and raster/PCM hash agreement
 - [ ] Fuzz targets and allocation-limit regression corpus
 
-Rust is not installed in the current build environment. This is an environment
-blocker, not a codec-design blocker.
+The Rust implementation is now the next mandatory cross-language gate. GitHub
+Actions may install a pinned stable toolchain even when Rust is absent from the
+interactive development environment.
 
 ## Phase 4 — products
 
@@ -409,13 +408,11 @@ maintainer identity is delegated to those platforms.
 
 ## Next concrete step
 
-Replace Grammar B's allocation-heavy parse-then-apply path with a bounded
-single-pass JavaScript decoder while preserving exact states and malformed-input
-rejection. Rerun the combined gate and require a substantial reduction from the
-current +212.186% decode-time delta. Then begin the Rust core/container golden
-implementation for the 32-glyph primary profile, optional 64-glyph profile,
-cadence-derived group limits, optional encoder `META`, registry semantics,
-raster state, subtitle planes, and audio timing.
+Create the `crates/v64-core` Rust workspace and implement the bounded header,
+chunk-framing, cadence, palette-depth, asset-identity, and optional encoder
+profile parser. Add golden tests against the JavaScript fixtures and establish
+cell-state agreement for Phase-1 and direct Grammar B before proceeding to
+subtitle and audio timelines.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

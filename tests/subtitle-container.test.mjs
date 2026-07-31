@@ -176,3 +176,9 @@ test("SUBT rejects noncanonical or malformed SM2 payloads", () => {
     /Invalid SM2 sequence header/
   );
 });
+
+test("feature bits above the registered SUBT boundary remain mandatory-unknown", () => {
+  const file = Buffer.from(build([subt(0, 1)]));
+  file.writeUInt32LE(file.readUInt32LE(12) | 0x100, 12);
+  assert.throws(() => verifyV64(file), /Unknown mandatory header feature bits/);
+});

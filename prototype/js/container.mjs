@@ -7,8 +7,9 @@ import { GLYPH_HASH, PALETTE_HASH } from "./assets.mjs";
 import { applyFrameCommands, encodeFrameCommands } from "./commands.mjs";
 import { crc32 } from "./crc32.mjs";
 import { validateAurnChunk } from "./audio-run.mjs";
+import { validateSubtitleTimeline } from "./subtitle-run.mjs";
 
-const KNOWN_CHUNKS = new Set(["VFRM", "RPTF", "AURN", "SILN", "PLIT", "META", "INDX"]);
+const KNOWN_CHUNKS = new Set(["VFRM", "RPTF", "AURN", "SILN", "SUBT", "PLIT", "META", "INDX"]);
 const FLAG_CRC = 1;
 const FLAG_DEFLATE = 2;
 
@@ -105,6 +106,7 @@ export function muxV64(config, mediaChunks) {
   if (mediaChunks.some((chunk) => chunk.type === "PLIT")) featureFlags |= 4;
   if (allSerialized.some((chunk) => chunk.flags & FLAG_DEFLATE)) featureFlags |= 32;
   if (mediaChunks.some((chunk) => chunk.type === "AURN")) featureFlags |= 64;
+  if (mediaChunks.some((chunk) => chunk.type === "SUBT")) featureFlags |= 128;
 
   const header = Buffer.alloc(HEADER_SIZE);
   MAGIC.copy(header, 0);
@@ -138,7 +140,7 @@ function parseHeader(file, options) {
   if (file[8] !== 0 || file[9] !== 1) throw new Error(`Unsupported V64 version ${file[8]}.${file[9]}`);
   if (file.readUInt16LE(10) !== HEADER_SIZE) throw new Error("Unsupported V64 header size");
   const featureFlags = file.readUInt32LE(12);
-  if (featureFlags & ~0x7f) throw new Error("Unknown mandatory header feature bits");
+  if (featureFlags & ~0xff) throw new Error("Unknown mandatory header feature bits");
   const columns = file.readUInt16LE(16);
   const rows = file.readUInt16LE(18);
   if (!columns || !rows || columns > LIMITS.maxColumns || rows > LIMITS.maxRows || columns * rows > LIMITS.maxCells) {
@@ -360,6 +362,10 @@ export function decodeAudioTimeline(demuxed) {
   };
 }
 
+export function decodeSubtitleTimeline(demuxed) {
+  return validateSubtitleTimeline(demuxed);
+}
+
 export function encodeParticleEvents(events) {
   if (!Array.isArray(events) || events.length > LIMITS.maxParticleEvents) throw new RangeError("Particle event count exceeds bound");
   const payload = Buffer.alloc(1 + events.length * 20);
@@ -405,6 +411,7 @@ export function verifyV64(input) {
   const demuxed = demuxV64(input);
   const timeline = decodeVideoTimeline(demuxed);
   const audio = decodeAudioTimeline(demuxed);
+  const subtitles = decodeSubtitleTimeline(demuxed);
   for (const chunk of demuxed.chunks) {
     if (chunk.type === "SILN" && (chunk.payload.length || !chunk.duration)) throw new Error("Malformed explicit-silence chunk");
     if (chunk.type === "PLIT") decodeParticleEvents(chunk.payload, demuxed.header.paletteDepth);
@@ -420,6 +427,8 @@ export function verifyV64(input) {
     audioRuns: audio?.runs.length || 0,
     audioSilenceSpans: audio?.silenceSpans.length || 0,
     audioKeptSamples: audio?.keptSamples || 0,
+    subtitleChunks: subtitles?.chunks.length || 0,
+    subtitleFrames: subtitles?.frameCount || 0,
     chunks: demuxed.chunks.length,
     durationTicks: demuxed.header.duration
   };

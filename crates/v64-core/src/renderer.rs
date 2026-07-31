@@ -75,7 +75,9 @@ pub fn render_rgba(
             return Err(format!("Glyph index exceeds canonical set at cell {cell}"));
         }
         if foreground >= palette_depth || background >= palette_depth {
-            return Err(format!("Palette index exceeds declared depth at cell {cell}"));
+            return Err(format!(
+                "Palette index exceeds declared depth at cell {cell}"
+            ));
         }
 
         let cell_x = cell % columns;

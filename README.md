@@ -43,15 +43,19 @@ real binary `.v64` implementation, not a mock UI:
   deterministic blinded-review worksheets;
 - a combined structural/human grammar gate that charges decoder time,
   allocation, opcode surface, and implementation complexity;
+- independent Rust video, subtitle, and audio-timing conformance gates;
+- a deterministic Rust hostile-input and process-resource gate;
 - Node conformance tests and golden hashes.
 
-Audio Opus, Rust, Video64 Drop's desktop shell, the native player, and VLC
-modules are staged in the ledger rather than represented as finished.
+Video64 Drop's desktop shell, the native player, WebAssembly delivery, the
+stable C ABI, and VLC modules remain staged in the ledger rather than
+represented as finished.
 
 ## Requirements
 
 - Node.js 20 or newer
 - FFmpeg and FFprobe
+- Rust 1.85.0 for the Rust conformance gates
 
 No npm dependencies are required.
 
@@ -77,6 +81,7 @@ npm run palette:hyperreal
 npm run bench:rd-glyph
 npm run bench:human-rd-glyph
 npm run bench:combined-grammar
+npm run rust:hostile
 ```
 
 Encode any FFmpeg-readable video with the primary 32-glyph profile:
@@ -139,34 +144,45 @@ is [`bench/HUMAN_RASTER_TRANCHE_2.md`](bench/HUMAN_RASTER_TRANCHE_2.md).
 The current scene-cut and glyph-budget profile is
 [`docs/RATE_DISTORTION_PROFILE.md`](docs/RATE_DISTORTION_PROFILE.md).
 
-See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for verified status,
-blockers, and the next concrete step. See
-[`spec/V64-v0.1-bitstream.md`](spec/V64-v0.1-bitstream.md) for the implemented
-binary layout.
+See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for the historical
+evidence chain and [`docs/CURRENT_STATUS.md`](docs/CURRENT_STATUS.md) for the
+active frontier. See [`spec/V64-v0.1-bitstream.md`](spec/V64-v0.1-bitstream.md)
+for the implemented binary layout.
 
 ## Contributing and forks
 
-Human developers are the primary contributor community. AI-assisted developers,
-coding agents, and autonomous-agent developers are also welcome through the
-same public review, provenance, security, and conformance gates.
+Human developers, AI-assisted developers, and autonomous AI agents have equal
+standing to choose Video 64 projects and workflows, create forks, open issues,
+submit pull requests, and build independent implementations. Contributions are
+judged by evidence, reproducibility, provenance, security, compatibility, and
+maintainability rather than contributor type.
 
 Forks, ports, alternate encoders, players, integrations, artistic variants, and
 incompatible research branches are welcome without advance permission.
+Authorized maintainers retain protected merges, releases, private security
+handling, credentials, and legal representation; those are controlled
+capabilities rather than an authorship hierarchy.
 
 Read:
 
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution workflow and AI-assisted
-  submission guidance;
-- [`GOVERNANCE.md`](GOVERNANCE.md) for human-first governance and outreach;
-- [`AGENTS.md`](AGENTS.md) for coding-agent operating rules;
-- [`SECURITY.md`](SECURITY.md) for vulnerability reporting.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution workflow and provenance;
+- [`GOVERNANCE.md`](GOVERNANCE.md) for equal participation and authority bounds;
+- [`AGENTS.md`](AGENTS.md) for autonomous coding-agent operating rules;
+- [`SECURITY.md`](SECURITY.md) for vulnerability reporting;
+- [`docs/ECOSYSTEM_OUTREACH.md`](docs/ECOSYSTEM_OUTREACH.md) for participation
+  and outreach strategy.
 
 ## License and authorship
 
-Video 64 is released under the maximally permissive
-[Zero-Clause BSD license](LICENSE), SPDX identifier `0BSD`. It may be used,
-copied, modified, forked, and distributed for any purpose with or without fee.
+Video 64 is released under the attribution-preserving [MIT License](LICENSE),
+SPDX identifier `MIT`, with `Copyright (c) 2026 Shael Riley`.
+
+Anyone may use, copy, modify, merge, publish, distribute, sublicense, sell, fork,
+port, or independently reimplement the project without requesting permission.
+The copyright and permission notice must be included in copies or substantial
+portions. No approval, advertising, share-alike, field-of-use, or noncommercial
+condition is added.
 
 The canonical Video 64 masks originated in ANSI Tube and were created by Shael
-Riley. Contributions are accepted under 0BSD and must include compatible rights
+Riley. Contributions are accepted under MIT and must include compatible rights
 for submitted code, media, data, and generated assets.

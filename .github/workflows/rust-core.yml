@@ -168,6 +168,6 @@ jobs:
           git add crates/v64-core/src/bin/v64-golden-stream.rs
           git add crates/v64-core/src/bin/v64-resource-gate.rs
           git add crates/v64-core/src/bin/v64-frame-rollback-gate.rs
-          git add bench/results/rust-resource-rollback
+          git add -f bench/results/rust-resource-rollback
           git commit -m 'Add configurable inflate and frame rollback gates [skip ci]'
           git push origin HEAD:agent/phase2-entropy-aware

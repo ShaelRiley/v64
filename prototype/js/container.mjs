@@ -6,8 +6,9 @@ import {
 import { GLYPH_HASH, PALETTE_HASH } from "./assets.mjs";
 import { applyFrameCommands, encodeFrameCommands } from "./commands.mjs";
 import { crc32 } from "./crc32.mjs";
+import { validateAurnChunk } from "./audio-run.mjs";
 
-const KNOWN_CHUNKS = new Set(["VFRM", "RPTF", "SILN", "PLIT", "META", "INDX"]);
+const KNOWN_CHUNKS = new Set(["VFRM", "RPTF", "AURN", "SILN", "PLIT", "META", "INDX"]);
 const FLAG_CRC = 1;
 const FLAG_DEFLATE = 2;
 
@@ -103,6 +104,7 @@ export function muxV64(config, mediaChunks) {
   if (mediaChunks.some((chunk) => chunk.type === "SILN")) featureFlags |= 2;
   if (mediaChunks.some((chunk) => chunk.type === "PLIT")) featureFlags |= 4;
   if (allSerialized.some((chunk) => chunk.flags & FLAG_DEFLATE)) featureFlags |= 32;
+  if (mediaChunks.some((chunk) => chunk.type === "AURN")) featureFlags |= 64;
 
   const header = Buffer.alloc(HEADER_SIZE);
   MAGIC.copy(header, 0);
@@ -136,7 +138,7 @@ function parseHeader(file, options) {
   if (file[8] !== 0 || file[9] !== 1) throw new Error(`Unsupported V64 version ${file[8]}.${file[9]}`);
   if (file.readUInt16LE(10) !== HEADER_SIZE) throw new Error("Unsupported V64 header size");
   const featureFlags = file.readUInt32LE(12);
-  if (featureFlags & ~0x3f) throw new Error("Unknown mandatory header feature bits");
+  if (featureFlags & ~0x7f) throw new Error("Unknown mandatory header feature bits");
   const columns = file.readUInt16LE(16);
   const rows = file.readUInt16LE(18);
   if (!columns || !rows || columns > LIMITS.maxColumns || rows > LIMITS.maxRows || columns * rows > LIMITS.maxCells) {
@@ -309,6 +311,55 @@ export function decodeVideoTimeline(demuxed) {
   return timeline;
 }
 
+export function decodeAudioTimeline(demuxed) {
+  const audioChunks = demuxed.chunks.filter((chunk) =>
+    chunk.type === "AURN" || chunk.type === "SILN");
+  const runChunks = audioChunks.filter((chunk) => chunk.type === "AURN");
+  const featureDeclared = Boolean(demuxed.header.featureFlags & 64);
+  if (featureDeclared !== Boolean(runChunks.length)) {
+    throw new Error("AURN feature flag and chunk presence disagree");
+  }
+  if (!runChunks.length) return null;
+
+  const timeline = [];
+  let expectedTimestamp = 0;
+  let keptSamples = 0;
+  let silenceTicks = 0;
+  for (const chunk of audioChunks) {
+    if (chunk.timestamp !== expectedTimestamp) {
+      throw new Error(
+        `Discontinuous audio timeline at ${chunk.timestamp}; expected ${expectedTimestamp}`
+      );
+    }
+    if (!chunk.duration) throw new Error(`${chunk.type} audio duration must be nonzero`);
+    if (chunk.type === "AURN") {
+      const run = validateAurnChunk(chunk);
+      keptSamples += run.keptSamples;
+      timeline.push({ type: "AURN", ...run });
+    } else {
+      if (chunk.payload.length) throw new Error("SILN payload must be empty");
+      silenceTicks += chunk.duration;
+      timeline.push({
+        type: "SILN",
+        timestamp: chunk.timestamp,
+        duration: chunk.duration
+      });
+    }
+    expectedTimestamp += chunk.duration;
+  }
+  if (expectedTimestamp !== demuxed.header.duration) {
+    throw new Error("Audio timeline does not cover the declared file duration");
+  }
+  return {
+    timeline,
+    runs: timeline.filter((item) => item.type === "AURN"),
+    silenceSpans: timeline.filter((item) => item.type === "SILN"),
+    keptSamples,
+    silenceTicks,
+    durationTicks: expectedTimestamp
+  };
+}
+
 export function encodeParticleEvents(events) {
   if (!Array.isArray(events) || events.length > LIMITS.maxParticleEvents) throw new RangeError("Particle event count exceeds bound");
   const payload = Buffer.alloc(1 + events.length * 20);
@@ -353,6 +404,7 @@ export function decodeParticleEvents(payload, paletteDepth) {
 export function verifyV64(input) {
   const demuxed = demuxV64(input);
   const timeline = decodeVideoTimeline(demuxed);
+  const audio = decodeAudioTimeline(demuxed);
   for (const chunk of demuxed.chunks) {
     if (chunk.type === "SILN" && (chunk.payload.length || !chunk.duration)) throw new Error("Malformed explicit-silence chunk");
     if (chunk.type === "PLIT") decodeParticleEvents(chunk.payload, demuxed.header.paletteDepth);
@@ -365,6 +417,9 @@ export function verifyV64(input) {
     frames: timeline.reduce((count, item) => count + item.duration / demuxed.header.cadence.frameTicks, 0),
     keyframes: timeline.filter((item) => item.keyframe).length,
     repeatSpans: timeline.filter((item) => item.repeat).length,
+    audioRuns: audio?.runs.length || 0,
+    audioSilenceSpans: audio?.silenceSpans.length || 0,
+    audioKeptSamples: audio?.keptSamples || 0,
     chunks: demuxed.chunks.length,
     durationTicks: demuxed.header.duration
   };

@@ -12,6 +12,11 @@ import {
 import { encodeSegmentedAm1Runs } from "../prototype/js/audio-opus.mjs";
 import { encodeAurnPayload } from "../prototype/js/audio-run.mjs";
 import {
+  decodeAudioTimelineToPcm,
+  decodeAudioWindowToPcm
+} from "../prototype/js/audio-decode.mjs";
+import {
+  demuxV64,
   encodeCellTimeline,
   makeChunk,
   muxV64,
@@ -96,8 +101,33 @@ const v64 = muxV64(
   [...videoChunks, ...audioChunks]
 );
 const verification = verifyV64(v64);
+const demuxed = demuxV64(v64);
+const decoded = decodeAudioTimelineToPcm(demuxed);
+const seekRanges = [
+  [0, 15000],
+  [10000, 50000],
+  [15000, 39000],
+  [39000, 87000],
+  [87000, 120000]
+];
+const seekWindows = seekRanges.map(([startTick, endTick]) => {
+  const window = decodeAudioWindowToPcm(demuxed, startTick, endTick);
+  const fullSlice = decoded.pcm.subarray(
+    window.startSample * 2,
+    window.endSample * 2
+  );
+  return {
+    startTick,
+    endTick,
+    startSample: window.startSample,
+    endSample: window.endSample,
+    bytes: window.pcm.length,
+    sha256: window.sha256,
+    matchesFullDecode: window.pcm.equals(fullSlice)
+  };
+});
 const manifest = {
-  format: "V64-AM1-FIXTURE-3",
+  format: "V64-AM1-FIXTURE-4",
   sampleRate: fixture.sampleRate,
   channels: fixture.channels,
   samples: fixture.samples.length,
@@ -131,11 +161,21 @@ const manifest = {
     featureFlags: v64.readUInt32LE(12),
     audioFeatureDeclared: Boolean(v64.readUInt32LE(12) & 64),
     verification
+  },
+  playback: {
+    filename: "am1-decoded.pcm",
+    samples: decoded.samples,
+    bytes: decoded.pcm.length,
+    sha256: decoded.sha256,
+    runs: decoded.runs,
+    silenceSpans: decoded.silenceSpans,
+    seekWindows
   }
 };
 
 writeFileSync(resolve(outputDirectory, "am1-hysteresis.wav"), wav);
 writeFileSync(resolve(outputDirectory, "am1-container.v64"), v64);
+writeFileSync(resolve(outputDirectory, "am1-decoded.pcm"), decoded.pcm);
 writeFileSync(
   resolve(outputDirectory, "manifest.json"),
   `${JSON.stringify(manifest, null, 2)}\n`

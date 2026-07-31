@@ -1,12 +1,16 @@
-name: V64 AM1 audio primitives
+name: V64 AM1 audio and container
 
 on:
   pull_request:
     paths:
       - "prototype/js/audio-am1.mjs"
       - "prototype/js/audio-opus.mjs"
+      - "prototype/js/audio-run.mjs"
+      - "prototype/js/opus-packet.mjs"
+      - "prototype/js/container.mjs"
       - "tests/audio-am1.test.mjs"
       - "tests/audio-opus.test.mjs"
+      - "tests/audio-run.test.mjs"
       - "tools/build-am1-fixtures.mjs"
       - "package.json"
   workflow_dispatch:
@@ -45,13 +49,13 @@ jobs:
       - name: Generate deterministic AM1 fixture
         run: npm run --silent audio:fixtures
 
-      - name: Verify generated manifest
+      - name: Verify generated manifest and container
         run: |
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
           const manifest = JSON.parse(readFileSync("bench/generated/am1/manifest.json", "utf8"));
-          assert.equal(manifest.format, "V64-AM1-FIXTURE-2");
+          assert.equal(manifest.format, "V64-AM1-FIXTURE-3");
           assert.equal(manifest.sampleRate, 48000);
           assert.equal(manifest.channels, 1);
           assert.equal(manifest.samples, 96000);
@@ -74,7 +78,20 @@ jobs:
           assert.equal(manifest.opus.accountedSamples, 96000);
           assert.ok(manifest.opus.runs.every((run) =>
             run.preSkip === 312 && run.keptSamples === run.endSample - run.startSample &&
-            run.packetSamples.every((samples) => samples === 960)));
+            run.packetSamples.every((samples) => samples === 960) &&
+            run.aurnPayloadBytes > run.packetStreamBytes));
+          assert.equal(manifest.container.filename, "am1-container.v64");
+          assert.equal(manifest.container.audioFeatureDeclared, true);
+          assert.equal(manifest.container.verification.valid, true);
+          assert.equal(manifest.container.verification.frames, 48);
+          assert.equal(manifest.container.verification.audioRuns, 2);
+          assert.equal(manifest.container.verification.audioSilenceSpans, 2);
+          assert.equal(manifest.container.verification.audioKeptSamples, 50400);
+          assert.equal(manifest.container.verification.durationTicks, 120000);
+          assert.equal(
+            readFileSync("bench/generated/am1/am1-container.v64").length,
+            manifest.container.bytes
+          );
           NODE
 
       - name: Upload deterministic AM1 fixture

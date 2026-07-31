@@ -32,6 +32,11 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
       - name: Run repository tests
         run: npm test
 
@@ -47,6 +52,12 @@ jobs:
           assert.equal(manifest.format, "V64-AM1-FIXTURE-1");
           assert.equal(manifest.sampleRate, 48000);
           assert.equal(manifest.channels, 1);
+          assert.equal(manifest.samples, 96000);
+          assert.equal(manifest.wavBytes, 192044);
+          assert.equal(
+            manifest.wavSha256,
+            "cb98b4184e0c5f69ab296b80c94b71b9896f5e44cff6e76dd0ec6d957f237c89"
+          );
           assert.deepEqual(manifest.silenceSpans, [
             { startSample: 12000, endSample: 31200 },
             { startSample: 69600, endSample: 96000 }

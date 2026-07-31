@@ -4,186 +4,137 @@ Updated: 2026-07-30
 
 ## Ground truth
 
-- Design source:
+- Authoritative design:
   [public V64 / Video64 Drop Google Doc](https://docs.google.com/document/d/1qP6a9f6OSggPun4t1wATHRrC1yPgLngblZwlZdrk1Tg/edit?usp=sharing)
-- ANSI Tube source: `ShaelRiley/ansi-tube`
-- Inspected ANSI Tube commit: `ee08e66` (`Release ANSI Tube v0.9.9`)
-- Canonical source file blob: `core.js` SHA `29fd2065612454a66a92e431213731c41d5dc28c`
+- ANSI Tube source inspected at release `v0.9.9`, commit `ee08e66`.
+- Canonical ANSI Tube source blob: `core.js`
+  `29fd2065612454a66a92e431213731c41d5dc28c`.
+- No benchmark or build result belongs here until produced by a checked command.
 
-No benchmark or build result belongs in this ledger until produced by a checked
-command.
+## Phase 0 — canonical assets and palette
 
-## Phase 0 — provenance and assets
-
-- [x] Read the complete design document.
-- [x] Inspect ANSI Tube v0.9.9 and isolate the Video 64 matcher.
-- [x] Add a one-purpose extractor for names and masks.
-- [x] Preserve 64 names, 64 × 16 bytes, MSB-left ordering, and `8×16` geometry.
-- [x] Emit SHA-256 asset identities and a PPM atlas.
-- [x] Add a reproducible ordered 256-color candidate-palette generator.
-- [x] Preserve ANSI Tube's exact twelve-color Hyper Real anchors and grading
-  parameters as versioned palette-research provenance.
-- [x] Generate and check Hyper Real Candidates 2–4.
-- [x] Reject Candidate 3 after its black-and-white separation fell from 5/5 to
-  2/5 despite stronger chromatic recognizability.
-- [x] Reject Candidate 4 after its black-and-white separation recovered only to
-  3/5 despite stronger recognizability, temporal stability, and compression.
-- [x] Generate Candidate 5A/5B with fixed dark `[32,32,32]`, middle
-  `[112,112,112]`, and light `[224,224,224]` neutrals while separately retaining
-  dark teal or dark navy.
-- [x] Run the twelve-lane Candidate-5 depth, monochrome, and screen-capture
-  ablation with pre-key still and motion review.
-- [x] Retain Candidate 5A as the dark-teal/depth endpoint and Candidate 5B as the
-  dark-navy/monochrome endpoint.
-- [x] Generate Candidate 6A/6B/6C as exact 25%, 50%, and 75% sRGB interpolation
-  points between Candidate 5A's dark teal `[0,92,96]` and Candidate 5B's dark
-  navy `[16,32,72]`, with every other prefix entry fixed.
-- [x] Run the eighteen-lane Candidate-6 finalist gate with pre-key still and
-  motion review.
+- [x] Preserve the 64 Video64 glyph names, 64 × 16 mask bytes, MSB-left order,
+  and `8×16` geometry.
+- [x] Emit deterministic glyph identities and atlas assets.
+- [x] Preserve ANSI Tube's exact twelve Hyper Real anchors and its 1.60
+  saturation / 1.12 contrast direction.
+- [x] Run matched palette Candidates 2–6C through low-depth visual, temporal,
+  monochrome, depth, screen-capture, and compression gates.
 - [x] Freeze Candidate 6A as normative `V64-P256-1`.
-- [x] Switch the executable palette default to normative `V64-P256-1`.
+- [x] Switch the executable palette default to `V64-P256-1`.
 
-Normative `V64-P256-1` uses dark chroma `[4,77,90]`, the checked 25%
-teal-to-navy interpolation. Its 16-color prefix SHA-256 is
-`e8d7b7de275b79acb403d17a97c4e7ef72ca16600a8f4f3ebdcba86099ce41cf`
-and its complete 256-color palette SHA-256 is
-`c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105`.
-Any byte change requires a new normative palette identifier.
+Normative `V64-P256-1` uses dark chroma `[4,77,90]`.
 
-In checked tranche 5, Candidate 6A used 10,580 selected DEFLATE bytes, 180 bytes
-or 1.673% below legacy Candidate 1. It also recorded the lowest selected command
-bytes (17,154), changed-cell rate (16.861%), and one-frame-reversion proxy
-(1.222%) among the six compared palettes. Pre-key review scored it 5/5 for
-depth, 4.5/5 for monochrome hierarchy, and 5/5 for screen capture, matching the
-best endpoint scores without their opposing regressions.
+- 16-color prefix SHA-256:
+  `e8d7b7de275b79acb403d17a97c4e7ef72ca16600a8f4f3ebdcba86099ce41cf`
+- Complete palette SHA-256:
+  `c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105`
+
+Candidate 6A scored 5/5 for depth, 4.5/5 for monochrome hierarchy, and 5/5
+for screen capture while using 1.673% fewer selected bytes than legacy
+Candidate 1. Any palette-byte change requires a new normative identifier.
 
 ## Phase 1 — JavaScript proof codec
 
-- [x] Define and implement a binary v0.1 header and chunk framing.
-- [x] Validate magic, reserved fields, dimensions, lengths, hashes, cadence, and
-  palette depth.
-- [x] Implement keyframes and delta commands.
-- [x] Implement `SKIP`, `LITERAL`, `REPEAT_TOKEN`, `FILL_RECT`,
-  `DEFINE_TOKEN_DICTIONARY`, and `DICTIONARY_LITERAL`.
-- [x] Implement repeat-frame spans.
-- [x] Implement CRC-32 and bounded raw-DEFLATE chunk payloads.
-- [x] Implement a keyframe seek index.
-- [x] Port the 4×8 proxy matcher, dual-color polarity choice, and temporal
-  glyph/color retention.
-- [x] Implement deterministic RGB rasterization.
-- [x] Add FFmpeg source ingest and decoded MP4/MKV generation.
-- [x] Add CLI encode, decode, inspect, verify, atlas, and sample commands.
-- [x] Add exact-silence and deterministic particle-event chunk primitives.
-- [x] Encode, verify, decode, and visually inspect a two-second procedural clip.
-- [x] Measure the first round-trip and publish exact hashes and command metrics.
-- [x] Add backend-neutral canonical command traces and exact opcode/count/payload
-  byte accounting.
-- [x] Add experimental Grammar B with packed palette indices, separable
-  glyph/foreground/background/color-pair actions, strict progress rules, and
-  transactional decoding.
-- [x] Implement deterministic canonical-Huffman encode/decode experiments.
-- [x] Compare packed-only, per-frame and per-group DEFLATE, Zstandard, and
-  canonical Huffman on the identical 48-frame golden trace.
-- [x] Add same-value glyph, foreground, background, and color-pair runs.
-- [x] Replace the fixed greedy trace builder with bounded dynamic programming
-  that minimizes exact packed command bytes.
-- [x] Add deterministic 0.5-, 1-, and 2-second independent-group sweeps with
-  forced keyframes and verified reconstruction.
-- [ ] Add scene-cut scoring and rate-distortion target modes.
-- [ ] Complete the 32-glyph and adaptive 16/32/64 canonical-glyph study.
-- [ ] Repeat the entropy and grammar comparison on the legally reusable mixed
-  corpus before selecting normative syntax or a backend.
-- [x] Add a provenance-validating manifest and deterministic CC0 structural
-  seed corpus covering all eleven required content classes.
-- [x] Add a two-pass static-byte entropy objective and actual-DEFLATE candidate
-  selection without changing decoder syntax.
-- [x] Publish the first multi-fixture entropy report: 6,807 selected DEFLATE
-  bytes versus 7,897 for packed-only parsing, with entropy selected on 5 of 11
-  fixtures.
-- [x] Add provenance- and SHA-256-validated FFmpeg raster-video ingest.
-- [x] Run raster tranche 0 from the self-authored CC0 procedural MP4: entropy
-  pass 2 reduced DEFLATE from 9,402 to 8,696 bytes (7.509%).
-- [x] Add original CC0 human-content raster tranche 1: dialogue/lecture,
-  saturated performance, and 2D animated dialogue crossed with both palette
-  candidates.
-- [x] Add reproducible 0.5-, 1-, and 2-second independent-group sweeps,
-  seek-decode timing, process high-water memory, changed-cell percentage, and a
-  one-frame-reversion flicker proxy to the raster harness.
-- [x] Measure entropy pass 2 on all six human-content lanes: 29,749 selected
-  DEFLATE bytes versus 34,834 for packed parsing (14.598% reduction).
-- [x] Complete raster coverage of all eleven required classes, including
-  deterministic CC0 3D-animation, black-and-white-film, and screen-capture
-  fixtures.
-- [x] Add hash-validated still-to-motion treatments without opaque derived-video
-  fixtures.
-- [x] Add matched subtitle lanes at 60 and 80 columns.
-- [x] Add deterministic blind-code previews, public worksheets, and separately
-  uploaded concealed keys.
-- [x] Run tranche-2 codec measurements: entropy pass 2 selected on all fourteen
-  lanes and reduced raw DEFLATE from 174,666 to 147,912 bytes (15.317%).
-- [x] Collect pre-key still and motion scores before every palette-key disclosure.
-- [x] Retain two-second independent groups as the prototype default. In the
-  Candidate-6 finalist tranche they were 11.396% smaller than one-second groups
-  and 24.832% smaller than half-second groups, with 1.996 ms median and 3.143 ms
-  p95 hosted-runner seek reconstruction.
-- [ ] Validate two-second seek behavior in the browser before freezing the group
-  duration.
+### Core container and video
 
-### Subtitle side-plane research
+- [x] Implement the v0.1 binary header and chunk framing.
+- [x] Validate magic, version, feature bits, reserved fields, dimensions,
+  cadence, palette depth, asset hashes, lengths, CRC-32, and bounded DEFLATE.
+- [x] Implement keyframes, deltas, repeat-frame spans, and a keyframe seek index.
+- [x] Implement the canonical command set and deterministic dynamic-programming
+  command selection.
+- [x] Add deterministic raster ingest, rendering, CLI encode/decode/inspect/
+  verify commands, and reproducible corpus benchmarking.
+- [x] Complete deterministic CC0 coverage of all eleven required raster classes.
+- [x] Add blind still/motion reviews with separately uploaded concealed keys.
+- [x] Retain two-second independent groups as the prototype default.
+- [ ] Validate two-second group seeks in the browser before a normative duration
+  freeze.
+- [ ] Complete scene-cut scoring, rate-distortion modes, the adaptive glyph-count
+  study, and final grammar/entropy selection.
 
-- [x] Prototype bounded sparse `SM1` arbitrary 8×16 masks with row-major delta
-  positions, palette indices, strict progress, exact rasterization, and
-  damaged-stream rejection.
-- [x] Demonstrate exact 60-column transcription with SM1: base 0/4 versus SM1
-  4/4.
-- [x] Reject SM1's broad extractor and per-frame framing after measuring 108,823
-  compressed bytes across sixteen lane-seconds, or 54.412 kbit/s.
-- [x] Build SM2 connected-region selection with full planes, repeat-plane spans,
-  sparse removal/upsert deltas, strict canonical decoding, and total-V64-byte
-  accounting.
-- [x] Reduce selected mask cells from 28,632 to 10,362 and side-plane rate from
-  54.412 to 4.785 kbit/s, a 91.206% reduction from SM1.
-- [x] Improve exact transcription from base 2/8 to SM2 6/8 at 7.590% total-stream
-  overhead.
-- [x] Diagnose SM2's two failures as under-selection on the 60-column lecture
-  lane.
-- [x] Build SM3 temporal subtitle-line discovery with connected components,
-  horizontal lower-band projection, ranked boxes, and bounded fallback.
-- [x] Restore exact 60-column lecture transcription from 0/2 to 2/2 with SM3,
-  while identifying broad per-frame projection as a 62.327% overhead failure.
-- [x] Build SM4 canonical persistent planes using recurrence thresholds, modal
-  palette pairs, consensus masks, and the existing repeat-span syntax.
-- [x] Preserve SM3's exact 2/2 lecture transcription and 5/5 edge/stability
-  scores while reducing compressed bytes from 12,284 to 1,806.
-- [x] Reduce focused total-stream overhead from 62.327% to 9.163%, clearing the
-  focused 10% ceiling without adding a decoder opcode.
-- [ ] Run a complete eight-lane SM4 regression across lecture and animated
-  dialogue at 60 and 80 columns.
-- [ ] Require 8/8 exact transcription and total-stream overhead at or below 10%
-  before registering the subtitle side plane in the normative V64 container.
-- [ ] Add stable-span boundaries and frame-local delta fallback for changing
-  subtitle text.
+### Subtitle side plane
 
-Clean GitHub Actions run `30589727547` at code head
-`35b75024e0d62df8afad472f726defd129802047` passed the normative palette finalist
-gate. It reduced raw DEFLATE from 73,634 to 64,612 bytes (12.252%) with entropy
-selected on all eighteen lanes and produced segregated blind/key artifacts.
+- [x] SM1 proved exact arbitrary-mask readability but was rejected at
+  54.412 kbit/s.
+- [x] SM2 introduced connected-region selection plus full-plane, repeat-span,
+  and sparse removal/upsert-delta syntax.
+- [x] SM3 restored 60-column lecture text through temporal projection but was
+  rejected at 62.327% focused-stream overhead.
+- [x] SM4 persistent planes reduced the focused overhead to 9.163% while
+  retaining exact 2/2 lecture transcription.
+- [x] SM5 added deterministic changing-caption span boundaries and sparse-frame
+  merging without changing decoder syntax.
+- [x] Pass the complete eight-lane gate: exact transcription improved from base
+  4/8 to SM4/SM5 8/8 at 7.082% total-stream overhead.
+- [x] Publish the versioned subtitle-extension profile.
+- [ ] Integrate the proposed `SUBT` chunk and its feature bit into the proof
+  container with grid, palette, frame-count, duration, alignment, overlap, and
+  canonical-sequence validation.
 
-Clean GitHub Actions run `30591665741` at code head
-`b96f45d3abed42d9da25bf55c7e29a5e12a10305` passed conformance and the focused
-SM4 gate. Candidate 6 was correctly skipped by path-specific CI. SM4 retained
-exact 2/2 lecture transcription while reducing focused side-plane rate to 3.612
-kbit/s and total-stream overhead to 9.163%.
+Full subtitle gate, workflow `30593087909`, code head
+`25b108b8572dc940362394286a1f88b63f5a7a85`:
 
-## Phase 2 — audio and finished container profile
+- 192 frames / 17 detected spans;
+- 9,086 side-plane bytes;
+- 128,304 selected base bytes;
+- 137,390 total bytes;
+- 7.082% overhead / 4.543 kbit/s;
+- mean edge clarity and temporal stability 4.875/5.
 
-- [ ] FFmpeg/libav audio ingest.
-- [ ] AM1 preprocessing: mono, 200 Hz–4.5 kHz, compressor, limiter.
-- [ ] Opus packetization at 4–16 kb/s, default 8 kb/s.
-- [ ] Silence detector with entry/exit hysteresis, hangover, and exact spans.
-- [x] Silence chunk syntax and exact-zero timeline semantics in verifier.
-- [ ] Audio/video synchronization and repeated-seek tests.
-- [ ] Final v1 chunk registry and forward-compatibility policy.
+## Phase 2 — AM1 audio and finished container profile
+
+### Deterministic source and silence
+
+- [x] Add mono PCM16 WAV encode/decode.
+- [x] Add a deterministic 48 kHz, 96,000-sample source fixture.
+- [x] Freeze the fixture identity:
+  `cb98b4184e0c5f69ab296b80c94b71b9896f5e44cff6e76dd0ec6d957f237c89`.
+- [x] Add hysteretic silence entry at −48 dB, exit at −42 dB, 120 ms minimum,
+  and 40 ms exit hangover.
+- [x] Reject the fixture's 80 ms quiet pause as too short for `SILN`.
+- [x] Convert qualifying silence to exact empty-payload `SILN` chunks.
+- [x] Reject inexact sample/tick boundaries and overlapping silence spans.
+
+### Standard Opus and `AURN`
+
+- [x] Add mono 48 kHz libopus packetization at 4–16 kbit/s; current experiment
+  uses 8 kbit/s constrained VBR, VOIP, and 20 ms packets.
+- [x] Parse standard Opus packet durations from TOC bytes.
+- [x] Extract deterministic packet streams independent of random Ogg serials.
+- [x] Add bounded version-1 `AURN` payloads with pre-skip, end trim, kept
+  samples, decoded samples, packet descriptors, and standard packet bytes.
+- [x] Register `AURN` as a mandatory chunk with header feature bit `0x40`.
+- [x] Require `AURN` and `SILN` to cover one continuous audio timeline from zero
+  through the declared file duration.
+- [x] Reject TOC-duration, trim/accounting, payload-length, duration, feature,
+  alignment, gap, and incomplete-coverage failures.
+
+### Playback and synchronization
+
+- [x] Reconstruct deterministic Ogg framing only as an FFmpeg/libopus transport.
+- [x] Decode independent `AURN` runs to exact kept-sample PCM lengths.
+- [x] Synthesize `SILN` spans as exact zero PCM.
+- [x] Pass full-decode determinism and five repeated-seek comparisons, including
+  windows crossing audio/silence boundaries.
+- [x] Publish a verified two-second `.v64` playback fixture.
+- [ ] Implement the AM1 preprocessing path: mono downmix, 200 Hz high-pass,
+  4.5 kHz low-pass, compressor, and limiter.
+- [ ] Run matched 4/8/12/16 kbit/s objective and blinded-listening sweeps before
+  freezing the default bitrate.
+- [ ] Finalize the v1 chunk registry and forward-compatibility policy.
+
+AM1 playback gate, workflow `30596274425`, code head
+`c5f76b05789e64645c3d532f819dbfd107e33858`:
+
+- V64 fixture: 1,732 bytes,
+  `a61b40502b4fd4a079dcb4bef050c7c33b9a854a6126ad350d8800b2d454b469`;
+- two `AURN` runs and two `SILN` spans;
+- exact 96,000-sample accounting;
+- decoded PCM: 192,000 bytes,
+  `b7c875b16fb4673f806477679470b3d6fcde1c92df331a0ba4983c3c33da99a5`;
+- all five seek windows match full-decode slices byte-for-byte.
 
 ## Phase 3 — Rust and stable API
 
@@ -191,53 +142,46 @@ kbit/s and total-stream overhead to 9.163%.
 - [ ] `crates/v64-encoder`
 - [ ] `crates/v64-cli`
 - [ ] Stable C ABI
-- [ ] JavaScript/Rust golden state and raster-hash agreement
+- [ ] JavaScript/Rust golden-state and raster/PCM hash agreement
 - [ ] Fuzz targets and allocation-limit regression corpus
 
-Rust is not installed in the current build environment; this is an environment
+Rust is not installed in the current build environment. This is an environment
 blocker, not a codec-design blocker.
 
 ## Phase 4 — products
 
 - [ ] `apps/video64-drop`: Linux-first drag/drop batch encoder.
 - [ ] Source/V64 decoded split preview.
-- [ ] Representative-sample size estimator and calibration history.
-- [ ] Per-file overrides and six-stage progress reporting.
-- [ ] Keyboard and reduced-motion audit.
+- [ ] Representative-sample estimator, calibration history, per-file overrides,
+  and six-stage progress reporting.
 - [ ] `apps/v64-player`: native standalone player.
-- [x] Specify a shared playback-effects profile whose CRT scanline option is
-  enabled by default, live-toggleable, persisted after user changes, and applied
-  only after deterministic rasterization.
-- [x] Add renderer-neutral default-on scanline compositing with strength 0.18,
-  period 2, phase 1, bounded validation, viewport-anchored phase, non-mutation
-  guarantees, and conformance tests.
-- [ ] Wire the native player's **View → CRT Scanlines** action, keyboard toggle,
-  and persisted preference to the shared playback profile.
+- [x] Specify and test renderer-neutral CRT scanlines at strength 0.18, period 2,
+  and phase 1.
+- [x] Require CRT scanlines enabled by default, live-toggleable, persisted after
+  user changes, viewport-anchored, and presentation-only.
+- [ ] Wire **View → CRT Scanlines**, the keyboard toggle, and persisted native
+  preference.
 - [ ] WebAssembly decoder.
 
 ## Phase 5 — VLC
 
 - [ ] Pin a supported VLC release and install its development SDK.
-- [ ] Build the `.v64` demux module.
-- [ ] Build the glyph-video decoder module.
-- [ ] Route Opus elementary packets through VLC's Opus decoder.
-- [ ] Synthesize exact silence blocks.
-- [ ] Expose the persisted `v64-crt-scanlines` module option enabled by default,
-  using the same non-normative presentation profile as the standalone player.
+- [ ] Build the `.v64` demux and glyph-video decoder modules.
+- [ ] Route `AURN` packets through VLC's Opus decoder and synthesize exact
+  `SILN` blocks.
+- [ ] Expose persisted `v64-crt-scanlines`, enabled by default, using the shared
+  playback profile.
 - [ ] Test duration, pause, seek, rate, EOF, repeated seeks, scanline default,
   live toggle, persistence, and viewport-phase stability.
 - [ ] Document Windows and macOS build routes.
 
-VLC development headers are absent in the current environment. Integration is
-intentionally downstream of standalone conformance.
-
 ## Next concrete step
 
-Run the complete eight-lane SM4 subtitle regression and add stable-span
-boundaries for changing subtitle text. If it passes 8/8 exact transcription at
-no more than 10% total-stream overhead, register the existing full/repeat/delta
-side-plane grammar in the V64 container profile.
+Implement the AM1 preprocessing path and a reproducible 4/8/12/16 kbit/s
+comparison. Preserve the current standard packet and `AURN` syntax while
+measuring size, decode integrity, band-limiting, peak control, and objective
+error before blinded listening.
 
-Then resume AM1 as a separately testable audio pipeline: deterministic WAV
-fixtures, hysteretic silence segmentation, standard Opus packets, exact `SILN`
-spans, and sample-exact A/V synchronization.
+In parallel, integrate the already-passed subtitle sequence as the versioned
+`SUBT` container extension. CRT scanlines remain mandatory and enabled by
+default for both the native player and VLC plugin.

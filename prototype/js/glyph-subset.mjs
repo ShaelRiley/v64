@@ -1,5 +1,9 @@
 import { GLYPH_MASKS } from "./assets.mjs";
 
+export const VIDEO64_DEFAULT_GLYPH_COUNT = 32;
+export const VIDEO64_PRIMARY_GLYPH_COUNTS = Object.freeze([32, 64]);
+export const VIDEO64_STUDY_GLYPH_COUNTS = Object.freeze([16, 32, 64]);
+
 const POPCOUNT = new Uint8Array(256);
 for (let value = 1; value < 256; value += 1) {
   POPCOUNT[value] = POPCOUNT[value >> 1] + (value & 1);
@@ -14,6 +18,16 @@ function glyphDistance(left, right) {
 }
 
 const SUBSET_MAPS = new Map();
+
+export function primaryGlyphCountFromValue(value = VIDEO64_DEFAULT_GLYPH_COUNT) {
+  const glyphCount = Number(value);
+  if (!Number.isInteger(glyphCount) || !VIDEO64_PRIMARY_GLYPH_COUNTS.includes(glyphCount)) {
+    throw new RangeError(
+      `Primary Video64 glyph count must be ${VIDEO64_PRIMARY_GLYPH_COUNTS.join(" or ")}`
+    );
+  }
+  return glyphCount;
+}
 
 export function glyphSubsetMap(glyphCount) {
   if (!Number.isInteger(glyphCount) || glyphCount < 1 || glyphCount > 64) {

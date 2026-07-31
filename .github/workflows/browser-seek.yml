@@ -11,6 +11,7 @@ on:
       - "tests/browser-seek.test.mjs"
       - "tests/playback-effects.test.mjs"
       - "tools/build-browser-seek-fixture.mjs"
+      - "tools/build-browser-seek-fixture-v2.mjs"
       - "package.json"
       - ".github/workflows/browser-seek.yml"
   workflow_dispatch:
@@ -47,7 +48,7 @@ jobs:
         run: npm test
 
       - name: Build deterministic browser seek fixture
-        run: node tools/build-browser-seek-fixture.mjs bench/generated/browser-seek
+        run: node tools/build-browser-seek-fixture-v2.mjs bench/generated/browser-seek
 
       - name: Verify Node-derived golden manifest
         run: |
@@ -66,7 +67,7 @@ jobs:
           assert.equal(manifest.profile.frameTicks, 2500);
           assert.equal(manifest.profile.durationTicks, 240000);
           assert.equal(manifest.profile.audioSamplesPerFrame, 2000);
-          assert.equal(manifest.seekOrder.length, 12);
+          assert.equal(manifest.seekOrder.length, 13);
           assert.equal(new Set(manifest.seekOrder).size, 8);
           assert.equal(manifest.container.bytes, file.length);
           assert.equal(manifest.audio.bytes, pcm.length);
@@ -116,7 +117,7 @@ jobs:
             .replaceAll("&gt;", ">");
           const result = JSON.parse(text);
           assert.equal(result.valid, true);
-          assert.equal(result.seeks, 12);
+          assert.equal(result.seeks, 13);
           assert.equal(result.uniqueFrames, 8);
           assert.equal(result.groupFrames, 48);
           assert.equal(result.groupCount, 2);

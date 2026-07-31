@@ -1,0 +1,128 @@
+{
+  "format": "V64-HUMAN-RD-GLYPH-CHECKED-SUMMARY-1",
+  "status": "passed",
+  "checkedCodeHead": "df0708742300b344e522009a7d78a17e3f1e0359",
+  "workflow": {
+    "id": 30636581459,
+    "name": "V64 human raster 32-primary gate"
+  },
+  "artifact": {
+    "id": 8795660692,
+    "name": "human-rd-glyph-study",
+    "zipSha256": "c9209d2378fba31218ea39a49fa6e6d36873986dbd9553e1395156cb166238f6",
+    "fullSummarySha256": "b381ed29dc1afb3920ec00ee5f41fde48f08e28ffac5ceb133f673a04df3f660",
+    "generatedManifestSha256": "4d1c49bf0f9b89ded4b0727d014f9cb4eed35ece49642e1cfb84b4d2f2289e42",
+    "retentionDays": 30
+  },
+  "source": {
+    "license": "CC0-1.0",
+    "paletteAsset": "V64-P256-1",
+    "lanes": 10,
+    "configurations": 4,
+    "cases": 40,
+    "tranche1Manifest": "bench/corpus/human-raster-manifest.json",
+    "tranche1Sha256": "1c23dd97eedae9d7dc0cea1b759b405cb888e42828fc6db08c2ec28d19adbba9",
+    "tranche2Manifest": "bench/corpus/human-raster-tranche-2-manifest.json",
+    "tranche2Sha256": "766a7516af8967a3a932a67f249f4603748a8b86493d19c7da7f9335642ca331"
+  },
+  "policy": {
+    "projectName": "Video 64",
+    "extension": ".v64",
+    "defaultGlyphCount": 32,
+    "optionalGlyphCount": 64,
+    "researchOnlyGlyphCount": 16,
+    "defaultTarget": "balanced"
+  },
+  "aggregates": [
+    {
+      "id": "primary-32-balanced",
+      "containerBytes": 249578,
+      "independentGroups": 20,
+      "sceneCuts": 0,
+      "meanDistortion": 0.018299704,
+      "meanPsnr": 17.765714,
+      "glyphSelections": { "32": 480, "64": 0 },
+      "worstDecodeP95Milliseconds": 17.575,
+      "peakHeapDeltaBytes": 16420128,
+      "peakArrayBufferDeltaBytes": 2859280
+    },
+    {
+      "id": "primary-32-quality",
+      "containerBytes": 256482,
+      "independentGroups": 20,
+      "sceneCuts": 0,
+      "meanDistortion": 0.018015554,
+      "meanPsnr": 17.835827,
+      "glyphSelections": { "32": 480, "64": 0 },
+      "worstDecodeP95Milliseconds": 17.907,
+      "peakHeapDeltaBytes": 12456624,
+      "peakArrayBufferDeltaBytes": 2523676
+    },
+    {
+      "id": "option-64-quality",
+      "containerBytes": 274904,
+      "independentGroups": 20,
+      "sceneCuts": 0,
+      "meanDistortion": 0.017388208,
+      "meanPsnr": 18.009902,
+      "glyphSelections": { "32": 0, "64": 480 },
+      "worstDecodeP95Milliseconds": 18.206,
+      "peakHeapDeltaBytes": 12992024,
+      "peakArrayBufferDeltaBytes": 2552540
+    },
+    {
+      "id": "adaptive-32-64-quality",
+      "containerBytes": 256482,
+      "independentGroups": 20,
+      "sceneCuts": 0,
+      "meanDistortion": 0.018015554,
+      "meanPsnr": 17.835827,
+      "glyphSelections": { "32": 480, "64": 0 },
+      "worstDecodeP95Milliseconds": 17.573,
+      "peakHeapDeltaBytes": 12456360,
+      "peakArrayBufferDeltaBytes": 2591188
+    }
+  ],
+  "findings": {
+    "glyph32To64": {
+      "containerByteDeltaPercent": 7.183,
+      "distortionReductionPercent": 3.482
+    },
+    "adaptiveVersusFixed32Quality": {
+      "containerByteDeltaPercent": 0,
+      "distortionReductionPercent": 0,
+      "selected32Frames": 480,
+      "selected64Frames": 0
+    },
+    "balancedVersusQuality32": {
+      "containerByteDeltaPercent": 2.766,
+      "distortionReductionPercent": 1.553
+    },
+    "grammar": {
+      "phase1GroupDeflateBytes": 874752,
+      "grammarBGroupDeflateBytes": 881164,
+      "grammarBHuffmanBytes": 988292,
+      "grammarBZstandardBytes": 912638,
+      "grammarBVersusPhase1SavingsPercent": -0.733,
+      "deflateVersusZstandardSavingsPercent": 3.449
+    }
+  },
+  "hostileInputs": {
+    "cases": 7,
+    "allRejected": true,
+    "largestSourceBytes": 68448,
+    "largestSourceSha256": "32906fad84a53c185994f6503296d2a8a8eae5820b7e4599108c4e44dabeebad",
+    "worstP95Milliseconds": 1.682,
+    "worstHeapDeltaBytes": 129336,
+    "worstArrayBufferDeltaBytes": 920753
+  },
+  "decisions": [
+    "32 glyphs is the primary and default encoder budget",
+    "64 glyphs remains an explicit full-alphabet option",
+    "balanced is the ordinary target",
+    "16 glyphs remains research-only",
+    "the two-second group ceiling is derived from cadence",
+    "final grammar selection remains open because Phase-1 leads the human gate by 0.733 percent",
+    "raw DEFLATE remains the current entropy leader"
+  ]
+}

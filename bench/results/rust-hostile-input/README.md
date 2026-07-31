@@ -1,10 +1,35 @@
-# Rust hostile-input and resource gate
+# Checked Rust hostile-input and resource gate
 
-Status: **implemented; first checked workflow pending**
+Status: **passed**
 
-This gate is the first bounded hostile-input tranche for `v64-core`. It runs a
-deterministic malformed-input corpus against the optimized Rust parser and
-requires every case to reject identically across 64 repetitions.
+Checked code head: `bbcd0fae408801369b66888ada14ae1749a41541`
+
+GitHub Actions workflow: `30648764459` (`V64 Rust hostile-input and resource gate`)
+
+Artifact: `v64-rust-hostile-input`, ID `8800518126`
+
+Artifact ZIP SHA-256:
+`5c1d640ffa154b2ef8924c5b0205e9d3b3629236f35edac206604e15d764640a`
+
+Canonical report SHA-256:
+`27b6494aab8f804adcb3290da46ad1b7c42c16c1c70a32eb1e2356f3e4375b0b`
+
+## Checked result
+
+- malformed cases: 29;
+- repetitions per case: 64;
+- complete runs: 2;
+- report identity: byte-for-byte equal across both runs;
+- valid fixture size: 13,483 bytes;
+- valid fingerprint: `120000:49:1:11787:19564:40x11`;
+- first-run wall time: 0.04 seconds;
+- first-run peak RSS: 2,672 KiB;
+- required process cap: 10 seconds per run;
+- required RSS ceiling: 262,144 KiB.
+
+Every hostile case rejected with the same error across all 64 repetitions. The
+original valid fixture parsed successfully after each case and reproduced the
+same fingerprint, demonstrating stateless parser recovery for this corpus.
 
 ## Covered in this tranche
 
@@ -17,15 +42,12 @@ requires every case to reject identically across 64 repetitions.
 - unknown canonical asset identifiers;
 - unknown mandatory chunks and flags;
 - excessive stored lengths and corrupted CRC-protected payloads;
-- byte-identical reports across two complete runs;
-- successful reparse of the original valid fixture after every hostile case;
-- a ten-second cap per complete hostile run;
-- a 256 MiB maximum-resident-set ceiling for each complete run.
+- byte-identical canonical reports across duplicate complete runs;
+- successful valid-file reparse after every hostile case;
+- process-level wall-time and maximum-resident-set measurement.
 
-The report format is `V64-RUST-HOSTILE-GATE-1`. It records exact rejection
-strings, input sizes, repetition counts, and a stable valid-file fingerprint.
-Process timing and peak RSS are captured separately with `/usr/bin/time -v` so
-the canonical semantic report remains byte-identical.
+The report format is `V64-RUST-HOSTILE-GATE-1`. Timing and peak RSS remain in
+separate `/usr/bin/time -v` records so the canonical semantic report is stable.
 
 ## Deliberately not claimed yet
 

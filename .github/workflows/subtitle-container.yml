@@ -1,0 +1,74 @@
+name: V64 SUBT container and fixture
+
+on:
+  pull_request:
+    paths:
+      - "prototype/js/container.mjs"
+      - "prototype/js/subtitle-run.mjs"
+      - "prototype/js/subtitle-mask-sm2.mjs"
+      - "tests/subtitle-container.test.mjs"
+      - "tools/build-subt-fixture.mjs"
+      - ".github/workflows/subtitle-container.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-subt-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  subt-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Build deterministic SUBT fixture
+        run: node tools/build-subt-fixture.mjs bench/generated/subt
+
+      - name: Verify SUBT manifest and container
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { verifyV64 } from "./prototype/js/container.mjs";
+          const manifest = JSON.parse(readFileSync("bench/generated/subt/manifest.json", "utf8"));
+          const file = readFileSync("bench/generated/subt/subt-container.v64");
+          assert.equal(manifest.format, "V64-SUBT-FIXTURE-1");
+          assert.equal(manifest.container.bytes, file.length);
+          assert.equal(manifest.container.subtitleFeatureDeclared, true);
+          assert.equal(manifest.container.verification.valid, true);
+          assert.equal(manifest.container.verification.frames, 6);
+          assert.equal(manifest.container.verification.subtitleChunks, 2);
+          assert.equal(manifest.container.verification.subtitleFrames, 5);
+          assert.equal(manifest.profile.sparseGapFrames, 1);
+          assert.deepEqual(manifest.chunks.map((chunk) => chunk.frameCount), [2, 3]);
+          assert.equal(verifyV64(file).subtitleFrames, 5);
+          NODE
+
+      - name: Upload deterministic SUBT fixture
+        uses: actions/upload-artifact@v4
+        with:
+          name: subt-deterministic-fixture
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/generated/subt

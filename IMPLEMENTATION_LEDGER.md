@@ -10,6 +10,13 @@ Updated: 2026-07-31
 - The canonical source asset remains the complete 64-glyph Video 64 alphabet.
 - The primary/default product encoder budget is 32 glyphs; 64 glyphs is an
   explicit additional option and 16 glyphs is research-only.
+- Video 64 is licensed under the maximally permissive Zero-Clause BSD license,
+  SPDX identifier `0BSD`; forks and modification require no permission.
+- Human developers are the primary contributor community. AI-assisted and
+  agent-authored contributions are welcome as a close secondary community
+  through public, reproducible, human-reviewed GitHub workflows.
+- Public contributor invitation: GitHub issue
+  [#4](https://github.com/ShaelRiley/v64/issues/4).
 - ANSI Tube source inspected at release `v0.9.9`, commit `ee08e66`.
 - Canonical ANSI Tube source blob: `core.js`
   `29fd2065612454a66a92e431213731c41d5dc28c`.
@@ -71,8 +78,12 @@ Candidate 1. Any palette-byte change requires a new normative identifier.
   sampled allocations, and malformed-input resource-limit measurements.
 - [x] Add deterministic `V64-ENCODER-PROFILE-1` metadata in optional `META`
   chunks and expose it through `inspect` and `verify`.
-- [ ] Select final command syntax on a broader combined structural/human corpus;
-  Phase-1 and Grammar B currently disagree by corpus.
+- [x] Complete the weighted combined structural/human grammar decision gate with
+  direct Phase-1 versus Grammar B decoder-time, allocation, and source-surface
+  measurements.
+- [ ] Optimize the JavaScript Grammar B decoder before any V1 grammar freeze;
+  its checked combined-corpus size win currently carries a 212.186% decode-time
+  regression.
 - [ ] Freeze an entropy backend only after Rust/WebAssembly/native decoder cost
   and interoperability measurements.
 
@@ -82,7 +93,7 @@ Browser seek gate, workflow `30599518584`, checked code head
 - all 101 repository tests passed;
 - artifact `8781381629`;
 - four-second fixture: 1,500 bytes,
-  `fb718b18ca33daee5626e2d3727e47f2393a3b8f74db5b38b20fcd40311aa1e1`;
+  `fb718b18ca33daee562dcc9ec46f2393a3b8f74db5b38b20fcd40311aa1e1`;
 - two 48-frame / two-second independent groups;
 - 96 video frames, two keyframes, 12 repeat spans;
 - two `SUBT` chunks covering all 96 subtitle frames;
@@ -154,6 +165,35 @@ Decision: 32 glyphs is frozen as the primary/default JavaScript encoder budget,
 64 remains the explicit full-alphabet option, balanced is the ordinary target,
 and final grammar selection is reopened because the structural and human
 corpora disagree slightly.
+
+Combined grammar decision gate, workflow `30640529023`, checked code head
+`a55e8a368e581ddee9e539922269547702128dc5`:
+
+- complete repository suite and both source-corpus rebuilds passed;
+- artifact `8797286945`;
+- artifact ZIP SHA-256:
+  `b065fca95200ed6156a722d341edb8880268157667e57b4cc238cad37ebf67d7`;
+- human material receives 75% decision weight and structural stress material
+  receives 25%;
+- Grammar B must save at least 1% weighted and may not regress either corpus by
+  more than 1%;
+- structural Phase-1/Grammar B group-DEFLATE bytes: 155,992 / 100,761,
+  a 35.406% Grammar B saving;
+- human Phase-1/Grammar B group-DEFLATE bytes: 874,752 / 881,164,
+  a 0.733% Grammar B regression;
+- weighted Grammar B saving: 8.302%;
+- decoder comparison covered 40 human files and 1,870 nominal frames;
+- Phase-1 total median decode time: 139.994 ms, worst p95 8.289 ms;
+- Grammar B total median decode time: 437.041 ms, worst p95 28.356 ms;
+- Grammar B decode-time delta: +212.186%;
+- Phase-1 decoder surface: 7 opcodes, one function, 3,850 source bytes;
+- Grammar B decoder surface: 12 opcodes, parser plus apply functions,
+  6,509 source bytes.
+
+Decision: Grammar B advances as the provisional combined-corpus byte winner but
+is not frozen. Phase-1 remains the compatibility and simplicity baseline.
+Optimize Grammar B's JavaScript parser/apply path and require Rust/WebAssembly
+golden-state and resource agreement before final command selection.
 
 ### Encoder profile metadata
 
@@ -349,14 +389,33 @@ blocker, not a codec-design blocker.
   live toggle, persistence, and viewport-phase stability.
 - [ ] Document Windows and macOS build routes.
 
+## Open-source governance and outreach
+
+- [x] License the repository under `0BSD`.
+- [x] Publish `CONTRIBUTING.md`, `GOVERNANCE.md`, `AGENTS.md`, `SECURITY.md`, and
+  a pull-request evidence template.
+- [x] State human-contributor primacy and welcome AI-assisted/agent-authored work
+  under the same technical and security gates.
+- [x] Open public contributor invitation issue #4 covering Rust, WebAssembly,
+  players, integrations, compression, accessibility, packaging, and forks.
+- [ ] Announce mature contribution opportunities to appropriate open-source,
+  multimedia, retrocomputing, creative-coding, accessibility, preservation,
+  and AI-development communities as the relevant interfaces stabilize.
+
+Third-party agent communities are announcement surfaces only. All code,
+evidence, issue reports, and decisions return through public GitHub review; no
+repository secrets, private vulnerability reports, release authority, or
+maintainer identity is delegated to those platforms.
+
 ## Next concrete step
 
-Build the combined structural-plus-human grammar decision gate, including
-weighted corpus reporting and decoder-complexity comparisons for Phase-1 versus
-Grammar B. In parallel, begin the Rust core/container implementation so the
-32-glyph primary profile, optional 64-glyph profile, cadence-derived group
-limits, optional encoder `META`, registry semantics, raster state, subtitle
-planes, and audio timing can be checked against JavaScript golden identities.
+Replace Grammar B's allocation-heavy parse-then-apply path with a bounded
+single-pass JavaScript decoder while preserving exact states and malformed-input
+rejection. Rerun the combined gate and require a substantial reduction from the
+current +212.186% decode-time delta. Then begin the Rust core/container golden
+implementation for the 32-glyph primary profile, optional 64-glyph profile,
+cadence-derived group limits, optional encoder `META`, registry semantics,
+raster state, subtitle planes, and audio timing.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

@@ -1,4 +1,4 @@
-name: V64 AM1 audio, container, and playback
+name: V64 AM1 audio, container, playback, and bitrate gates
 
 on:
   pull_request:
@@ -7,13 +7,16 @@ on:
       - "prototype/js/audio-opus.mjs"
       - "prototype/js/audio-run.mjs"
       - "prototype/js/audio-decode.mjs"
+      - "prototype/js/audio-preprocess.mjs"
       - "prototype/js/opus-packet.mjs"
       - "prototype/js/container.mjs"
       - "tests/audio-am1.test.mjs"
       - "tests/audio-opus.test.mjs"
       - "tests/audio-run.test.mjs"
       - "tests/audio-decode.test.mjs"
+      - "tests/audio-preprocess.test.mjs"
       - "tools/build-am1-fixtures.mjs"
+      - "tools/benchmark-am1-bitrates.mjs"
       - "package.json"
   workflow_dispatch:
 
@@ -27,7 +30,7 @@ concurrency:
 jobs:
   audio-am1:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Check out pull-request head
@@ -108,6 +111,40 @@ jobs:
           );
           NODE
 
+      - name: Run preprocessing and 4/8/12/16 kbit/s sweep
+        run: npm run --silent bench:audio-bitrates
+
+      - name: Verify preprocessing and blind sweep
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const directory = "bench/results/am1-bitrate-sweep";
+          const preprocess = JSON.parse(readFileSync(`${directory}/preprocess-summary.json`, "utf8"));
+          const publicManifest = JSON.parse(readFileSync(`${directory}/public-manifest.json`, "utf8"));
+          const key = JSON.parse(readFileSync(`${directory}/key.json`, "utf8"));
+          assert.equal(preprocess.format, "V64-AM1-PREPROCESS-SUMMARY-1");
+          assert.equal(preprocess.source.sampleRate, 44100);
+          assert.equal(preprocess.source.channels, 2);
+          assert.equal(preprocess.output.sampleRate, 48000);
+          assert.equal(preprocess.output.channels, 1);
+          assert.equal(preprocess.output.samples, 96000);
+          assert.equal(preprocess.output.wavBytes, 192044);
+          const metrics = Object.fromEntries(preprocess.output.segmentMetrics.map((row) => [row.id, row]));
+          assert.ok(metrics["low-80hz"].rms < metrics["mid-1khz"].rms * 0.40);
+          assert.ok(metrics["high-8khz"].rms < metrics["mid-1khz"].rms * 0.60);
+          assert.ok(metrics["loud-1khz"].rms / metrics["quiet-1khz"].rms < 7);
+          assert.ok(Math.max(...Object.values(metrics).map((row) => row.peak)) <= 0.90);
+          assert.equal(publicManifest.format, "V64-AM1-BITRATE-REVIEW-PUBLIC-1");
+          assert.equal(publicManifest.variants.length, 4);
+          assert.equal(key.format, "V64-AM1-BITRATE-REVIEW-KEY-1");
+          assert.deepEqual(key.variants.map((row) => row.bitrateKbps).sort((a, b) => a - b), [4, 8, 12, 16]);
+          assert.ok(key.variants.every((row) =>
+            row.keptSamples === 96000 && row.packets === 101 &&
+            row.aurnPayloadBytes > row.packetDataBytes &&
+            Number.isFinite(row.comparison.snrDb)));
+          NODE
+
       - name: Upload deterministic AM1 fixture
         uses: actions/upload-artifact@v4
         with:
@@ -115,3 +152,21 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           path: bench/generated/am1
+
+      - name: Upload blind bitrate review
+        uses: actions/upload-artifact@v4
+        with:
+          name: am1-bitrate-sweep-blind
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            bench/results/am1-bitrate-sweep
+            !bench/results/am1-bitrate-sweep/key.json
+
+      - name: Upload concealed bitrate key
+        uses: actions/upload-artifact@v4
+        with:
+          name: am1-bitrate-sweep-key
+          if-no-files-found: error
+          retention-days: 30
+          path: bench/results/am1-bitrate-sweep/key.json

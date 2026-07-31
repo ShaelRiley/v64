@@ -2,14 +2,14 @@
 
 Status: **passed**
 
-Checked code head: `d29031aee42dd7b55d91c2d7b9882d52f56007ca`
+Checked code head: `336165de40f43066197e15f19fac914affac64e6`
 
-GitHub Actions workflow: `30643857083` (`V64 Rust core golden gate`)
+GitHub Actions workflow: `30644441969` (`V64 Rust core golden gate`)
 
-Artifact: `v64-rust-javascript-golden`, ID `8798576462`
+Artifact: `v64-rust-javascript-golden`, ID `8798814495`
 
 Artifact ZIP SHA-256:
-`78b350c8fa80dec0c93a79484b722339468c4447fdfbf0913ee620aacac42410`
+`a414b79b5ab105ec459c23af826242c15098dfdcf9c4714790c9b941c45bc44b`
 
 ## Scope
 
@@ -28,8 +28,9 @@ The checked `v64-core` container parser validates:
 - final `INDX` position, length, entry flags, timestamps, and keyframe targets;
 - optional `V64-ENCODER-PROFILE-1` JSON discovery and duplicate rejection.
 
-The Rust golden executable also implements the complete Phase-1 frame command
-set:
+The Rust golden executables implement both checked video grammars.
+
+Phase-1:
 
 - END;
 - SKIP;
@@ -39,29 +40,47 @@ set:
 - DEFINE_TOKEN_DICTIONARY;
 - DICTIONARY_LITERAL.
 
-It enforces canonical uint32 varints, palette and glyph bounds, dictionary
-bounds, rectangle bounds, command progress, keyframe coverage, transactional
-delta state, timestamp continuity, nominal-frame duration alignment, repeat
-spans, and trailing-data rejection.
+Grammar B:
 
-## Cross-language agreement
+- END and SKIP;
+- packed LITERAL and REPEAT_TOKEN;
+- single and repeat glyph updates;
+- single and repeat foreground updates;
+- single and repeat background updates;
+- single and repeat color-pair updates.
 
-GitHub Actions decoded `tests/golden/procedural.v64` independently through the
-JavaScript and Rust implementations. Each emitted the same canonical stream
-containing:
+Both paths enforce canonical uint32 varints, palette and glyph bounds, packed
+padding, command-count and grid-progress bounds, truncation, trailing-data
+rejection, repeat-state validity, and transactional delta state.
 
-- grid dimensions;
-- timeline record count;
-- every record timestamp and duration;
-- keyframe and repeat flags;
-- every decoded glyph/foreground/background cell state.
+## Four-way cross-language agreement
 
-The workflow required `cmp` byte equality before publishing evidence.
+GitHub Actions decoded `tests/golden/procedural.v64` through JavaScript Phase-1
+and Rust Phase-1. JavaScript then generated a deterministic backend-neutral
+Grammar B fixture from those decoded states. JavaScript and Rust independently
+decoded that identical Grammar B fixture.
+
+The workflow required all four outputs to be byte-identical:
+
+1. JavaScript Phase-1;
+2. Rust Phase-1;
+3. JavaScript direct Grammar B;
+4. Rust direct Grammar B.
+
+Each canonical state stream contains grid dimensions, timeline record count,
+every timestamp and duration, keyframe/repeat flags, and every decoded
+cell-state byte.
 
 | Output | Bytes | SHA-256 |
 |---|---:|---|
-| JavaScript decoded-state stream | 64,528 | `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9` |
-| Rust decoded-state stream | 64,528 | `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9` |
+| JavaScript Phase-1 states | 64,528 | `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9` |
+| Rust Phase-1 states | 64,528 | `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9` |
+| JavaScript Grammar B states | 64,528 | `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9` |
+| Rust Grammar B states | 64,528 | `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9` |
+
+The deterministic Grammar B fixture is 13,102 bytes with SHA-256:
+
+`a1b51a75487160b369675b4d128640bf07b041cca6ea7e27ddcaee2b8324a4d9`
 
 Both debug and optimized-release Rust test suites passed before the comparison.
 
@@ -77,9 +96,11 @@ committed unchanged.
 ## Decision
 
 - Advance the Rust implementation from structural parsing to verified Phase-1
-  video-state decoding.
-- Preserve the JavaScript decoder as the current conformance oracle while
+  and direct Grammar B video-state decoding.
+- Retain the JavaScript implementation as the current conformance oracle while
   cross-language coverage expands.
-- Add direct Grammar B state agreement next.
-- Keep subtitle-plane, audio-timeline, renderer, resource, fuzz, WebAssembly,
-  and C-ABI gates open.
+- Grammar B has now cleared its first cross-language decoded-state gate, but its
+  V1 freeze still requires Rust/WebAssembly resource measurements and broader
+  conformance fixtures.
+- Add subtitle-plane and audio-timeline agreement next, followed by renderer,
+  fuzz, WebAssembly, and C-ABI gates.

@@ -1,0 +1,75 @@
+name: V64 V1 registry conformance
+
+on:
+  pull_request:
+    paths:
+      - "spec/v64-v1-registry.json"
+      - "prototype/js/v1-registry.mjs"
+      - "tests/v1-registry.test.mjs"
+      - "tools/build-v1-registry-matrix.mjs"
+      - "package.json"
+      - ".github/workflows/v1-registry.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-v1-registry-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Build registry conformance matrix
+        run: node tools/build-v1-registry-matrix.mjs bench/generated/v1-registry
+
+      - name: Verify registry matrix
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const matrix = JSON.parse(
+            readFileSync("bench/generated/v1-registry/matrix.json", "utf8")
+          );
+          assert.equal(matrix.format, "V64-V1-REGISTRY-MATRIX-1");
+          assert.equal(matrix.registryFormat, "V64-V1-REGISTRY-1");
+          assert.equal(matrix.knownFeatureMask, 0xff);
+          assert.equal(matrix.requiredFeatureMask, 0x19);
+          assert.equal(matrix.featureCount, 8);
+          assert.equal(matrix.chunkCount, 8);
+          assert.equal(matrix.scenarios, 18);
+          assert.equal(matrix.passedExpectations, matrix.scenarios);
+          assert.ok(matrix.results.every((result) => result.matched === true));
+          NODE
+
+      - name: Upload registry evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1-registry-conformance
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            spec/v64-v1-registry.json
+            bench/generated/v1-registry

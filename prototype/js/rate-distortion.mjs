@@ -10,6 +10,8 @@ import {
 } from "./glyph-subset.mjs";
 import { planIndependentGroups } from "./scene-cut.mjs";
 
+const TWO_SECONDS_TICKS = 120_000;
+
 export const RATE_DISTORTION_MODES = Object.freeze({
   compact: Object.freeze({
     id: "compact",
@@ -42,6 +44,11 @@ export function rateDistortionModeFromValue(value = "balanced") {
     );
   }
   return mode;
+}
+
+export function twoSecondGroupFrames(cadenceId) {
+  const cadence = cadenceFromId(cadenceId);
+  return Math.max(1, Math.floor(TWO_SECONDS_TICKS / cadence.frameTicks));
 }
 
 function assertProxy(source, width, height) {
@@ -119,13 +126,18 @@ export function analyzeRateDistortionTimeline(rawFrames, config) {
   const mode = rateDistortionModeFromValue(config.mode);
   const { width, height, columns, rows, paletteDepth, cadenceId } = config;
   const palette = config.palette ?? MASTER_PALETTE;
-  const maximumGroupFrames = Number(config.maximumGroupFrames ?? 48);
+  const cadence = cadenceFromId(cadenceId);
+  const maximumGroupFrames = Number(
+    config.maximumGroupFrames ?? twoSecondGroupFrames(cadenceId)
+  );
+  if (!Number.isInteger(maximumGroupFrames) || maximumGroupFrames < 1) {
+    throw new RangeError("Maximum group frames must be a positive integer");
+  }
   const glyphCounts = config.glyphCounts ?? mode.glyphCounts;
   if (!Array.isArray(glyphCounts) || !glyphCounts.length ||
       glyphCounts.some((count) => !VIDEO64_STUDY_GLYPH_COUNTS.includes(count))) {
     throw new RangeError("Rate-distortion glyph candidates must use 16, 32, or 64 glyphs");
   }
-  const cadence = cadenceFromId(cadenceId);
   const plan = planIndependentGroups(rawFrames, width, height, {
     threshold: config.sceneCutThreshold ?? mode.sceneCutThreshold,
     minimumGroupFrames: config.minimumGroupFrames ?? 2,
@@ -195,7 +207,8 @@ export function analyzeRateDistortionTimeline(rawFrames, config) {
         ])
       )),
       independentGroups: plan.groups.length,
-      sceneCuts: plan.sceneCuts
+      sceneCuts: plan.sceneCuts,
+      maximumGroupFrames
     }),
     frameTicks: cadence.frameTicks,
     encodeConfig: Object.freeze({

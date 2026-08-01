@@ -1,0 +1,24 @@
+[package]
+name = "video64-drop-native"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Linux-first native shell for Video64 Drop"
+
+[dependencies]
+sdl2 = { version = "=0.38.0", optional = true }
+serde_json = "1"
+
+[features]
+default = []
+native-ui = ["dep:sdl2"]
+
+[[bin]]
+name = "video64-drop"
+path = "src/main.rs"
+required-features = ["native-ui"]
+
+[lints]
+workspace = true

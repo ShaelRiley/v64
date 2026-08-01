@@ -8,9 +8,13 @@ on:
       - "Cargo.lock"
       - "assets/glyphs/video64-v1.bin"
       - "assets/palettes/v64-p256-1.**"
+      - "bench/generated/am1/**"
+      - "bench/generated/subt/**"
       - "bench/results/native-player/**"
       - "crates/v64-core/**"
       - "apps/v64-player/**"
+      - "tools/build-am1-fixtures.mjs"
+      - "tools/build-subt-fixture.mjs"
       - "docs/NATIVE_PLAYER.md"
       - "docs/PLAYBACK_PROFILE.md"
       - "docs/CURRENT_STATUS.md"
@@ -52,9 +56,6 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Resolve staged native audio lockfile
-        run: cargo generate-lockfile
-
       - name: Check formatting and normative palette identity
         shell: bash
         run: |
@@ -76,49 +77,118 @@ jobs:
           cargo test --locked --workspace --all-targets --release \
             --features v64-player/native-ui
 
+      - name: Build deterministic subtitle and audio fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent subt:fixtures
+          npm run --silent audio:fixtures
+
       - name: Build native release player
         run: cargo build --locked --release --package v64-player --features native-ui
 
-      - name: Require deterministic playback report
+      - name: Require deterministic profile-v2 playback evidence
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p target/native-player
+
+          for fixture in procedural subt am1; do
+            case "$fixture" in
+              procedural) input="tests/golden/procedural.v64" ;;
+              subt) input="bench/generated/subt/subt-container.v64" ;;
+              am1) input="bench/generated/am1/am1-container.v64" ;;
+            esac
+            target/release/v64-player \
+              --preferences target/native-player/default.conf \
+              --headless-report "target/native-player/${fixture}-a.json" \
+              "$input"
+            target/release/v64-player \
+              --preferences target/native-player/default.conf \
+              --headless-report "target/native-player/${fixture}-b.json" \
+              "$input"
+            cmp "target/native-player/${fixture}-a.json" \
+              "target/native-player/${fixture}-b.json"
+          done
+
           target/release/v64-player \
             --preferences target/native-player/default.conf \
-            --headless-report target/native-player/report-a.json \
-            tests/golden/procedural.v64
-          target/release/v64-player \
-            --preferences target/native-player/default.conf \
-            --headless-report target/native-player/report-b.json \
-            tests/golden/procedural.v64
-          cmp target/native-player/report-a.json target/native-player/report-b.json
+            --dump-audio-pcm target/native-player/am1-native.pcm \
+            --headless-report target/native-player/am1-pcm-report.json \
+            bench/generated/am1/am1-container.v64
+          cmp target/native-player/am1-native.pcm bench/generated/am1/am1-decoded.pcm
+
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
-          const report = JSON.parse(readFileSync("target/native-player/report-a.json"));
-          assert.equal(report.format, "V64-NATIVE-PLAYER-1");
-          assert.equal(report.playerProfileVersion, 1);
-          assert.equal(report.scanlines.defaultEnabled, true);
-          assert.equal(report.scanlines.menuPath, "View/CRT Scanlines");
-          assert.equal(report.scanlines.keyboardToggle, "C");
-          assert.notEqual(report.scanlines.unfilteredFnv1a64, report.scanlines.filteredFnv1a64);
-          assert.equal(report.controls.eof, true);
-          assert.equal(report.controls.repeatedSeekHashes[0], report.controls.repeatedSeekHashes[4]);
-          assert.equal(report.controls.repeatedSeekHashes[1], report.controls.repeatedSeekHashes[3]);
-          assert.equal(report.controls.eofRecoveryHash, report.controls.repeatedSeekHashes[0]);
-          assert.equal(report.extensions.validatedBeforePlayback, true);
+
+          const load = (name) => JSON.parse(
+            readFileSync(`target/native-player/${name}-a.json`)
+          );
+          const procedural = load("procedural");
+          const subt = load("subt");
+          const am1 = load("am1");
+          const reports = [procedural, subt, am1];
+
+          for (const report of reports) {
+            assert.equal(report.format, "V64-NATIVE-PLAYER-2");
+            assert.equal(report.playerProfileVersion, 2);
+            assert.equal(report.bounded.maxAudioPcmBytes, 268435456);
+            assert.equal(report.scanlines.defaultEnabled, true);
+            assert.equal(report.scanlines.menuPath, "View/CRT Scanlines");
+            assert.equal(report.scanlines.keyboardToggle, "C");
+            assert.notEqual(
+              report.scanlines.unfilteredFnv1a64,
+              report.scanlines.filteredFnv1a64
+            );
+            assert.equal(report.controls.eof, true);
+            assert.equal(
+              report.controls.repeatedSeekHashes[0],
+              report.controls.repeatedSeekHashes[4]
+            );
+            assert.equal(
+              report.controls.repeatedSeekHashes[1],
+              report.controls.repeatedSeekHashes[3]
+            );
+            assert.equal(
+              report.controls.eofRecoveryHash,
+              report.controls.repeatedSeekHashes[0]
+            );
+            assert.equal(report.extensions.validatedBeforePlayback, true);
+          }
+
+          assert.equal(procedural.subtitlePresentation.composited, false);
+          assert.equal(procedural.audioPresentation.decoded, false);
+
+          assert.equal(subt.extensions.subtitleChunks, 2);
+          assert.equal(subt.extensions.subtitleFrames, 5);
+          assert.equal(subt.extensions.subtitleEntries, 10);
+          assert.equal(subt.subtitlePresentation.composited, true);
+          assert.equal(subt.audioPresentation.decoded, false);
+          assert.equal(new Set(subt.subtitlePresentation.sampleFnv1a64).size > 1, true);
+
+          assert.equal(am1.extensions.audioRuns, 2);
+          assert.equal(am1.extensions.silenceRuns, 2);
+          assert.equal(am1.extensions.audioPackets, 54);
+          assert.equal(am1.audioPresentation.decoded, true);
+          assert.equal(am1.audioPresentation.sampleRate, 48000);
+          assert.equal(am1.audioPresentation.channels, 1);
+          assert.equal(am1.audioPresentation.samples, 96000);
+          assert.equal(am1.audioPresentation.bytes, 192000);
+          assert.match(am1.audioPresentation.pcmFnv1a64, /^[0-9a-f]{16}$/);
           NODE
 
-      - name: Run real native window loop under Xvfb
+      - name: Run real native video and audio loop under Xvfb
         shell: bash
+        env:
+          SDL_AUDIODRIVER: dummy
         run: |
           set -euo pipefail
           timeout 20s xvfb-run --auto-servernum --server-args="-screen 0 1280x800x24" \
             target/release/v64-player \
               --preferences target/native-player/window.conf \
               --smoke-presents 3 \
-              tests/golden/procedural.v64
+              bench/generated/am1/am1-container.v64
 
       - name: Hash native player evidence
         shell: bash
@@ -126,7 +196,13 @@ jobs:
           set -euo pipefail
           sha256sum \
             assets/palettes/v64-p256-1.rgb \
-            target/native-player/report-a.json \
+            bench/generated/subt/subt-container.v64 \
+            bench/generated/am1/am1-container.v64 \
+            bench/generated/am1/am1-decoded.pcm \
+            target/native-player/procedural-a.json \
+            target/native-player/subt-a.json \
+            target/native-player/am1-a.json \
+            target/native-player/am1-native.pcm \
             target/release/v64-player \
             | tee target/native-player/SHA256SUMS
 
@@ -141,5 +217,7 @@ jobs:
             Cargo.lock
             target/native-player
             target/release/v64-player
+            bench/generated/subt
+            bench/generated/am1
             bench/results/native-player
             docs/NATIVE_PLAYER.md

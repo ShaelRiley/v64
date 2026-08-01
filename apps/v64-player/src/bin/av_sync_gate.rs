@@ -166,8 +166,8 @@ struct ClockEvidence {
 fn run_clock_simulation(session: &mut PlayerSession) -> Result<ClockEvidence, String> {
     session.seek(0)?;
     session.set_rate(PlaybackRate::NORMAL)?;
-    let duration_ns = u128::from(session.duration_ticks()) * NANOS_PER_SECOND
-        / u128::from(TICK_RATE);
+    let duration_ns =
+        u128::from(session.duration_ticks()) * NANOS_PER_SECOND / u128::from(TICK_RATE);
     let checkpoints_ns = [
         123_456_789_123u128,
         300 * NANOS_PER_SECOND,
@@ -176,7 +176,10 @@ fn run_clock_simulation(session: &mut PlayerSession) -> Result<ClockEvidence, St
         1_799 * NANOS_PER_SECOND + 500_000_000,
         duration_ns,
     ];
-    if checkpoints_ns.iter().any(|checkpoint| *checkpoint > duration_ns) {
+    if checkpoints_ns
+        .iter()
+        .any(|checkpoint| *checkpoint > duration_ns)
+    {
         return Err("feature-length checkpoint exceeds the input duration".to_owned());
     }
 
@@ -200,8 +203,8 @@ fn run_clock_simulation(session: &mut PlayerSession) -> Result<ClockEvidence, St
             pattern_index += 1;
             increments = increments.saturating_add(1);
         }
-        let expected_ticks = reference_ticks(wall_ns, PlaybackRate::NORMAL)
-            .min(session.duration_ticks());
+        let expected_ticks =
+            reference_ticks(wall_ns, PlaybackRate::NORMAL).min(session.duration_ticks());
         let actual_ticks = session.position_ticks();
         let expected_sample = floor_samples_from_ticks(expected_ticks)?;
         let audio = session.audio().ok_or("audio timeline disappeared")?;
@@ -221,7 +224,9 @@ fn run_clock_simulation(session: &mut PlayerSession) -> Result<ClockEvidence, St
     }
 
     if !session.at_eof() || session.raster().is_some() {
-        return Err("irregular feature-length clock simulation did not reach stable EOF".to_owned());
+        return Err(
+            "irregular feature-length clock simulation did not reach stable EOF".to_owned(),
+        );
     }
     Ok(ClockEvidence {
         checkpoints,
@@ -245,10 +250,7 @@ fn checkpoint_record(
     let end = actual_sample
         .saturating_add(usize::try_from(AUDIO_SAMPLE_RATE).unwrap_or(48_000))
         .min(audio.sample_count());
-    let window_hash = format!(
-        "{:016x}",
-        fnv1a64_pcm(&audio.samples()[actual_sample..end])
-    );
+    let window_hash = format!("{:016x}", fnv1a64_pcm(&audio.samples()[actual_sample..end]));
     let frame = session.current_frame().map(|frame| {
         json!({
             "timestamp": frame.timestamp,
@@ -471,9 +473,8 @@ mod tests {
         let mut accumulated = 0u128;
         let mut index = 0usize;
         while accumulated < total {
-            let step = (total - accumulated).min(u128::from(
-                CLOCK_PATTERN_NS[index % CLOCK_PATTERN_NS.len()],
-            ));
+            let step = (total - accumulated)
+                .min(u128::from(CLOCK_PATTERN_NS[index % CLOCK_PATTERN_NS.len()]));
             accumulated += step;
             index += 1;
         }

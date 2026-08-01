@@ -1,0 +1,16 @@
+[package]
+name = "v64-player"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Bounded native Video 64 player"
+
+[dependencies]
+sdl2 = "=0.38.0"
+serde_json = "1"
+v64-core = { path = "../v64-core" }
+
+[lints]
+workspace = true

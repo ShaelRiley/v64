@@ -57,6 +57,9 @@ jobs:
               '    progress: f32,': '    progress_percent: u32,',
               '    let filled = (progress.clamp(0.0, 1.0) * width as f32).round() as u32;': '    let filled = width.saturating_mul(progress_percent.min(100)) / 100;',
               'assert_eq!(values.last().copied(), Some(1.0));': 'assert_eq!(values.last().copied(), Some(100));',
+              '                    state.notice =\n                        "Encoding is active; quit after the current file completes".to_owned();': '                    "Encoding is active; quit after the current file completes"\n                        .clone_into(&mut state.notice);',
+              'adjust_settings(&core, &mut state, -1)': 'adjust_settings(core, &mut state, -1)',
+              'adjust_settings(&core, &mut state, 1)': 'adjust_settings(core, &mut state, 1)',
           }
           for old, new in replacements.items():
               text = text.replace(old, new)
@@ -104,7 +107,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add apps/video64-drop-native/src
-            git commit -m "Harden native Video64 Drop shell lint compliance"
+            git commit -m "Finish native Video64 Drop lint fixes"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
           fi
 

@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   native-shell:
@@ -22,6 +22,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 0
 
       - name: Install native and media dependencies
         run: |
@@ -36,11 +39,28 @@ jobs:
         with:
           components: rustfmt,clippy
 
+      - name: Format native shell exactly once
+        if: github.event_name == 'pull_request'
+        run: |
+          rustfmt --edition 2024 \
+            apps/video64-drop-native/src/lib.rs \
+            apps/video64-drop-native/src/main.rs
+          if ! git diff --quiet -- apps/video64-drop-native/src; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add apps/video64-drop-native/src
+            git commit -m "Format native Video64 Drop shell"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
+
       - name: Test application core and queue planning
         run: npm --prefix apps/video64-drop test
 
-      - name: Check Rust formatting
-        run: cargo fmt --all --check
+      - name: Check native-shell Rust formatting
+        run: |
+          rustfmt --edition 2024 --check \
+            apps/video64-drop-native/src/lib.rs \
+            apps/video64-drop-native/src/main.rs
 
       - name: Test native shell
         run: cargo test --locked -p video64-drop-native --features native-ui

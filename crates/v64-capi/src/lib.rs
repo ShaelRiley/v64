@@ -609,6 +609,12 @@ mod tests {
         assert_eq!(v64_decoder_create(0, 1), 0);
         assert_eq!(v64_decoder_create(1, 0), 0);
         assert_eq!(v64_decoder_create(u32::MAX, 1), 0);
+        let ceiling = u32::try_from(V64_MAX_INPUT_BYTES).expect("1 GiB fits in uint32");
+        let boundary = v64_decoder_create(ceiling, ceiling);
+        assert_ne!(boundary, 0);
+        assert_eq!(v64_decoder_destroy(boundary), V64_STATUS_OK);
+        assert_eq!(v64_decoder_create(ceiling + 1, ceiling), 0);
+        assert_eq!(v64_decoder_create(ceiling, ceiling + 1), 0);
         let handles = (0..V64_MAX_SESSIONS)
             .map(|_| v64_decoder_create(1, 1))
             .collect::<Vec<_>>();

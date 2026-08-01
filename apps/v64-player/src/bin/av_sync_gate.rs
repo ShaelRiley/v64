@@ -143,10 +143,10 @@ fn run() -> Result<(), Box<dyn Error>> {
         ]
     });
 
-    if let Some(parent) = options.output.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        fs::create_dir_all(parent)?;
+    if let Some(parent) = options.output.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
     }
     fs::write(
         options.output,
@@ -287,10 +287,12 @@ fn run_seek_conformance(session: &mut PlayerSession) -> Result<Value, String> {
             .and_then(Value::as_str)
             .ok_or("seek fingerprint is missing")?
             .to_owned();
-        if let Some(prior) = fingerprints.insert(target, fingerprint.clone())
-            && prior != fingerprint
-        {
-            return Err("repeated feature-length seek produced a different fingerprint".to_owned());
+        if let Some(prior) = fingerprints.insert(target, fingerprint.clone()) {
+            if prior != fingerprint {
+                return Err(
+                    "repeated feature-length seek produced a different fingerprint".to_owned(),
+                );
+            }
         }
         records.push(record);
     }

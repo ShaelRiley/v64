@@ -142,13 +142,67 @@ alignment for a feature-length file without waiting thirty wall-clock minutes.
 It does not measure operating-system mixer latency, audio-device oscillator
 error, or physical hardware scheduler drift.
 
+## Video64 Drop application core
+
+Pull request `#12` establishes the first executable Video64 Drop application
+tranche around the existing verified proof encoder. It intentionally freezes a
+testable application contract before choosing the native desktop-shell toolkit.
+
+The application core now provides:
+
+- normative 24 fps, 80-column, 32-color, 32-glyph, `balanced` defaults;
+- validation for all frozen cadence, palette, glyph-budget, and profile choices;
+- FFprobe-backed source metadata and display-aspect analysis;
+- aspect-aware row and raster-dimension derivation;
+- deterministic output naming and collision-free batch output allocation;
+- immutable queue and job documents with stable identifiers;
+- explicit analysis, video encode, audio encode, mux, and verify stages;
+- actionable failed-stage state and machine-readable progress events;
+- isolated child-process invocation of the existing proof encoder rather than
+  copied codec logic;
+- independent final V64 verification;
+- a headless Linux command surface suitable for the later desktop host.
+
+Permanent workflow `30712779947` passed at immutable code head
+`f5eed760bced9b2a0234abe1f3fd8d542fa3ff59`. The focused suite contains ten
+application tests. The workflow then generated a real one-second H.264/AAC
+source and encoded it through Video64 Drop with 24 fps, 40 columns, 16 colors,
+32 glyphs, and the `balanced` profile.
+
+Checked application evidence:
+
+- source analysis: 320×180 H.264 video with mono 48 kHz AAC audio;
+- derived grid: 40×11 cells, or 320×176 decoded raster pixels;
+- encoded frames: 24;
+- output bytes: 7,282;
+- output bitrate: 58,256 bits per second;
+- changed-cell percentage: 20.939%;
+- keyframes: 1;
+- chunks: 26;
+- independent verification: valid;
+- output SHA-256:
+  `75d3d98a318aaa354aaad42b892126b9be0c60445b6f1ed24f00fad688353c7d`;
+- evidence artifact: `8822412544`;
+- artifact digest:
+  `25af6009ce9ded104af5b790215fa5570351bd43eaebbdd4aeed930db7a02cbc`.
+
+The source audio was detected and disclosed, the audio stage was explicitly
+marked skipped, and the completed file was identified as silent. This tranche
+does not silently discard audio or claim AM1 source encoding before it exists.
+
 The official Google Docs design document records the checked player evidence
-and remaining caveats.
+and remaining caveats; the Video64 Drop application-core evidence will be added
+there after merge.
 
 ## Boundaries not yet claimed
 
 - Genuine blinded AM1 speech listening is still mandatory before freezing the
   normative audio bitrate profile.
+- Video64 Drop does not yet encode source audio; application-core outputs remain
+  silent and disclose that limitation.
+- The native drag-and-drop window, file picker, control surface, decoded preview,
+  sampled size estimator, Particle Lighting controls, and packaged application
+  are not yet claimed.
 - Operating-system and physical-device A/V drift remain platform qualification
   work; the accelerated gate proves arithmetic and decoded-timeline alignment.
 - Fixed 0.5× and 2× audio currently changes pitch through deterministic sample
@@ -158,11 +212,16 @@ and remaining caveats.
 
 ## Next mandatory gates
 
-1. Complete genuine blinded AM1 speech listening and decide whether the current
+1. Build the Linux-first native Video64 Drop shell on the checked application
+   core, including drag/drop or file selection, the frozen controls, queue state,
+   visible warnings, progress, and completion output.
+2. Complete genuine blinded AM1 speech listening and decide whether the current
    speech bitrate profile can freeze.
-2. Begin the Video64 Drop application tranche while preserving the current
-   format, glyph, palette, and primary encoder invariants.
-3. Add platform-specific real-device synchronization and packaging evidence as
-   Windows and macOS player work becomes executable.
-4. Continue broader browser/WebAssembly decoding and VLC integration in the
+3. Connect AM1 source-audio encoding to Video64 Drop so ordinary audiovisual
+   inputs no longer produce silent outputs.
+4. Add the sampled size estimator and decoded source/V64 preview without
+   replacing exact post-encode verification.
+5. Add platform-specific real-device synchronization and packaging evidence as
+   Windows and macOS player and encoder work becomes executable.
+6. Continue broader browser/WebAssembly decoding and VLC integration in the
    planned product order.

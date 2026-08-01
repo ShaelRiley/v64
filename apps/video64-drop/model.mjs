@@ -75,6 +75,19 @@ export function suggestDropOutputPath(inputPath, outputDirectory = null) {
   return join(outputDirectory ? resolve(outputDirectory) : dirname(absolute), `${stem}.v64`);
 }
 
+function uniqueDropOutputPath(suggestedPath, usedPaths) {
+  const absolute = resolve(suggestedPath);
+  if (!usedPaths.has(absolute)) return absolute;
+  const directory = dirname(absolute);
+  const extension = extname(absolute) || ".v64";
+  const stem = basename(absolute, extension);
+  for (let suffix = 2; suffix < Number.MAX_SAFE_INTEGER; suffix += 1) {
+    const candidate = join(directory, `${stem}.${suffix}${extension}`);
+    if (!usedPaths.has(candidate)) return candidate;
+  }
+  throw new Error("Unable to allocate a unique Video64 Drop output path");
+}
+
 function makeStages() {
   return Object.fromEntries(DROP_STAGE_IDS.map((id) => [id, {
     id,
@@ -118,16 +131,22 @@ export function createDropQueue({ settings = {}, jobs = [] } = {}) {
 
 export function enqueueDropInputs(queue, inputPaths, { outputDirectory = null } = {}) {
   if (queue?.format !== DROP_QUEUE_FORMAT) throw new TypeError("Invalid Video64 Drop queue");
-  const existing = new Set(queue.jobs.map((job) => job.inputPath));
+  const existingInputs = new Set(queue.jobs.map((job) => job.inputPath));
+  const usedOutputs = new Set(queue.jobs.map((job) => job.outputPath));
   const additions = [];
   for (const inputPath of inputPaths) {
     const absolute = resolve(String(inputPath));
-    if (existing.has(absolute)) continue;
-    existing.add(absolute);
+    if (existingInputs.has(absolute)) continue;
+    existingInputs.add(absolute);
+    const outputPath = uniqueDropOutputPath(
+      suggestDropOutputPath(absolute, outputDirectory),
+      usedOutputs
+    );
+    usedOutputs.add(outputPath);
     additions.push(createDropJob({
       id: `drop-${String(queue.jobs.length + additions.length + 1).padStart(4, "0")}`,
       inputPath: absolute,
-      outputPath: suggestDropOutputPath(absolute, outputDirectory),
+      outputPath,
       settings: queue.settings
     }));
   }

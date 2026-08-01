@@ -176,9 +176,7 @@ impl PlayerSession {
             Decoder::from_bytes_with_config(bytes, config).map_err(|error| error.to_string())?;
         let (palette, palette_name) = match decoder.header().palette_hash {
             NORMATIVE_PALETTE_HASH => (NORMATIVE_PALETTE_BYTES, "V64-P256-1"),
-            LEGACY_PROOF_PALETTE_HASH => {
-                (LEGACY_PROOF_PALETTE_BYTES, "V64-P256-CANDIDATE-1")
-            }
+            LEGACY_PROOF_PALETTE_HASH => (LEGACY_PROOF_PALETTE_BYTES, "V64-P256-CANDIDATE-1"),
             _ => return Err("Player does not recognize the declared palette hash".to_owned()),
         };
         let extensions = validate_extension_timelines(decoder.file())?;

@@ -45,11 +45,13 @@ real binary `.v64` implementation, not a mock UI:
   allocation, opcode surface, and implementation complexity;
 - independent Rust video, subtitle, and audio-timing conformance gates;
 - a deterministic Rust hostile-input and process-resource gate;
+- a stable bounded Rust decoder API and `v64` command-line surface;
+- a pointer-free, generation-checked C ABI with a real C11 conformance caller;
 - Node conformance tests and golden hashes.
 
 Video64 Drop's desktop shell, the native player, WebAssembly delivery, the
-stable C ABI, and VLC modules remain staged in the ledger rather than
-represented as finished.
+complete WebAssembly decoder, and VLC modules remain staged in the ledger
+rather than represented as finished.
 
 ## Requirements
 
@@ -83,6 +85,8 @@ npm run bench:human-rd-glyph
 npm run bench:combined-grammar
 npm run rust:hostile
 npm run fuzz:corpus
+cargo run --locked --package v64-cli -- inspect tests/golden/procedural.v64
+cargo run --locked --package v64-cli -- verify tests/golden/procedural.v64
 ```
 
 Encode any FFmpeg-readable video with the primary 32-glyph profile:
@@ -153,6 +157,14 @@ for the implemented binary layout.
 Coverage-guided Rust targets, curated seed-corpus generation, deeper local
 commands, and deterministic allocation ceilings are documented in
 [`docs/FUZZING.md`](docs/FUZZING.md).
+
+The stable C decoder contract, public header, status values, lifecycle, and
+exact export allowlist are documented in
+[`spec/V64-c-api-v1.md`](spec/V64-c-api-v1.md). The ABI intentionally uses
+only fixed-width scalars: callers stream bytes into a bounded handle and read
+decoded state through checked accessors, so no caller-owned pointer crosses the
+Rust boundary. The corresponding Rust ownership and CLI contract is
+[`docs/RUST_API.md`](docs/RUST_API.md).
 
 ## Contributing and forks
 

@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod decoder;
 pub mod extensions;
 pub mod frame;
 pub mod grammar_b;
@@ -48,8 +49,12 @@ const CADENCES: [Cadence; 11] = [
 pub struct Error(String);
 
 impl Error {
-    fn new(message: impl Into<String>) -> Self {
+    pub(crate) fn new(message: impl Into<String>) -> Self {
         Self(message.into())
+    }
+
+    pub fn message(&self) -> &str {
+        &self.0
     }
 }
 

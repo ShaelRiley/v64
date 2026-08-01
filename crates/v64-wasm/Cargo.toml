@@ -1,0 +1,11 @@
+[package]
+name = "v64-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Dependency-free WebAssembly conformance shim for the Video 64 renderer"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

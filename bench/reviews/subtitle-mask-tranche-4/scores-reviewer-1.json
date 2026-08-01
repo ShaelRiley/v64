@@ -1,0 +1,14 @@
+{
+  "format": "V64-SUBTITLE-MASK-BLIND-SCORES-4",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-3",
+  "reviewer": "reviewer-1",
+  "keyOpened": false,
+  "rows": [
+    {"group":"lecture-subtitle-60-sm4","code":"38BAC883","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm4","code":"66F83E47","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm4","code":"7F690B87","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm4","code":"BB759112","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm4","code":"BFC2C69E","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm4","code":"C6EF1A00","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4}
+  ]
+}

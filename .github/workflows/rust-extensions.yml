@@ -1,0 +1,111 @@
+name: V64 Rust subtitle and audio golden gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-extensions.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**"
+      - "package.json"
+      - "prototype/js/audio-am1.mjs"
+      - "prototype/js/audio-decode.mjs"
+      - "prototype/js/audio-opus.mjs"
+      - "prototype/js/audio-run.mjs"
+      - "prototype/js/container.mjs"
+      - "prototype/js/opus-packet.mjs"
+      - "prototype/js/subtitle-mask-sm2.mjs"
+      - "prototype/js/subtitle-run.mjs"
+      - "tools/build-am1-fixtures.mjs"
+      - "tools/build-subt-fixture.mjs"
+      - "tools/write-extension-golden-stream.mjs"
+      - "IMPLEMENTATION_LEDGER.md"
+  workflow_dispatch:
+
+jobs:
+  rust-extensions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup default 1.85.0
+          rustc --version
+          cargo --version
+
+      - name: Install FFmpeg with libopus
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Generate deterministic SUBT and AM1 fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent subt:fixtures > target-subt-manifest.json
+          npm run --silent audio:fixtures > target-am1-manifest.json
+
+      - name: Build and test Rust workspace
+        run: cargo test --locked --workspace --all-targets
+
+      - name: Generate JavaScript extension streams
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/extension-golden
+          node tools/write-extension-golden-stream.mjs \
+            bench/generated/subt/subt-container.v64 \
+            target/extension-golden/javascript-subt.bin
+          node tools/write-extension-golden-stream.mjs \
+            bench/generated/am1/am1-container.v64 \
+            target/extension-golden/javascript-am1.bin
+
+      - name: Generate Rust extension streams
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --locked --release --bin v64-extension-golden -- \
+            bench/generated/subt/subt-container.v64 \
+            target/extension-golden/rust-subt.bin
+          cargo run --locked --release --bin v64-extension-golden -- \
+            bench/generated/am1/am1-container.v64 \
+            target/extension-golden/rust-am1.bin
+
+      - name: Require byte-identical extension semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmp target/extension-golden/javascript-subt.bin target/extension-golden/rust-subt.bin
+          cmp target/extension-golden/javascript-am1.bin target/extension-golden/rust-am1.bin
+          sha256sum target/extension-golden/javascript-subt.bin | tee target/extension-golden/subt-stream-sha256.txt
+          sha256sum target/extension-golden/javascript-am1.bin | tee target/extension-golden/am1-stream-sha256.txt
+          sha256sum bench/generated/subt/subt-container.v64 | tee target/extension-golden/subt-container-sha256.txt
+          sha256sum bench/generated/am1/am1-container.v64 | tee target/extension-golden/am1-container-sha256.txt
+
+      - name: Upload cross-language extension evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-rust-javascript-extensions
+          path: |
+            target/extension-golden
+            target-subt-manifest.json
+            target-am1-manifest.json
+            bench/generated/subt/manifest.json
+            bench/generated/am1/manifest.json
+            IMPLEMENTATION_LEDGER.md
+          if-no-files-found: error
+          retention-days: 30

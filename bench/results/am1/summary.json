@@ -1,0 +1,83 @@
+{
+  "format": "V64-AM1-RESULTS-1",
+  "workflowRun": 30596274425,
+  "codeHead": "c5f76b05789e64645c3d532f819dbfd107e33858",
+  "artifact": {
+    "id": 8780245153,
+    "name": "am1-deterministic-fixture",
+    "digest": "sha256:2e15a3f9e9b94c61ee25ee09dbeddc359ebdd32a5bc6a26bf06b697c58f714e1"
+  },
+  "source": {
+    "sampleRate": 48000,
+    "channels": 1,
+    "samples": 96000,
+    "durationTicks": 120000,
+    "wavBytes": 192044,
+    "wavSha256": "cb98b4184e0c5f69ab296b80c94b71b9896f5e44cff6e76dd0ec6d957f237c89"
+  },
+  "silence": {
+    "entryDb": -48,
+    "exitDb": -42,
+    "minimumMs": 120,
+    "hangoverMs": 40,
+    "spans": [
+      { "startSample": 12000, "endSample": 31200, "timestamp": 15000, "duration": 24000 },
+      { "startSample": 69600, "endSample": 96000, "timestamp": 87000, "duration": 33000 }
+    ]
+  },
+  "opus": {
+    "application": "voip",
+    "bitrateKbps": 8,
+    "frameDurationMs": 20,
+    "constrainedVbr": true,
+    "runs": [
+      {
+        "packets": 13,
+        "packetStreamBytes": 279,
+        "packetStreamSha256": "f22ce5e8bc6c25ac65dac4da1e79d4cf3b292874b75333b7d0dff04198ea93be",
+        "aurnPayloadBytes": 337,
+        "preSkip": 312,
+        "endTrim": 168,
+        "keptSamples": 12000
+      },
+      {
+        "packets": 41,
+        "packetStreamBytes": 801,
+        "packetStreamSha256": "d1bc7fe8999fe1252f634a6d4f2511d7e1dcf340fd5e117d72d2e6e12471449c",
+        "aurnPayloadBytes": 915,
+        "preSkip": 312,
+        "endTrim": 648,
+        "keptSamples": 38400
+      }
+    ],
+    "accountedSamples": 96000
+  },
+  "container": {
+    "bytes": 1732,
+    "sha256": "a61b40502b4fd4a079dcb4bef050c7c33b9a854a6126ad350d8800b2d454b469",
+    "featureFlags": 91,
+    "verification": {
+      "frames": 48,
+      "keyframes": 2,
+      "repeatSpans": 2,
+      "audioRuns": 2,
+      "audioSilenceSpans": 2,
+      "audioKeptSamples": 50400,
+      "chunks": 9,
+      "durationTicks": 120000
+    }
+  },
+  "playback": {
+    "samples": 96000,
+    "bytes": 192000,
+    "sha256": "b7c875b16fb4673f806477679470b3d6fcde1c92df331a0ba4983c3c33da99a5",
+    "seekWindows": 5,
+    "allSeekWindowsMatchFullDecode": true,
+    "explicitSilenceIsExactZero": true
+  },
+  "decision": {
+    "aurnContainerGatePassed": true,
+    "sampleExactPlaybackGatePassed": true,
+    "nextGate": "AM1 preprocessing and matched 4/8/12/16 kbit/s listening and objective sweeps."
+  }
+}

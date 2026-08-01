@@ -1,0 +1,174 @@
+{
+  "format": "V64-V1-REGISTRY-1",
+  "containerVersion": "0.1",
+  "knownFeatureMask": 255,
+  "requiredFeatureMask": 25,
+  "unknownFeaturePolicy": "reject any set bit outside knownFeatureMask",
+  "unknownChunkPolicy": {
+    "uppercaseOrNonlowercase": "reject as unknown mandatory chunk",
+    "containsLowercase": "skip as optional extension after bounded framing, CRC, and inflation checks"
+  },
+  "features": [
+    {
+      "bit": 1,
+      "hex": "0x01",
+      "id": "core-video",
+      "required": true,
+      "binding": {
+        "kind": "chunk-presence",
+        "chunks": ["VFRM"],
+        "mode": "any"
+      }
+    },
+    {
+      "bit": 2,
+      "hex": "0x02",
+      "id": "explicit-silence",
+      "required": false,
+      "binding": {
+        "kind": "chunk-presence",
+        "chunks": ["SILN"],
+        "mode": "any"
+      }
+    },
+    {
+      "bit": 4,
+      "hex": "0x04",
+      "id": "particle-events",
+      "required": false,
+      "binding": {
+        "kind": "chunk-presence",
+        "chunks": ["PLIT"],
+        "mode": "any"
+      }
+    },
+    {
+      "bit": 8,
+      "hex": "0x08",
+      "id": "seek-index",
+      "required": true,
+      "binding": {
+        "kind": "chunk-presence",
+        "chunks": ["INDX"],
+        "mode": "any"
+      }
+    },
+    {
+      "bit": 16,
+      "hex": "0x10",
+      "id": "canonical-assets",
+      "required": true,
+      "binding": {
+        "kind": "header-only"
+      }
+    },
+    {
+      "bit": 32,
+      "hex": "0x20",
+      "id": "raw-deflate-storage",
+      "required": false,
+      "binding": {
+        "kind": "chunk-storage-flag",
+        "flag": 2,
+        "mode": "any"
+      }
+    },
+    {
+      "bit": 64,
+      "hex": "0x40",
+      "id": "opus-audio-runs",
+      "required": false,
+      "binding": {
+        "kind": "chunk-presence",
+        "chunks": ["AURN"],
+        "mode": "any"
+      }
+    },
+    {
+      "bit": 128,
+      "hex": "0x80",
+      "id": "subtitle-mask-planes",
+      "required": false,
+      "binding": {
+        "kind": "chunk-presence",
+        "chunks": ["SUBT"],
+        "mode": "any"
+      }
+    }
+  ],
+  "chunks": [
+    {
+      "type": "VFRM",
+      "class": "mandatory",
+      "minimum": 1,
+      "maximum": null,
+      "timeline": "continuous core video with RPTF",
+      "featureBit": 1
+    },
+    {
+      "type": "RPTF",
+      "class": "mandatory",
+      "minimum": 0,
+      "maximum": null,
+      "timeline": "continuous core video with VFRM",
+      "featureBit": 1
+    },
+    {
+      "type": "AURN",
+      "class": "mandatory",
+      "minimum": 0,
+      "maximum": null,
+      "timeline": "continuous audio with SILN when present",
+      "featureBit": 64
+    },
+    {
+      "type": "SILN",
+      "class": "mandatory",
+      "minimum": 0,
+      "maximum": null,
+      "timeline": "explicit zero-output spans",
+      "featureBit": 2
+    },
+    {
+      "type": "SUBT",
+      "class": "mandatory",
+      "minimum": 0,
+      "maximum": null,
+      "timeline": "sparse nonoverlapping whole-frame spans",
+      "featureBit": 128
+    },
+    {
+      "type": "PLIT",
+      "class": "mandatory",
+      "minimum": 0,
+      "maximum": null,
+      "timeline": "bounded particle events",
+      "featureBit": 4
+    },
+    {
+      "type": "META",
+      "class": "mandatory-known",
+      "minimum": 0,
+      "maximum": null,
+      "timeline": "non-normative metadata",
+      "featureBit": null
+    },
+    {
+      "type": "INDX",
+      "class": "mandatory",
+      "minimum": 1,
+      "maximum": 1,
+      "mustBeLast": true,
+      "timeline": "keyframe seek index",
+      "featureBit": 8
+    }
+  ],
+  "crossChunkInvariants": [
+    "VFRM and RPTF form one continuous video timeline from tick zero",
+    "AURN and SILN form one continuous audio timeline when AURN is present",
+    "SUBT spans are whole-frame aligned, bounded by file duration, and nonoverlapping",
+    "INDX is unique, final, and references actual VFRM keyframes",
+    "feature declarations exactly match bound chunk or storage-flag presence",
+    "required feature bits 0x01, 0x08, and 0x10 are always set"
+  ]
+}

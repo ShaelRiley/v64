@@ -1,0 +1,40 @@
+{
+  "format": "V64-SUBTITLE-MASK-TRANCHE-5-DECISION",
+  "workflowRun": 30593087909,
+  "codeHead": "25b108b8572dc940362394286a1f88b63f5a7a85",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-3",
+  "palettePair": [
+    "V64-P256-CANDIDATE-1",
+    "V64-P256-1"
+  ],
+  "aggregate": {
+    "lanes": 8,
+    "frames": 192,
+    "detectedSpans": 17,
+    "broadCells": 28632,
+    "temporalCells": 16196,
+    "stabilizedCells": 18624,
+    "sm4DeflateBytes": 9086,
+    "baseV64SelectedDeflateBytes": 128304,
+    "totalV64PlusSm4DeflateBytes": 137390,
+    "sm4OverheadPercent": 7.082,
+    "sm4KilobitsPerSecond": 4.543
+  },
+  "blindReview": {
+    "baseExact": 4,
+    "sm4Exact": 8,
+    "lanesPerVariant": 8,
+    "baseMeanEdgeClarity": 2.375,
+    "sm4MeanEdgeClarity": 4.875,
+    "baseMeanTemporalStability": 2.875,
+    "sm4MeanTemporalStability": 4.875,
+    "meanScenePreservation": 4
+  },
+  "decision": {
+    "fullGatePassed": true,
+    "advanceSpanAwareStabilization": true,
+    "registerSubtitleExtension": true,
+    "wireSyntax": "SM2 full-plane, repeat-span, and sparse removal/upsert delta",
+    "nextGate": "AM1 deterministic WAV fixtures, hysteretic silence segmentation, Opus packetization, and sample-exact A/V synchronization."
+  }
+}

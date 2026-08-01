@@ -1,0 +1,39 @@
+{
+  "format": "V64-SUBTITLE-MASK-TRANCHE-2",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-3",
+  "extraction": {
+    "source": "SM1 lower-band candidates",
+    "selection": "wide, shallow, high-contrast connected subtitle-like regions",
+    "temporalCoding": ["full-plane", "repeat-plane-span", "cell-removal-and-upsert-delta"],
+    "note": "SM2 remains experimental and outside the V64 container."
+  },
+  "aggregate": {
+    "lanes": 8,
+    "frames": 192,
+    "sm1CandidateCells": 28632,
+    "sm2SelectedCells": 10362,
+    "sm2Bytes": 34117,
+    "sm2DeflateBytes": 9569,
+    "selectedCellReductionPercent": 63.81,
+    "baseV64SelectedDeflateBytes": 126080,
+    "totalV64PlusSm2DeflateBytes": 135649,
+    "sm2OverheadPercentOfBase": 7.59,
+    "sm2KilobitsPerSecond": 4.785
+  },
+  "blindReview": {
+    "baseExact": 2,
+    "sm2Exact": 6,
+    "lanesPerVariant": 8,
+    "baseMeanEdgeClarity": 2,
+    "sm2MeanEdgeClarity": 4.125,
+    "baseMeanTemporalStability": 2.75,
+    "sm2MeanTemporalStability": 4.375,
+    "meanScenePreservation": 4
+  },
+  "decision": {
+    "advanceSequenceSemantics": true,
+    "freezeSelector": false,
+    "containerIntegration": false,
+    "nextGate": "Temporal subtitle-line aggregation and bounded fallback expansion for the 60-column lecture lane."
+  }
+}

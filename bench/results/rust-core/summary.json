@@ -1,0 +1,41 @@
+{
+  "format": "V64-RUST-CORE-CHECKED-SUMMARY-1",
+  "status": "passed",
+  "checkedCodeHead": "336165de40f43066197e15f19fac914affac64e6",
+  "workflow": {
+    "id": 30644441969,
+    "name": "V64 Rust core golden gate"
+  },
+  "artifact": {
+    "id": 8798814495,
+    "name": "v64-rust-javascript-golden",
+    "zipSha256": "a414b79b5ab105ec459c23af826242c15098dfdcf9c4714790c9b941c45bc44b"
+  },
+  "toolchain": {
+    "rust": "1.85.0",
+    "edition": "2024",
+    "license": "0BSD",
+    "unsafeCode": "forbidden",
+    "cargoLockSha256": "a640ddcea99452d5b8bd714b1d8f6d7faa1a5802b844d034f456406e9b346309"
+  },
+  "grammarBFixture": {
+    "bytes": 13102,
+    "sha256": "a1b51a75487160b369675b4d128640bf07b041cca6ea7e27ddcaee2b8324a4d9"
+  },
+  "decodedStateStream": {
+    "bytes": 64528,
+    "sha256": "df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9",
+    "outputs": [
+      "javascript-phase1",
+      "rust-phase1",
+      "javascript-grammar-b-direct",
+      "rust-grammar-b-direct"
+    ]
+  },
+  "decision": [
+    "Rust advances from bounded container parsing to verified Phase-1 and direct Grammar B video-state decoding",
+    "JavaScript remains the current conformance oracle",
+    "Grammar B cleared its first cross-language state gate but remains unfrozen",
+    "subtitle-plane and audio-timeline agreement are next"
+  ]
+}

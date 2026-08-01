@@ -1,0 +1,51 @@
+{
+  "case_count": 5,
+  "cases": [
+    {
+      "command_bytes": 6,
+      "error": "Unknown mandatory frame opcode 0xff",
+      "iterations": 64,
+      "name": "literal_then_unknown_opcode",
+      "prior_state_hex": "000102030405060708090a0b",
+      "recovery_state_hex": "0001020c0d0e060708090a0b"
+    },
+    {
+      "command_bytes": 7,
+      "error": "Trailing bytes after frame END",
+      "iterations": 64,
+      "name": "repeat_then_trailing_bytes",
+      "prior_state_hex": "000102030405060708090a0b",
+      "recovery_state_hex": "0001020c0d0e060708090a0b"
+    },
+    {
+      "command_bytes": 10,
+      "error": "Invalid skip run",
+      "iterations": 64,
+      "name": "rectangle_then_zero_skip",
+      "prior_state_hex": "000102030405060708090a0b",
+      "recovery_state_hex": "0001020c0d0e060708090a0b"
+    },
+    {
+      "command_bytes": 10,
+      "error": "Dictionary index out of range",
+      "iterations": 64,
+      "name": "dictionary_partial_then_bad_index",
+      "prior_state_hex": "000102030405060708090a0b",
+      "recovery_state_hex": "0001020c0d0e060708090a0b"
+    },
+    {
+      "command_bytes": 7,
+      "error": "Truncated cell token",
+      "iterations": 64,
+      "name": "literal_partial_then_truncated_token",
+      "prior_state_hex": "000102030405060708090a0b",
+      "recovery_state_hex": "0001020c0d0e060708090a0b"
+    }
+  ],
+  "copyright": "Copyright (c) 2026 Shael Riley",
+  "format": "V64-RUST-FRAME-ROLLBACK-GATE-1",
+  "iterations_per_case": 64,
+  "license": "MIT",
+  "prior_state_immutable": true,
+  "valid_delta_recovery_after_each_failure": true
+}

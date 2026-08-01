@@ -93,6 +93,32 @@ test("cost-aware parsing selects same-value component runs when they save bytes"
   }), current);
 });
 
+test("static-byte entropy costs remain bounded and preserve lossless syntax", () => {
+  const prior = frame(Array.from({ length: 12 }, (_, index) => [index, 1, 0]));
+  const current = new Uint8Array(prior);
+  for (let cell = 2; cell < 10; cell += 1) current[cell * 3 + 1] = 3;
+  const byteCosts = Array(256).fill(8);
+  byteCosts[PACKED_OPCODE.REPEAT_FOREGROUND] = 1;
+  const trace = buildCommandTrace(current, prior, {
+    columns: 6,
+    rows: 2,
+    paletteDepth: 4,
+    keyframe: false,
+    byteCosts
+  });
+  assert.equal(trace.parser, "static-byte-entropy-dynamic-programming");
+  assert.equal(trace.objective, "estimated-static-byte-bits");
+  const bytes = encodePackedCommands(trace);
+  assert.equal(bytes.length, trace.packedByteCost);
+  assert.deepEqual(applyPackedCommands(bytes, prior, {
+    columns: 6, rows: 2, paletteDepth: 4, keyframe: false
+  }), current);
+  assert.throws(() => buildCommandTrace(current, prior, {
+    columns: 6, rows: 2, paletteDepth: 4, keyframe: false,
+    byteCosts: Array(255).fill(8)
+  }), /256/);
+});
+
 test("packed payloads are canonical and reject padding, truncation, and zero progress", () => {
   assert.throws(() => parsePackedCommands(
     Buffer.from([PACKED_OPCODE.SET_GLYPH, 0xc0, PACKED_OPCODE.END]),

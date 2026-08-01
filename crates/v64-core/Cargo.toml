@@ -1,0 +1,15 @@
+[package]
+name = "v64-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Bounded parser and decoder core for the Video 64 .v64 format"
+
+[dependencies]
+flate2 = "1"
+serde_json = "1"
+
+[lints]
+workspace = true

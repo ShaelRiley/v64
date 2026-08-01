@@ -1,0 +1,88 @@
+{
+  "format": "V64-COMBINED-GRAMMAR-CHECKED-SUMMARY-2",
+  "status": "passed",
+  "checkedCodeHead": "af688fc6d93e25b91af62bf7d0cc349b2ae26363",
+  "workflow": {
+    "id": 30642213125,
+    "name": "V64 combined grammar decision gate"
+  },
+  "artifact": {
+    "id": 8797976278,
+    "name": "combined-grammar-study",
+    "zipSha256": "804506cde3f28a7c969bba43a5a02838b434ea6dd6d766625724c9563c2d035b",
+    "generatedSummarySha256": "ff9be2dbb9de6f2908adc29e74f4e985b95a129ff488d1040efb09d9bf1472aa",
+    "generatedMarkdownSha256": "c9cad9811da42d1bf7c79990d9aaee80ad07fa606c6a63cb9b52391f547db708"
+  },
+  "weights": {
+    "structural": 0.25,
+    "human": 0.75
+  },
+  "thresholds": {
+    "requiredWeightedSavingsPercent": 1,
+    "maximumCorpusRegressionPercent": 1
+  },
+  "corpora": {
+    "structural": {
+      "phase1GroupDeflateBytes": 155992,
+      "grammarBGroupDeflateBytes": 100761,
+      "grammarBSavingsPercent": 35.406
+    },
+    "human": {
+      "phase1GroupDeflateBytes": 874752,
+      "grammarBGroupDeflateBytes": 881164,
+      "grammarBSavingsPercent": -0.733
+    }
+  },
+  "weightedSavingsPercent": 8.302,
+  "decoder": {
+    "files": 40,
+    "nominalFrames": 1870,
+    "codedFrames": 1764,
+    "repeatFrames": 106,
+    "phase1": {
+      "totalMedianMilliseconds": 135.939,
+      "medianMillisecondsPerFile": 3.398,
+      "worstP95Milliseconds": 8.076,
+      "peakHeapDeltaBytes": 10253512,
+      "peakArrayBufferDeltaBytes": 489792,
+      "peakRssDeltaBytes": 524288
+    },
+    "grammarBDirect": {
+      "totalMedianMilliseconds": 175.112,
+      "medianMillisecondsPerFile": 4.378,
+      "worstP95Milliseconds": 13.173,
+      "peakHeapDeltaBytes": 3173560,
+      "peakArrayBufferDeltaBytes": 400896,
+      "peakRssDeltaBytes": 1310720
+    },
+    "grammarBDecodeTimeDeltaPercent": 28.817,
+    "priorParseThenApplyDeltaPercent": 212.186,
+    "relativePenaltyReductionPercent": 86.419
+  },
+  "complexity": {
+    "phase1": {
+      "opcodeCount": 7,
+      "functionCount": 1,
+      "sourceBytes": 3850,
+      "sourceLines": 84,
+      "decisionTokens": 23,
+      "loopTokens": 7
+    },
+    "grammarBDirect": {
+      "opcodeCount": 12,
+      "functionCount": 5,
+      "sourceBytes": 7459,
+      "sourceLines": 236,
+      "decisionTokens": 27,
+      "loopTokens": 6
+    }
+  },
+  "decision": [
+    "Grammar B advances as the provisional combined-corpus byte winner",
+    "the bounded single-pass JavaScript Grammar B decoder becomes the benchmark path",
+    "Grammar B is not frozen into V1",
+    "Phase-1 remains the compatibility and simplicity baseline",
+    "the next mandatory gate is Rust and WebAssembly golden-state and resource agreement",
+    "raw DEFLATE remains the current entropy leader"
+  ]
+}

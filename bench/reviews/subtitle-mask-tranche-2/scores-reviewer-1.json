@@ -1,0 +1,24 @@
+{
+  "format": "V64-SUBTITLE-MASK-BLIND-SCORES-2",
+  "sourceManifest": "V64-HUMAN-RASTER-TRANCHE-3",
+  "reviewer": "reviewer-1",
+  "keyOpened": false,
+  "rows": [
+    {"group":"lecture-subtitle-60-sm2","code":"4E5F9971","transcription":"","exact":false,"edgeClarity":2,"temporalStability":3,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm2","code":"AC93558A","transcription":"","exact":false,"edgeClarity":2,"temporalStability":3,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm2","code":"B3A47F81","transcription":"","exact":false,"edgeClarity":2,"temporalStability":3,"scenePreservation":4},
+    {"group":"lecture-subtitle-60-sm2","code":"DEED60CC","transcription":"","exact":false,"edgeClarity":2,"temporalStability":3,"scenePreservation":4},
+    {"group":"lecture-subtitle-80-sm2","code":"5C4B172C","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":4,"temporalStability":4,"scenePreservation":4},
+    {"group":"lecture-subtitle-80-sm2","code":"74719A30","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":4,"temporalStability":4,"scenePreservation":4},
+    {"group":"lecture-subtitle-80-sm2","code":"7CA76CB1","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"lecture-subtitle-80-sm2","code":"F32FBCEB","transcription":"WE KEEP THE SIGNAL.","exact":true,"edgeClarity":4,"temporalStability":4,"scenePreservation":4},
+    {"group":"animation-subtitle-60-sm2","code":"3ED72607","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"animation-subtitle-60-sm2","code":"87C2ACF0","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"animation-subtitle-60-sm2","code":"A5D88FFB","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"group":"animation-subtitle-60-sm2","code":"DDF39FE2","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"group":"animation-subtitle-80-sm2","code":"260DF8E0","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"group":"animation-subtitle-80-sm2","code":"4CBF6871","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"group":"animation-subtitle-80-sm2","code":"66F4D53D","transcription":"","exact":false,"edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"group":"animation-subtitle-80-sm2","code":"BFD84D4F","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","exact":true,"edgeClarity":5,"temporalStability":5,"scenePreservation":4}
+  ]
+}

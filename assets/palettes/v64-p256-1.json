@@ -1,0 +1,24 @@
+{
+  "id": "V64-P256-1",
+  "status": "normative",
+  "normativeVersion": 1,
+  "sourceCandidate": "V64-P256-HYPERREAL-CANDIDATE-6A",
+  "source": {
+    "repository": "ShaelRiley/ansi-tube",
+    "file": "core.js",
+    "blobSha": "29fd2065612454a66a92e431213731c41d5dc28c",
+    "palette": "hyperreal",
+    "anchorsSha256": "31c9a10ee942a10ce0d251dbe5b121cde724844d17e84f42fa247027a1345322",
+    "saturationGrade": 1.6,
+    "contrastGrade": 1.12
+  },
+  "darkChroma": [4, 77, 90],
+  "prefix": {
+    "sha256": "e8d7b7de275b79acb403d17a97c4e7ef72ca16600a8f4f3ebdcba86099ce41cf",
+    "rationale": "Exact twelve Hyper Real anchors plus the checked 25% teal-to-navy dark-chroma interpolation and fixed dark, light, and middle neutral rungs."
+  },
+  "generation": "Normative alias of checked Candidate 6A: constrained prefix followed by ordered OKLab farthest-point sampling over the Hyper Real-graded 16^3 sRGB lattice",
+  "sha256": "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105",
+  "generatedColors": true,
+  "immutability": "Any byte change requires a new normative palette identifier."
+}

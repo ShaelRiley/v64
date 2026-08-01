@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Video 64 WebAssembly renderer conformance</title>
+</head>
+<body data-status="pending">
+  <pre id="result">pending</pre>
+  <script>
+    const resultNode = document.querySelector("#result");
+    document.body.dataset.status = "running";
+    resultNode.textContent = "running";
+
+    function hex(bytes) {
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function sha256(bytes) {
+      return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
+    }
+
+    function fnv1a64(bytes) {
+      let hash = 0xcbf29ce484222325n;
+      const prime = 0x100000001b3n;
+      for (const byte of bytes) {
+        hash ^= BigInt(byte);
+        hash = BigInt.asUintN(64, hash * prime);
+      }
+      return hash;
+    }
+
+    function finish(result) {
+      document.body.dataset.status = result.valid ? "pass" : "fail";
+      resultNode.textContent = JSON.stringify(result);
+    }
+
+    (async () => {
+      try {
+        const [wasmResponse, expectedResponse] = await Promise.all([
+          fetch("../../target/v64-wasm/v64_wasm.wasm", { cache: "no-store" }),
+          fetch("../../target/renderer-golden/javascript-synthetic-atlas.rgba", { cache: "no-store" })
+        ]);
+        if (!wasmResponse.ok || !expectedResponse.ok) {
+          throw new Error("renderer fixture or WebAssembly module could not be fetched");
+        }
+
+        const wasmBytes = await wasmResponse.arrayBuffer();
+        const expected = new Uint8Array(await expectedResponse.arrayBuffer());
+        const { instance } = await WebAssembly.instantiate(wasmBytes, {});
+        const exports = instance.exports;
+        const abiVersion = exports.v64_renderer_abi_version();
+        const width = exports.v64_renderer_fixture_width();
+        const height = exports.v64_renderer_fixture_height();
+        const length = exports.v64_renderer_fixture_len();
+        const actual = new Uint8Array(length);
+        let invalidByte = -1;
+        for (let index = 0; index < length; index += 1) {
+          const value = exports.v64_renderer_fixture_byte(index);
+          if (value > 255) {
+            invalidByte = index;
+            break;
+          }
+          actual[index] = value;
+        }
+
+        let firstMismatch = -1;
+        if (actual.length === expected.length && invalidByte === -1) {
+          for (let index = 0; index < actual.length; index += 1) {
+            if (actual[index] !== expected[index]) {
+              firstMismatch = index;
+              break;
+            }
+          }
+        }
+
+        const expectedFnv = fnv1a64(expected);
+        const wasmFnv = BigInt(exports.v64_renderer_fixture_fnv_lo() >>> 0)
+          | (BigInt(exports.v64_renderer_fixture_fnv_hi() >>> 0) << 32n);
+        const actualSha256 = await sha256(actual);
+        const expectedSha256 = await sha256(expected);
+        const valid = abiVersion === 1
+          && width === 64
+          && height === 128
+          && length === 32768
+          && actual.length === expected.length
+          && invalidByte === -1
+          && firstMismatch === -1
+          && wasmFnv === expectedFnv
+          && actualSha256 === expectedSha256
+          && exports.v64_renderer_fixture_byte(length) === 256;
+
+        finish({
+          valid,
+          abiVersion,
+          width,
+          height,
+          bytes: length,
+          firstMismatch,
+          invalidByte,
+          sha256: actualSha256,
+          fnv1a64: wasmFnv.toString(16).padStart(16, "0"),
+          outOfRangeSentinel: exports.v64_renderer_fixture_byte(length)
+        });
+      } catch (error) {
+        finish({ valid: false, error: String(error?.stack || error) });
+      }
+    })();
+  </script>
+</body>
+</html>

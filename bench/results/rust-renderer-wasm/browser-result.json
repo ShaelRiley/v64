@@ -1,0 +1,12 @@
+{
+  "valid": true,
+  "abiVersion": 1,
+  "width": 64,
+  "height": 128,
+  "bytes": 32768,
+  "firstMismatch": -1,
+  "invalidByte": -1,
+  "sha256": "751d51c7871fe9f545becc45ce5f3601300f824d61d4555decfac4cb8d988487",
+  "fnv1a64": "00bf8840a3a1ec6f",
+  "outOfRangeSentinel": 256
+}

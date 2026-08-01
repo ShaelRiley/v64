@@ -98,11 +98,14 @@ export function scoreGlyph(target, glyphIndex) {
     occupancyError * 0.30 + centroid * 0.70 + orientationError * 0.55;
 }
 
-export function closestPaletteIndex(r, g, b, depth) {
+export function closestPaletteIndex(r, g, b, depth, palette = MASTER_PALETTE) {
+  if (!Array.isArray(palette) || palette.length < depth) {
+    throw new RangeError("Palette does not contain the declared depth");
+  }
   let best = 0;
   let bestDistance = Infinity;
   for (let index = 0; index < depth; index += 1) {
-    const color = MASTER_PALETTE[index];
+    const color = palette[index];
     const dr = r - color[0];
     const dg = g - color[1];
     const db = b - color[2];
@@ -122,7 +125,17 @@ function colorDistanceSquared(a, b) {
   return dr * dr + dg * dg + db * db;
 }
 
-export function analyzeRgbaFrame(source, width, height, columns, rows, depth, previous = null, stability = 0.48) {
+export function analyzeRgbaFrame(
+  source,
+  width,
+  height,
+  columns,
+  rows,
+  depth,
+  previous = null,
+  stability = 0.48,
+  palette = MASTER_PALETTE
+) {
   if (source.length !== width * height * 4) throw new RangeError("RGBA frame byte length does not match dimensions");
   const cells = new Uint8Array(columns * rows * 3);
   const stable = clamp(Number(stability), 0, 1);
@@ -216,14 +229,22 @@ export function analyzeRgbaFrame(source, width, height, columns, rows, depth, pr
         }
       }
 
-      let fg = closestPaletteIndex(foreground[0], foreground[1], foreground[2], depth);
-      let bg = closestPaletteIndex(background[0], background[1], background[2], depth);
+      let fg = closestPaletteIndex(
+        foreground[0], foreground[1], foreground[2], depth, palette
+      );
+      let bg = closestPaletteIndex(
+        background[0], background[1], background[2], depth, palette
+      );
       if (previous) {
         const threshold = 7 + stable * 17;
         const previousFg = previous[tokenOffset + 1];
         const previousBg = previous[tokenOffset + 2];
-        if (colorDistanceSquared(MASTER_PALETTE[fg], MASTER_PALETTE[previousFg]) <= threshold * threshold) fg = previousFg;
-        if (colorDistanceSquared(MASTER_PALETTE[bg], MASTER_PALETTE[previousBg]) <= threshold * threshold) bg = previousBg;
+        if (colorDistanceSquared(palette[fg], palette[previousFg]) <= threshold * threshold) {
+          fg = previousFg;
+        }
+        if (colorDistanceSquared(palette[bg], palette[previousBg]) <= threshold * threshold) {
+          bg = previousBg;
+        }
       }
       cells[tokenOffset] = glyph;
       cells[tokenOffset + 1] = fg;
@@ -233,7 +254,16 @@ export function analyzeRgbaFrame(source, width, height, columns, rows, depth, pr
   return cells;
 }
 
-export function renderCells(cells, columns, rows, paletteDepth = 256) {
+export function renderCells(
+  cells,
+  columns,
+  rows,
+  paletteDepth = 256,
+  palette = MASTER_PALETTE
+) {
+  if (!Array.isArray(palette) || palette.length < paletteDepth) {
+    throw new RangeError("Palette does not contain the declared depth");
+  }
   if (cells.length !== columns * rows * 3) throw new RangeError("Cell state length does not match grid");
   const width = columns * CELL_WIDTH;
   const height = rows * CELL_HEIGHT;
@@ -243,8 +273,8 @@ export function renderCells(cells, columns, rows, paletteDepth = 256) {
     const fgIndex = cells[cell * 3 + 1];
     const bgIndex = cells[cell * 3 + 2];
     if (glyph >= 64 || fgIndex >= paletteDepth || bgIndex >= paletteDepth) throw new RangeError(`Invalid token at cell ${cell}`);
-    const foreground = MASTER_PALETTE[fgIndex];
-    const background = MASTER_PALETTE[bgIndex];
+    const foreground = palette[fgIndex];
+    const background = palette[bgIndex];
     const cx = cell % columns;
     const cy = Math.floor(cell / columns);
     const mask = GLYPH_MASKS[glyph];

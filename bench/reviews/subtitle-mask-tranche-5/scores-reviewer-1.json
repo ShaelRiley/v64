@@ -1,0 +1,23 @@
+{
+  "format": "V64-SUBTITLE-MASK-SCORES-5",
+  "reviewer": "reviewer-1",
+  "keyDisclosed": false,
+  "rows": [
+    {"code":"4B12E956","transcription":"","edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"code":"59811395","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"8515575A","transcription":"","edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"code":"9F6F67D1","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"33D4D3F1","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","edgeClarity":3,"temporalStability":3,"scenePreservation":4},
+    {"code":"34479DE6","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"3F40347A","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"B4C6F7D0","transcription":"NOTHING IMPORTANT SHOULD DISAPPEAR.","edgeClarity":3,"temporalStability":3,"scenePreservation":4},
+    {"code":"1EF28E99","transcription":"","edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"code":"3CC34C82","transcription":"WE KEEP THE SIGNAL.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"6D68783B","transcription":"WE KEEP THE SIGNAL.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"F2ED6FCE","transcription":"","edgeClarity":1,"temporalStability":2,"scenePreservation":4},
+    {"code":"22FCACE4","transcription":"WE KEEP THE SIGNAL.","edgeClarity":4,"temporalStability":4,"scenePreservation":4},
+    {"code":"2E278613","transcription":"WE KEEP THE SIGNAL.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"65440A1B","transcription":"WE KEEP THE SIGNAL.","edgeClarity":5,"temporalStability":5,"scenePreservation":4},
+    {"code":"D2F86E85","transcription":"WE KEEP THE SIGNAL.","edgeClarity":4,"temporalStability":4,"scenePreservation":4}
+  ]
+}

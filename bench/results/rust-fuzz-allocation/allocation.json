@@ -1,0 +1,48 @@
+{
+  "audio": {
+    "compiled_max_packet_data_bytes": 67108864,
+    "compiled_max_packets": 65535,
+    "packet_declaration_error": "Invalid AURN counts",
+    "timing_error": "AURN timestamp is not aligned to a 48 kHz sample boundary",
+    "valid_packets": 1
+  },
+  "container": {
+    "aggregate_limit_error": "Decoded payload byte total exceeds configured limit",
+    "compiled_max_chunks": 10000000,
+    "compiled_max_inflated_chunk_bytes": 1073741824,
+    "compiled_max_stored_chunk_bytes": 67108864,
+    "compiled_max_total_payload_bytes": 1073741824,
+    "excessive_chunk_count_error": "Invalid chunk count",
+    "excessive_length_error": "Declared maximum chunk exceeds decoder limit",
+    "valid_recovery_fingerprint": "120000:49:1:40x11"
+  },
+  "format": "V64-ALLOCATION-REGRESSION-1",
+  "frame_state": {
+    "grammar_b_recovery": true,
+    "maximum_cells": 262144,
+    "maximum_committed_state_bytes": 786432,
+    "maximum_logical_keyframe_touched_flags": 262144,
+    "pathological_command_error": "Frame command count exceeds bound",
+    "phase1_recovery": true
+  },
+  "iterations_per_recovery_case": 64,
+  "renderer": {
+    "maximum_height": 8192,
+    "maximum_rgba_bytes": 134217728,
+    "maximum_width": 4096,
+    "overflow_and_outside_boundaries_rejected": true
+  },
+  "subtitles": {
+    "compiled_max_canonical_entries": 4194304,
+    "compiled_max_frames": 1000000,
+    "entry_budget_error": "SM2 canonical entry count exceeds configured limit",
+    "frame_declaration_error": "SM2 frame count exceeds configured limit",
+    "valid_canonical_entries": 2
+  },
+  "wasm_accessor_boundaries": {
+    "first_invalid_index": 32768,
+    "invalid_sentinel": 256,
+    "last_valid_index": 32767,
+    "verified_by_workspace_tests_and_fuzz_target": true
+  }
+}

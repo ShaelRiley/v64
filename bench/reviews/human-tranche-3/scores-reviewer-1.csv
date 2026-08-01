@@ -1,0 +1,15 @@
+group,code,recognizability_1_to_5,color_or_grayscale_1_to_5,temporal_stability_1_to_5,subtitle_transcription,exact_transcription,notes
+depth-40,87B9C525,4,4,4,,false,Cube and orb remain coherent; minor edge-token shimmer.
+depth-40,80B15852,5,5,4,,false,Strong floor perspective and object separation; vivid chromatic identity.
+monochrome-40,67A465E1,5,5,4,,false,"Neutral hierarchy, silhouette, windows, and lamp remain distinct."
+monochrome-40,1B894226,4,3,4,,false,"Light neutral helps highlights, but dark regions remain navy and tonal hierarchy compresses."
+screen-40,41A1DA06,4,4,3,,false,Interface layout remains identifiable; fine lines and cursor detail shimmer.
+screen-40,E54D2CAF,4,5,4,,false,Panes and status regions remain distinct with stronger chromatic separation.
+lecture-subtitle-60,9F5675E1,3,3,3,,false,Face and lamp remain recognizable; subtitle is unreadable.
+lecture-subtitle-60,D2099212,4,4,4,,false,Stronger scene separation; subtitle remains unreadable.
+animation-subtitle-60,6D8AB7FC,4,3,3,,false,Profiles remain recognizable; subtitle is unreadable and detail shimmers.
+animation-subtitle-60,75A9843D,5,4,4,,false,Strong profile and staging separation; subtitle remains unreadable.
+lecture-subtitle-80,C95B1D23,4,3,4,,false,Face and gesture remain stable; no exact transcription at established scale.
+lecture-subtitle-80,CC5F5A10,4,4,4,,false,Improved chromatic separation; no exact transcription at established scale.
+animation-subtitle-80,06A257D4,4,3,3,,false,Staging is recognizable; dense detail and subtitle strokes jitter.
+animation-subtitle-80,7E44592E,5,4,4,,false,Strong profile separation and stable staging; no exact transcription.

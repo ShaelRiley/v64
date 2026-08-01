@@ -1,0 +1,113 @@
+name: V64 Rust hostile-input and resource gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-hostile-input.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**"
+      - "tests/golden/**"
+      - "bench/results/rust-hostile-input/**"
+      - "package.json"
+      - "SECURITY.md"
+      - "IMPLEMENTATION_LEDGER.md"
+      - "docs/CURRENT_STATUS.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-rust-hostile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-hostile-input:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup default 1.85.0
+          rustc --version
+          cargo --version
+
+      - name: Build and test optimized Rust workspace
+        run: cargo test --locked --workspace --all-targets --release
+
+      - name: Build hostile-input gate
+        run: cargo build --locked --release --bin v64-hostile-gate
+
+      - name: Run bounded hostile-input gate twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/hostile
+          /usr/bin/time -v -o target/hostile/resource-a.txt \
+            timeout 10s target/release/v64-hostile-gate \
+            tests/golden/procedural.v64 target/hostile/report-a.json
+          /usr/bin/time -v -o target/hostile/resource-b.txt \
+            timeout 10s target/release/v64-hostile-gate \
+            tests/golden/procedural.v64 target/hostile/report-b.json
+          cmp target/hostile/report-a.json target/hostile/report-b.json
+
+      - name: Verify deterministic rejection and process bounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const report = JSON.parse(readFileSync("target/hostile/report-a.json", "utf8"));
+          assert.equal(report.format, "V64-RUST-HOSTILE-GATE-1");
+          assert.equal(report.license, "MIT");
+          assert.equal(report.copyright, "Copyright (c) 2026 Shael Riley");
+          assert.ok(report.case_count >= 24);
+          assert.equal(report.case_count, report.cases.length);
+          assert.equal(report.iterations_per_case, 64);
+          assert.equal(new Set(report.cases.map(({ name }) => name)).size, report.case_count);
+          for (const testCase of report.cases) {
+            assert.equal(testCase.iterations, 64);
+            assert.ok(testCase.input_bytes > 0);
+            assert.ok(testCase.error.length > 0);
+            assert.equal(testCase.valid_reparse_fingerprint, report.valid_fingerprint);
+          }
+          assert.equal(report.scope.deterministic_rejection, true);
+          assert.equal(report.scope.valid_reparse_after_each_case, true);
+          assert.equal(report.scope.process_time_and_rss_measured_by_workflow, true);
+          assert.equal(report.scope.decompression_expansion_limit_finalized, false);
+          assert.equal(report.scope.transactional_frame_rollback_corpus_complete, false);
+          NODE
+
+          for resource in target/hostile/resource-a.txt target/hostile/resource-b.txt; do
+            rss_kb="$(awk -F: '/Maximum resident set size/ {gsub(/^[[:space:]]+/, "", $2); print $2}' "$resource")"
+            test -n "$rss_kb"
+            test "$rss_kb" -le 262144
+          done
+
+          sha256sum target/hostile/report-a.json | tee target/hostile/report.sha256
+
+      - name: Upload hostile-input evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-rust-hostile-input
+          path: |
+            target/hostile/report-a.json
+            target/hostile/report-b.json
+            target/hostile/report.sha256
+            target/hostile/resource-a.txt
+            target/hostile/resource-b.txt
+            bench/results/rust-hostile-input/README.md
+            SECURITY.md
+          if-no-files-found: error
+          retention-days: 30

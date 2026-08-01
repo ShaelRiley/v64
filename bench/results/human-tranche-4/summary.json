@@ -1,0 +1,36 @@
+{
+  "format": "V64-HUMAN-RASTER-TRANCHE-4-RESULTS-1",
+  "workflowRun": 30587498438,
+  "codeHead": "8b0f80dda9da650e40b75edfbef16c91cea28df7",
+  "totals": {
+    "packedDeflateBytes": 48705,
+    "selectedDeflateBytes": 42728,
+    "savingsBytes": 5977,
+    "savingsPercent": 12.272,
+    "entropySelectedLanes": 12,
+    "lanes": 12,
+    "canonicalSelectionSha256": "bbb1806ee624fa199426d459426016991c8ac93f97e16a5b21004f5260ae2e1c"
+  },
+  "palettes": [
+    {"id":"V64-P256-CANDIDATE-1","selectedDeflateBytes":10760,"deltaBytes":0,"deltaPercent":0,"meanChangedCellsPercent":17.635,"meanFlickerReversionPercent":1.371,"meanRecognizability":4.333,"meanSeparation":4.333,"meanTemporalStability":4.333,"monochromeSeparation":5,"depthSeparation":4},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-4","selectedDeflateBytes":10742,"deltaBytes":-18,"deltaPercent":-0.167,"meanChangedCellsPercent":17.536,"meanFlickerReversionPercent":1.619,"meanRecognizability":4.333,"meanSeparation":4.333,"meanTemporalStability":4.667,"monochromeSeparation":3,"depthSeparation":5},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-5A","selectedDeflateBytes":10668,"deltaBytes":-92,"deltaPercent":-0.855,"meanChangedCellsPercent":16.963,"meanFlickerReversionPercent":1.319,"meanRecognizability":4.5,"meanSeparation":4.5,"meanTemporalStability":4.667,"monochromeSeparation":4,"depthSeparation":5},
+    {"id":"V64-P256-HYPERREAL-CANDIDATE-5B","selectedDeflateBytes":10558,"deltaBytes":-202,"deltaPercent":-1.877,"meanChangedCellsPercent":16.977,"meanFlickerReversionPercent":1.243,"meanRecognizability":4.333,"meanSeparation":4.333,"meanTemporalStability":4.5,"monochromeSeparation":4.5,"depthSeparation":4}
+  ],
+  "groupDurations": [
+    {"maximumSeconds":0.5,"groups":48,"selectedDeflateBytes":56814,"medianSeekMilliseconds":0.587,"p95SeekMilliseconds":1.612},
+    {"maximumSeconds":1,"groups":24,"selectedDeflateBytes":48192,"medianSeekMilliseconds":1.138,"p95SeekMilliseconds":3.084},
+    {"maximumSeconds":2,"groups":12,"selectedDeflateBytes":42728,"medianSeekMilliseconds":1.919,"p95SeekMilliseconds":3.295}
+  ],
+  "decision": {
+    "executableDefault": "V64-P256-CANDIDATE-1",
+    "advance": "V64-P256-HYPERREAL-CANDIDATE-5B",
+    "rejectAsFreezeCandidate": "V64-P256-HYPERREAL-CANDIDATE-5A",
+    "freeze": false,
+    "nextGate": "Constrained single dark-chroma utility search between the Candidate-5A teal and Candidate-5B navy endpoints while retaining dark, middle, and light neutrals."
+  },
+  "artifacts": {
+    "blindDigest": "sha256:935196893f2fea838562e3a5732f3c7e7e01098b78e214b4d5007fe25995e764",
+    "keyDigest": "sha256:a8207ccf76cf70f9f826eb28c4d94153b651673959ff5e1a3e6f83a4c2ba5811"
+  }
+}

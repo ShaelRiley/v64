@@ -52,7 +52,9 @@ For each token, fields appear in this order:
 | `0x0A` | `REPEAT_BACKGROUND` | positive varuint `n`, one packed `c`-bit index | Change only background in `n` sequential cells. |
 | `0x0B` | `REPEAT_COLOR_PAIR` | positive varuint `n`, one packed color pair | Change both colors in `n` sequential cells. |
 
-Grammar B version 2 uses deterministic bounded dynamic programming. At each
+Grammar B version 3 retains the version 2 decoder syntax and adds a selectable
+encoder cost model. The packed-byte model uses deterministic bounded dynamic
+programming. At each
 cell, the reference encoder evaluates:
 
 1. a maximal `SKIP` when the cell retains baseline state;
@@ -66,11 +68,19 @@ Equal-cost choices prefer the command that advances farther, then the stable
 priority order documented in the implementation. The 64-cell literal horizon
 bounds encoder work without changing decoder syntax.
 
-This is a packed-byte optimum, not an entropy-aware optimum. Shootout 2 showed
-that it substantially reduced raw command bytes while producing worse
-group-level DEFLATE than the earlier greedy trace. A future parser must estimate
-the selected backend or optimize a second-stage model without changing decoder
-semantics.
+The entropy-aware experiment assigns each encoded command byte the smoothed
+static information cost `-log2(p(byte))`. Probabilities are learned from a
+complete packed-byte candidate group with additive smoothing, then the dynamic
+program is rerun. A second pass may retrain from the first entropy candidate.
+All candidates retain the same decoder syntax and must reconstruct identical
+cell states.
+
+Static byte probabilities do not model DEFLATE string matches. The offline
+experiment therefore compresses the packed-byte candidate and both entropy
+candidates using the selected backend, then retains the smallest actual group.
+Stable ties prefer the packed-byte parser. This bounded encoder search cannot
+worsen stored group size relative to its included baseline and adds no decoder
+state or syntax.
 
 ## Backend framing used by the shootout
 
@@ -121,4 +131,6 @@ The reference implementation is:
 
 - `prototype/js/grammar-b.mjs`
 - `prototype/js/command-benchmark.mjs`
+- `prototype/js/corpus-fixtures.mjs`
+- `prototype/js/entropy-benchmark.mjs`
 - `prototype/js/canonical-huffman.mjs`

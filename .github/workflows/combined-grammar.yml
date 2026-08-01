@@ -1,0 +1,72 @@
+name: V64 combined grammar decision gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/combined-grammar.yml"
+      - "assets/**"
+      - "bench/corpus/**"
+      - "package.json"
+      - "prototype/js/**"
+      - "tests/**"
+      - "tools/benchmark-rd-glyph-study.mjs"
+      - "tools/benchmark-human-rd-glyph.mjs"
+      - "tools/benchmark-combined-grammar.mjs"
+  workflow_dispatch:
+
+jobs:
+  combined-grammar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Rebuild structural grammar evidence
+        run: npm run bench:rd-glyph
+
+      - name: Rebuild human grammar evidence and containers
+        run: npm run bench:human-rd-glyph
+
+      - name: Run combined grammar decision gate
+        run: npm run bench:combined-grammar
+
+      - name: Verify combined evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=bench/generated/combined-grammar-study
+          expected=$(cat "$output/summary.sha256")
+          actual=$(sha256sum "$output/summary.json" | cut -d' ' -f1)
+          test "$expected" = "$actual"
+          test -s "$output/RESULTS.md"
+          node -e '
+            const fs = require("fs");
+            const report = JSON.parse(fs.readFileSync("bench/generated/combined-grammar-study/summary.json"));
+            if (report.format !== "V64-COMBINED-GRAMMAR-GATE-1") throw new Error("Unexpected format");
+            if (!report.decoder.files) throw new Error("No decoder files measured");
+            if (!['"'"'phase-1'"'"', '"'"'grammar-b'"'"'].includes(report.decision.selectedGrammar)) {
+              throw new Error("No grammar decision");
+            }
+          '
+
+      - name: Upload combined grammar evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-grammar-study
+          path: bench/generated/combined-grammar-study
+          if-no-files-found: error
+          retention-days: 30

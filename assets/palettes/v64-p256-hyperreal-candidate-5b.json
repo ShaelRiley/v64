@@ -1,0 +1,20 @@
+{
+  "id": "V64-P256-HYPERREAL-CANDIDATE-5B",
+  "status": "experimental-ablation",
+  "source": {
+    "repository": "ShaelRiley/ansi-tube",
+    "file": "core.js",
+    "blobSha": "29fd2065612454a66a92e431213731c41d5dc28c",
+    "palette": "hyperreal",
+    "anchorsSha256": "31c9a10ee942a10ce0d251dbe5b121cde724844d17e84f42fa247027a1345322",
+    "saturationGrade": 1.6,
+    "contrastGrade": 1.12
+  },
+  "prefix": {
+    "sha256": "57b004a2d0038b032596d12d5faf6e69688b176bf9148a5aaad9cfe15ac9f827",
+    "rationale": "Exact twelve Hyper Real anchors plus dark navy, dark neutral, light neutral, and neutral midtone; dark teal is omitted."
+  },
+  "generation": "controlled Candidate-5 prefix followed by ordered OKLab farthest-point sampling over the Hyper Real-graded 16^3 sRGB lattice",
+  "sha256": "dcab57b7098a23674555453a1db3183b00189ee44a7feffe7d40dd212c76b61a",
+  "generatedColors": true
+}

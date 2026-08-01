@@ -1,0 +1,13 @@
+group,code,recognizability_1_to_5,separation_1_to_5,temporal_stability_1_to_5,notes
+depth-40,71551077,4,4,4,"Cube, orb, and face planes remain clear; subdued floor grid and darker motion transitions."
+depth-40,7746B5CC,5,5,5,"Strongest depth hierarchy, saturated object identity, persistent floor grid, and stable motion."
+depth-40,F4E63B47,5,5,5,"Excellent face separation and chromatic identity with a stable, readable grid."
+depth-40,54B42507,4,4,4.5,"Objects remain legible and stable, but floor perspective is less explicit."
+monochrome-40,BCC42C4C,5,5,4.5,"Best tonal ladder; silhouette, windows, platform, and lamp remain distinctly ordered."
+monochrome-40,33B150DD,3,3,4,"Blue-biased dark hierarchy compresses several tonal planes despite stable motion."
+monochrome-40,15130111,4,4,4.5,"Good neutral hierarchy and silhouette retention with slightly compressed shadow detail."
+monochrome-40,063E391E,4.5,4.5,4.5,"Strong neutral separation and stable silhouette, narrowly below the clearest ladder."
+screen-40,C4B85361,4,4,4.5,"Interface panes, cursor, and status structure remain readable; palette is comparatively subdued."
+screen-40,939D3DC4,5,5,5,"Strongest pane separation, cursor visibility, color coding, and motion stability."
+screen-40,889866AD,4.5,4.5,4.5,"High detail retention and stable interface structure with a dark neutral background."
+screen-40,BDB0E296,4.5,4.5,4.5,"Strong interface and cursor clarity; bright lower status region slightly dominates."

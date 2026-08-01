@@ -75,3 +75,12 @@ export function paletteAssetFromId(id = "V64-P256-1") {
   if (!palette) throw new RangeError(`Unknown V64 palette asset ${id}`);
   return palette;
 }
+
+export function paletteAssetFromHash(value) {
+  const hash = Buffer.isBuffer(value) || value instanceof Uint8Array
+    ? Buffer.from(value).toString("hex")
+    : String(value).toLowerCase();
+  const palette = Object.values(PALETTES).find((entry) => entry.sha256 === hash);
+  if (!palette) throw new RangeError(`Unknown V64 palette hash ${hash}`);
+  return palette;
+}

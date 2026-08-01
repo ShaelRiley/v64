@@ -3,7 +3,7 @@ import {
   CADENCES, CHUNK_HEADER_SIZE, HEADER_SIZE, LIMITS, MAGIC, TICK_RATE,
   cadenceFromId, paletteDepthFromId
 } from "./constants.mjs";
-import { GLYPH_HASH, PALETTE_HASH } from "./assets.mjs";
+import { GLYPH_HASH, LEGACY_PALETTE_HASH, PALETTE_HASH } from "./assets.mjs";
 import { applyFrameCommands, encodeFrameCommands } from "./commands.mjs";
 import { crc32 } from "./crc32.mjs";
 import { validateAurnChunk } from "./audio-run.mjs";
@@ -155,7 +155,10 @@ function parseHeader(file, options) {
   const glyphHash = file.subarray(36, 68);
   const paletteHash = file.subarray(68, 100);
   if (!options?.allowUnknownAssets && !glyphHash.equals(GLYPH_HASH)) throw new Error("Canonical glyph asset hash mismatch");
-  if (!options?.allowUnknownAssets && !paletteHash.equals(PALETTE_HASH)) throw new Error("Master palette asset hash mismatch");
+  if (!options?.allowUnknownAssets &&
+      !paletteHash.equals(PALETTE_HASH) && !paletteHash.equals(LEGACY_PALETTE_HASH)) {
+    throw new Error("Master palette asset hash mismatch");
+  }
   const indexOffset = checkedNumber(file.readBigUInt64LE(100), "Index offset");
   const indexLength = file.readUInt32LE(108);
   const chunkCount = file.readUInt32LE(112);

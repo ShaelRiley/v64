@@ -37,11 +37,11 @@ test("all canonical glyphs render deterministically", () => {
   assert.equal(first.height, 128);
 });
 
-test("master palette candidate is reproducible, ordered, and supports every depth prefix", () => {
-  assert.equal(PALETTE_META.id, "V64-P256-CANDIDATE-1");
+test("normative master palette is reproducible, ordered, and supports every depth prefix", () => {
+  assert.equal(PALETTE_META.id, "V64-P256-1");
   assert.equal(MASTER_PALETTE.length, 256);
   assert.equal(MASTER_PALETTE_BYTES.length, 768);
-  assert.equal(PALETTE_HASH.toString("hex"), "f2b6ae132bc269e17e66378184e66f2dfdf0a079ff0281fa69858144252fefb2");
+  assert.equal(PALETTE_HASH.toString("hex"), "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105");
   assert.equal(createHash("sha256").update(MASTER_PALETTE_BYTES).digest("hex"), PALETTE_META.sha256);
   for (const depth of PALETTE_DEPTHS) {
     assert.equal(MASTER_PALETTE.slice(0, depth).length, depth);

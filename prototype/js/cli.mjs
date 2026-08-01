@@ -30,6 +30,7 @@ import {
   encodeEncoderProfilePayload,
   encoderProfileFromDemuxed
 } from "./encoder-profile.mjs";
+import { paletteAssetFromHash } from "./palette-registry.mjs";
 
 const PROFILES = Object.freeze({
   smallest: { target: "compact", dictionary: true },
@@ -183,10 +184,14 @@ function encodeVideo(inputPath, outputPath, rawOptions = {}) {
 function decodeVideo(inputPath, outputPath) {
   const file = readFileSync(inputPath);
   const demuxed = demuxV64(file);
+  const palette = paletteAssetFromHash(demuxed.header.paletteHash).colors;
   const timeline = decodeVideoTimeline(demuxed);
   const frameBuffers = [];
   for (const item of timeline) {
-    const rendered = renderCells(item.state, demuxed.header.columns, demuxed.header.rows, demuxed.header.paletteDepth);
+    const rendered = renderCells(
+      item.state, demuxed.header.columns, demuxed.header.rows,
+      demuxed.header.paletteDepth, palette
+    );
     const repeats = item.duration / demuxed.header.cadence.frameTicks;
     for (let index = 0; index < repeats; index += 1) frameBuffers.push(rendered.rgba);
   }
@@ -213,6 +218,7 @@ function decodeVideo(inputPath, outputPath) {
 function inspect(inputPath) {
   const file = readFileSync(inputPath);
   const demuxed = demuxV64(file);
+  const paletteAsset = paletteAssetFromHash(demuxed.header.paletteHash);
   const distribution = {};
   for (const chunk of demuxed.chunks) {
     const entry = distribution[chunk.type] ||= { count: 0, storedBytes: 0, decodedBytes: 0 };
@@ -240,7 +246,7 @@ function inspect(inputPath) {
       ...demuxed.header,
       cadence: demuxed.header.cadence.label,
       glyphAsset: GLYPH_META.id,
-      paletteAsset: PALETTE_META.id
+      paletteAsset: paletteAsset.id
     },
     encoderProfile: encoderProfileFromDemuxed(demuxed),
     chunkDistribution: distribution,

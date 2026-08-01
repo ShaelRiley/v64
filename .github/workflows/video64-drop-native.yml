@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   native-shell:
@@ -22,9 +22,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          fetch-depth: 0
 
       - name: Install native and media dependencies
         run: |
@@ -38,78 +35,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           components: rustfmt,clippy
-
-      - name: Apply pinned native-shell source normalization
-        if: github.event_name == 'pull_request'
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path("apps/video64-drop-native/src/main.rs")
-          text = path.read_text()
-          replacements = {
-              'const ENCODE_BUTTON: Rect = Rect::new(810, 650, 170, 46);': 'fn encode_button() -> Rect {\n    Rect::new(810, 650, 170, 46)\n}',
-              'run_windowed(core, options.inputs, options.smoke_presents)': 'run_windowed(&core, options.inputs, options.smoke_presents)',
-              'fn run_windowed(\n    core: CoreConfig,': 'fn run_windowed(\n    core: &CoreConfig,',
-              'thread::spawn(move || run_encode_worker(core, settings, job, sender));': 'thread::spawn(move || run_encode_worker(&core, &settings, &job, &sender));',
-              'fn run_encode_worker(\n    core: CoreConfig,\n    settings: ShellSettings,\n    job: ShellJob,\n    sender: Sender<WorkerMessage>,': 'fn run_encode_worker(\n    core: &CoreConfig,\n    settings: &ShellSettings,\n    job: &ShellJob,\n    sender: &Sender<WorkerMessage>,',
-              '    progress: f32,': '    progress_percent: u32,',
-              '    let filled = (progress.clamp(0.0, 1.0) * width as f32).round() as u32;': '    let filled = width.saturating_mul(progress_percent.min(100)) / 100;',
-              'assert_eq!(values.last().copied(), Some(1.0));': 'assert_eq!(values.last().copied(), Some(100));',
-              '                    state.notice =\n                        "Encoding is active; quit after the current file completes".to_owned();': '                    "Encoding is active; quit after the current file completes"\n                        .clone_into(&mut state.notice);',
-              'adjust_settings(&core, &mut state, -1)': 'adjust_settings(core, &mut state, -1)',
-              'adjust_settings(&core, &mut state, 1)': 'adjust_settings(core, &mut state, 1)',
-          }
-          for old, new in replacements.items():
-              text = text.replace(old, new)
-
-          stage_old = "\n".join([
-              "fn stage_progress(stage: Option<&str>) -> f32 {",
-              "    match stage {",
-              "        Some(\"analysis\") => 0.12,",
-              "        Some(\"video_encode\") => 0.48,",
-              "        Some(\"audio_encode\") => 0.70,",
-              "        Some(\"mux\") => 0.84,",
-              "        Some(\"verify\") => 0.94,",
-              "        Some(\"complete\") => 1.0,",
-              "        _ => 0.03,",
-              "    }",
-              "}",
-          ])
-          stage_new = "\n".join([
-              "fn stage_progress(stage: Option<&str>) -> u32 {",
-              "    match stage {",
-              "        Some(\"analysis\") => 12,",
-              "        Some(\"video_encode\") => 48,",
-              "        Some(\"audio_encode\") => 70,",
-              "        Some(\"mux\") => 84,",
-              "        Some(\"verify\") => 94,",
-              "        Some(\"complete\") => 100,",
-              "        _ => 3,",
-              "    }",
-              "}",
-          ])
-          text = text.replace(stage_old, stage_new)
-          if 'ENCODE_BUTTON' in text and 'const ENCODE_BUTTON' not in text:
-              text = text.replace('ENCODE_BUTTON', 'encode_button()')
-          text = text.replace('add_inputs(&core,', 'add_inputs(core,')
-          text = text.replace('start_next_worker(&core,', 'start_next_worker(core,')
-          text = text.replace('handle_click(&core,', 'handle_click(core,')
-          text = re.sub(r'state\.notice = "([^"]+)"\.to_owned\(\);', r'"\1".clone_into(&mut state.notice);', text)
-          text = re.sub(r'state\.notice = "([^"]+)"\.to_owned\(\),', r'"\1".clone_into(&mut state.notice),', text)
-          path.write_text(text)
-          PY
-          rustfmt --edition 2024 \
-            apps/video64-drop-native/src/lib.rs \
-            apps/video64-drop-native/src/main.rs
-          if ! git diff --quiet -- apps/video64-drop-native/src; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add apps/video64-drop-native/src
-            git commit -m "Finish native Video64 Drop lint fixes"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
 
       - name: Test application core and queue planning
         run: npm --prefix apps/video64-drop test

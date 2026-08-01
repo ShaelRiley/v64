@@ -106,9 +106,9 @@ impl NativeAudioOutput {
     fn resync(&mut self, session: &PlayerSession) -> Result<(), String> {
         self.queue.clear();
         self.rate = session.rate();
-        self.source_cursor = session
-            .audio()
-            .map_or(0, |audio| audio.sample_index_at_ticks(session.position_ticks()));
+        self.source_cursor = session.audio().map_or(0, |audio| {
+            audio.sample_index_at_ticks(session.position_ticks())
+        });
         self.refill(session)?;
         if session.paused() || session.at_eof() {
             self.queue.pause();
@@ -125,8 +125,8 @@ impl NativeAudioOutput {
             return Ok(());
         };
         while self.source_cursor < audio.sample_count() {
-            let queued = usize::try_from(self.queue.size()).unwrap_or(usize::MAX)
-                / size_of::<i16>();
+            let queued =
+                usize::try_from(self.queue.size()).unwrap_or(usize::MAX) / size_of::<i16>();
             if queued >= AUDIO_QUEUE_TARGET_SAMPLES {
                 break;
             }

@@ -9,6 +9,7 @@
     "v64": "prototype/js/cli.mjs"
   },
   "scripts": {
+    "fuzz:corpus": "node tools/build-rust-fuzz-corpus.mjs",
     "extract-assets": "node tools/extract-assets.mjs ../ansi-tube-source/core.js",
     "palette:hyperreal": "node tools/hyperreal-palette-generator.mjs assets/palettes",
     "palette:candidate5": "node tools/hyperreal-candidate-5-generator.mjs assets/palettes",

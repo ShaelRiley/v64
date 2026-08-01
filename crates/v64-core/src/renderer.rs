@@ -18,14 +18,16 @@ pub struct Raster {
     pub rgba: Vec<u8>,
 }
 
-pub fn render_rgba(
-    cells: &[u8],
-    columns: usize,
-    rows: usize,
-    palette_depth: usize,
-    glyph_bytes: &[u8],
-    palette_bytes: &[u8],
-) -> Result<Raster, String> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RasterLayout {
+    pub cell_count: usize,
+    pub state_length: usize,
+    pub width: usize,
+    pub height: usize,
+    pub rgba_length: usize,
+}
+
+pub fn checked_raster_layout(columns: usize, rows: usize) -> Result<RasterLayout, String> {
     if columns == 0 || rows == 0 || columns > MAX_COLUMNS || rows > MAX_ROWS {
         return Err("Invalid or oversized renderer grid".to_owned());
     }
@@ -35,10 +37,38 @@ pub fn render_rgba(
     if cell_count > MAX_CELLS {
         return Err("Invalid or oversized renderer grid".to_owned());
     }
-    let expected_cells = cell_count
+    let state_length = cell_count
         .checked_mul(3)
         .ok_or_else(|| "Renderer cell-state length overflow".to_owned())?;
-    if cells.len() != expected_cells {
+    let width = columns
+        .checked_mul(CELL_WIDTH)
+        .ok_or_else(|| "Renderer width overflow".to_owned())?;
+    let height = rows
+        .checked_mul(CELL_HEIGHT)
+        .ok_or_else(|| "Renderer height overflow".to_owned())?;
+    let rgba_length = width
+        .checked_mul(height)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| "Renderer output length overflow".to_owned())?;
+    Ok(RasterLayout {
+        cell_count,
+        state_length,
+        width,
+        height,
+        rgba_length,
+    })
+}
+
+pub fn render_rgba(
+    cells: &[u8],
+    columns: usize,
+    rows: usize,
+    palette_depth: usize,
+    glyph_bytes: &[u8],
+    palette_bytes: &[u8],
+) -> Result<Raster, String> {
+    let layout = checked_raster_layout(columns, rows)?;
+    if cells.len() != layout.state_length {
         return Err("Cell state length does not match renderer grid".to_owned());
     }
     if glyph_bytes.len() != GLYPH_COUNT * GLYPH_BYTES_PER_CELL {
@@ -54,19 +84,9 @@ pub fn render_rgba(
         return Err("Palette asset is shorter than the declared depth".to_owned());
     }
 
-    let width = columns
-        .checked_mul(CELL_WIDTH)
-        .ok_or_else(|| "Renderer width overflow".to_owned())?;
-    let height = rows
-        .checked_mul(CELL_HEIGHT)
-        .ok_or_else(|| "Renderer height overflow".to_owned())?;
-    let output_length = width
-        .checked_mul(height)
-        .and_then(|pixels| pixels.checked_mul(4))
-        .ok_or_else(|| "Renderer output length overflow".to_owned())?;
-    let mut rgba = vec![0; output_length];
+    let mut rgba = vec![0; layout.rgba_length];
 
-    for cell in 0..cell_count {
+    for cell in 0..layout.cell_count {
         let token_offset = cell * 3;
         let glyph = usize::from(cells[token_offset]);
         let foreground = usize::from(cells[token_offset + 1]);
@@ -96,7 +116,7 @@ pub fn render_rgba(
                     background_offset
                 };
                 let raster_x = cell_x * CELL_WIDTH + pixel_x;
-                let output_offset = (raster_y * width + raster_x) * 4;
+                let output_offset = (raster_y * layout.width + raster_x) * 4;
                 rgba[output_offset..output_offset + 3]
                     .copy_from_slice(&palette_bytes[color_offset..color_offset + 3]);
                 rgba[output_offset + 3] = 255;
@@ -105,8 +125,8 @@ pub fn render_rgba(
     }
 
     Ok(Raster {
-        width,
-        height,
+        width: layout.width,
+        height: layout.height,
         rgba,
     })
 }
@@ -190,5 +210,18 @@ mod tests {
         assert_eq!(first.height, 128);
         assert_eq!(first.rgba.len(), 32_768);
         assert_ne!(fnv1a64(&first.rgba), 0);
+    }
+
+    #[test]
+    fn maximum_layout_has_an_exact_bounded_allocation() {
+        let layout = checked_raster_layout(MAX_COLUMNS, MAX_ROWS)
+            .expect("maximum legal layout must be representable");
+        assert_eq!(layout.cell_count, 262_144);
+        assert_eq!(layout.state_length, 786_432);
+        assert_eq!(layout.width, 4_096);
+        assert_eq!(layout.height, 8_192);
+        assert_eq!(layout.rgba_length, 134_217_728);
+        assert!(checked_raster_layout(usize::MAX, 2).is_err());
+        assert!(checked_raster_layout(MAX_COLUMNS + 1, 1).is_err());
     }
 }

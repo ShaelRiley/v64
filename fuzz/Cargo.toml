@@ -1,0 +1,67 @@
+[package]
+name = "v64-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+v64-core = { path = "../crates/v64-core" }
+v64-wasm = { path = "../crates/v64-wasm" }
+
+[[bin]]
+name = "container_parse"
+path = "fuzz_targets/container_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "phase1_frame"
+path = "fuzz_targets/phase1_frame.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "grammar_b"
+path = "fuzz_targets/grammar_b.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "renderer"
+path = "fuzz_targets/renderer.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "subtitles"
+path = "fuzz_targets/subtitles.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "audio"
+path = "fuzz_targets/audio.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "wasm_accessors"
+path = "fuzz_targets/wasm_accessors.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]

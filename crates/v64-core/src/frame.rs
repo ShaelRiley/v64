@@ -18,6 +18,14 @@ pub fn apply_frame_commands(
     let cell_count = columns
         .checked_mul(rows)
         .ok_or_else(|| "Cell count overflow".to_owned())?;
+    if columns == 0
+        || rows == 0
+        || columns > usize::from(crate::MAX_COLUMNS)
+        || rows > usize::from(crate::MAX_ROWS)
+        || cell_count > crate::MAX_CELLS
+    {
+        return Err("Invalid or oversized frame grid".to_owned());
+    }
     let state_length = cell_count
         .checked_mul(3)
         .ok_or_else(|| "Cell-state length overflow".to_owned())?;

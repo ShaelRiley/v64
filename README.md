@@ -82,6 +82,7 @@ npm run bench:rd-glyph
 npm run bench:human-rd-glyph
 npm run bench:combined-grammar
 npm run rust:hostile
+npm run fuzz:corpus
 ```
 
 Encode any FFmpeg-readable video with the primary 32-glyph profile:
@@ -148,6 +149,10 @@ See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for the historical
 evidence chain and [`docs/CURRENT_STATUS.md`](docs/CURRENT_STATUS.md) for the
 active frontier. See [`spec/V64-v0.1-bitstream.md`](spec/V64-v0.1-bitstream.md)
 for the implemented binary layout.
+
+Coverage-guided Rust targets, curated seed-corpus generation, deeper local
+commands, and deterministic allocation ceilings are documented in
+[`docs/FUZZING.md`](docs/FUZZING.md).
 
 ## Contributing and forks
 

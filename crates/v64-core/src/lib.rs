@@ -1,6 +1,9 @@
 #![forbid(unsafe_code)]
 
+pub mod extensions;
 pub mod frame;
+pub mod grammar_b;
+pub mod renderer;
 
 use flate2::read::DeflateDecoder;
 use serde_json::Value;
@@ -16,6 +19,7 @@ pub const MAX_ROWS: u16 = 512;
 pub const MAX_CELLS: usize = 262_144;
 pub const MAX_STORED_CHUNK: usize = 64 * 1024 * 1024;
 pub const MAX_INFLATED_CHUNK: usize = 1024 * 1024 * 1024;
+pub const MAX_TOTAL_PAYLOAD_BYTES: usize = 1024 * 1024 * 1024;
 pub const MAX_CHUNKS: u32 = 10_000_000;
 pub const MAX_JS_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 
@@ -107,12 +111,16 @@ pub struct ParseOptions {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResourceLimits {
     pub max_inflated_chunk_bytes: usize,
+    pub max_total_payload_bytes: usize,
+    pub max_chunks: u32,
 }
 
 impl Default for ResourceLimits {
     fn default() -> Self {
         Self {
             max_inflated_chunk_bytes: MAX_INFLATED_CHUNK,
+            max_total_payload_bytes: MAX_TOTAL_PAYLOAD_BYTES,
+            max_chunks: MAX_CHUNKS,
         }
     }
 }
@@ -197,17 +205,26 @@ pub fn parse_with_resource_limits(
     options: ParseOptions,
     limits: ResourceLimits,
 ) -> Result<V64File> {
-    if limits.max_inflated_chunk_bytes == 0 || limits.max_inflated_chunk_bytes > MAX_INFLATED_CHUNK
+    if limits.max_inflated_chunk_bytes == 0
+        || limits.max_inflated_chunk_bytes > MAX_INFLATED_CHUNK
+        || limits.max_total_payload_bytes == 0
+        || limits.max_total_payload_bytes > MAX_TOTAL_PAYLOAD_BYTES
+        || limits.max_chunks == 0
+        || limits.max_chunks > MAX_CHUNKS
     {
         return Err(Error::new(
-            "Configured inflated-chunk limit lies outside the supported range",
+            "Configured resource limits lie outside the supported range",
         ));
     }
     let header = parse_header(input, options)?;
+    if header.chunk_count > limits.max_chunks {
+        return Err(Error::new("Declared chunk count exceeds configured limit"));
+    }
     let declared_chunks = usize::try_from(header.chunk_count)
         .map_err(|_| Error::new("Chunk count exceeds platform range"))?;
     let mut chunks = Vec::with_capacity(declared_chunks.min(4096));
     let mut offset = HEADER_SIZE;
+    let mut total_payload_bytes = 0usize;
 
     for _ in 0..declared_chunks {
         let chunk_header_end = checked_add(offset, CHUNK_HEADER_SIZE, "Chunk header range")?;
@@ -256,6 +273,14 @@ pub fn parse_with_resource_limits(
         } else {
             stored.to_vec()
         };
+        total_payload_bytes = total_payload_bytes
+            .checked_add(payload.len())
+            .ok_or_else(|| Error::new("Decoded payload byte total overflow"))?;
+        if total_payload_bytes > limits.max_total_payload_bytes {
+            return Err(Error::new(
+                "Decoded payload byte total exceeds configured limit",
+            ));
+        }
 
         if KNOWN_CHUNKS.contains(&chunk_type.as_str()) {
             chunks.push(Chunk {
@@ -704,6 +729,7 @@ mod tests {
             ParseOptions::default(),
             ResourceLimits {
                 max_inflated_chunk_bytes: expanded.len(),
+                ..ResourceLimits::default()
             },
         )
         .expect("the exact configured output boundary should be accepted");
@@ -713,6 +739,7 @@ mod tests {
             ParseOptions::default(),
             ResourceLimits {
                 max_inflated_chunk_bytes: expanded.len() - 1,
+                ..ResourceLimits::default()
             },
         )
         .expect_err("one byte below the expanded size must fail closed");
@@ -731,6 +758,7 @@ mod tests {
                 ParseOptions::default(),
                 ResourceLimits {
                     max_inflated_chunk_bytes: limit,
+                    ..ResourceLimits::default()
                 },
             )
             .expect_err("invalid resource limits must fail before parsing");

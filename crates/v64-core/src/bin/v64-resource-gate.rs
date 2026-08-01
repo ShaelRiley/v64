@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             ParseOptions::default(),
             ResourceLimits {
                 max_inflated_chunk_bytes: expanded.len(),
+                ..ResourceLimits::default()
             },
         )?;
         if fingerprint(&exact) != baseline_fingerprint {
@@ -57,6 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ParseOptions::default(),
                 ResourceLimits {
                     max_inflated_chunk_bytes: limit,
+                    ..ResourceLimits::default()
                 },
             )
             .expect_err("configured hostile limit must fail")

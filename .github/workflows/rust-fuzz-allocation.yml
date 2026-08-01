@@ -1,0 +1,162 @@
+name: V64 Rust fuzz and allocation-regression gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-fuzz-allocation.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**"
+      - "fuzz/**"
+      - "package.json"
+      - "tests/golden/procedural.v64"
+      - "tools/build-rust-fuzz-corpus.mjs"
+      - "docs/FUZZING.md"
+      - "docs/CURRENT_STATUS.md"
+      - "IMPLEMENTATION_LEDGER.md"
+  schedule:
+    - cron: "23 7 * * 0"
+  workflow_dispatch:
+    inputs:
+      run_profile:
+        description: Per-target libFuzzer run budget
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - deep
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-rust-fuzz-allocation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-fuzz-allocation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      FUZZ_RUNS: ${{ (github.event_name == 'schedule' || inputs.run_profile == 'deep') && '20000' || '512' }}
+      FUZZ_TOOLCHAIN: nightly-2025-02-20
+
+    steps:
+      - name: Check out immutable workflow head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pinned Rust toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup toolchain install "$FUZZ_TOOLCHAIN" --profile minimal
+          rustup default 1.85.0
+          rustc --version
+          cargo --version
+          rustc "+$FUZZ_TOOLCHAIN" --version
+
+      - name: Install pinned cargo-fuzz
+        run: cargo install cargo-fuzz --version 0.12.0 --locked
+
+      - name: Run JavaScript and Rust regression suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+          cargo test --locked --workspace --all-targets
+          cargo test --locked --workspace --all-targets --release
+
+      - name: Build reproducible curated seed corpora twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/build-rust-fuzz-corpus.mjs target/fuzz-corpus-a > target/fuzz-corpus-a.json
+          node tools/build-rust-fuzz-corpus.mjs target/fuzz-corpus-b > target/fuzz-corpus-b.json
+          cmp target/fuzz-corpus-a.json target/fuzz-corpus-b.json
+          sha256sum target/fuzz-corpus-a.json | tee target/fuzz-corpus-manifest-sha256.txt
+
+      - name: Compile every libFuzzer target
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo "+$FUZZ_TOOLCHAIN" metadata --manifest-path fuzz/Cargo.toml --format-version 1 > target/fuzz-cargo-metadata.json
+          for target in container_parse phase1_frame grammar_b renderer subtitles audio wasm_accessors; do
+            cargo "+$FUZZ_TOOLCHAIN" fuzz build "$target"
+          done
+
+      - name: Run deterministic allocation and expansion gates twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/allocation-gate
+          cargo run --locked --release --bin v64-allocation-gate -- target/allocation-gate/report-a.json
+          cargo run --locked --release --bin v64-allocation-gate -- target/allocation-gate/report-b.json
+          cmp target/allocation-gate/report-a.json target/allocation-gate/report-b.json
+          sha256sum target/allocation-gate/report-a.json | tee target/allocation-gate/report-sha256.txt
+          cargo run --locked --release --bin v64-resource-gate -- target/allocation-gate/expansion-report-a.json
+          cargo run --locked --release --bin v64-resource-gate -- target/allocation-gate/expansion-report-b.json
+          cmp target/allocation-gate/expansion-report-a.json target/allocation-gate/expansion-report-b.json
+          sha256sum target/allocation-gate/expansion-report-a.json | tee target/allocation-gate/expansion-report-sha256.txt
+
+      - name: Run bounded deterministic libFuzzer smoke/deep profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/fuzz-artifacts
+          for target in container_parse phase1_frame grammar_b renderer subtitles audio wasm_accessors; do
+            mkdir -p "target/fuzz-artifacts/$target"
+            cargo "+$FUZZ_TOOLCHAIN" fuzz run "$target" "target/fuzz-corpus-a/$target" -- \
+              -runs="$FUZZ_RUNS" \
+              -seed=1 \
+              -workers=1 \
+              -jobs=1 \
+              -max_len=65536 \
+              -timeout=10 \
+              -rss_limit_mb=2048 \
+              -artifact_prefix="target/fuzz-artifacts/$target/"
+          done
+
+      - name: Record checked tool and target identities
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/fuzz-evidence
+          rustc --version > target/fuzz-evidence/rustc.txt
+          cargo --version > target/fuzz-evidence/cargo.txt
+          cargo fuzz --version > target/fuzz-evidence/cargo-fuzz.txt
+          printf '%s\n' "$FUZZ_RUNS" > target/fuzz-evidence/runs-per-target.txt
+          find fuzz/fuzz_targets -maxdepth 1 -type f -name '*.rs' -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > target/fuzz-evidence/target-sha256.txt
+          if [ -f fuzz/Cargo.lock ]; then
+            cp fuzz/Cargo.lock target/fuzz-evidence/Cargo.lock
+          fi
+
+      - name: Upload fuzz, corpus, and allocation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-rust-fuzz-allocation-evidence
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            target/fuzz-corpus-a.json
+            target/fuzz-corpus-b.json
+            target/fuzz-corpus-manifest-sha256.txt
+            target/fuzz-cargo-metadata.json
+            target/fuzz-artifacts
+            target/fuzz-evidence
+            target/allocation-gate
+            fuzz/Cargo.toml
+            fuzz/fuzz_targets
+            tools/build-rust-fuzz-corpus.mjs

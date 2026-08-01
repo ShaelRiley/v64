@@ -67,11 +67,11 @@ inserts exact zero-valued PCM for every `SILN` span. The complete timeline must
 cover the declared container duration on an exact 48 kHz sample boundary.
 
 Decoded PCM is capped at 256 MiB. The SDL queue is bounded and refilled from the
-single validated timeline. Pause, resume, seeking, EOF, and recovery resynchronize
-the queue to the integer Video 64 clock. The fixed 0.5× and 2× modes currently
-use deterministic sample repetition or decimation, respectively; therefore
-pitch follows playback rate rather than invoking an opaque time-stretching
-algorithm.
+single validated timeline. Pause, resume, seeking, EOF, and recovery
+resynchronize the queue to the integer Video 64 clock. The fixed 0.5× and 2×
+modes currently use deterministic sample repetition or decimation,
+respectively; therefore pitch follows playback rate rather than invoking an
+opaque time-stretching algorithm.
 
 For deterministic inspection, the player can emit raw little-endian mono
 PCM16 without opening an audio device:
@@ -83,7 +83,7 @@ v64-player \
   example.v64
 ```
 
-## Deterministic headless gate
+## Deterministic profile-v2 gate
 
 ```bash
 cargo run --locked --release --package v64-player --features native-ui -- \
@@ -102,6 +102,57 @@ requires byte-identical reports; compares native AM1 PCM byte-for-byte with the
 reference decoder output; and runs the real SDL video/audio loop under Xvfb
 with a dummy audio device.
 
+## Feature-length synchronization gate
+
+`v64-av-sync-gate` provides accelerated deterministic evidence for long-file
+clock and timeline behavior without sleeping for the media's full wall-clock
+duration:
+
+```bash
+node tools/build-feature-length-av-fixture.mjs target/av-sync/fixture
+cargo run --locked --release --package v64-player \
+  --bin v64-av-sync-gate --features native-audio -- \
+  target/av-sync/fixture/feature-length-av.v64 \
+  target/av-sync/report.json
+```
+
+The canonical feature-length fixture is exactly 30 minutes and contains:
+
+- 900 independently seekable two-second groups;
+- 43,200 nominal video frames represented by 900 keyframes and 900 repeat
+  spans;
+- 1,800 `AURN` runs and 1,800 exact `SILN` spans;
+- 48,600 Opus packets;
+- 86,400,000 mono samples at 48 kHz;
+- 172,800,000 decoded PCM bytes, or 64.37% of the 256 MiB player ceiling.
+
+The gate advances the real player clock through 4,941 irregular nanosecond
+increments and compares the result with a single 30-minute increment. It checks
+intermediate video-record containment, PCM sample positions, repeated distant
+seeks, pause, 0.5× and 2× transitions, declared EOF, and recovery after EOF.
+
+Permanent workflow `30709579841` passed at checked head
+`554456a037e8393b5793326cddc418f6a7ea8b55` with zero accumulated tick drift
+and zero sample-index drift. Peak resident memory was 176,464 KiB. Duplicate
+reports were byte-identical.
+
+Checked identities:
+
+- fixture SHA-256:
+  `6cb462f16e2ebf9e0bf576210f1d8c6177cc9b69ba4f1045beef0252034d1f58`;
+- report SHA-256:
+  `4b667cfc198c5a9e9b10846082b4e68be1d2cb07db80e1996e7ca1520b25f2ce`;
+- gate binary SHA-256:
+  `91565e09695271a1af593994ffbc26dfabf8a70e2c082561b28bcd3fdad42443`;
+- evidence artifact: `8821428834`;
+- artifact digest:
+  `3e422742a81fdb004fa85b3f89b8663a42b2a5353a037be1e37b0f096e49bb56`.
+
+This evidence proves player-clock arithmetic, decoded video-record selection,
+and decoded PCM timeline alignment. It deliberately does not claim measurement
+of operating-system mixer latency, audio-device oscillator error, or physical
+hardware scheduling drift. Those remain platform qualification work.
+
 ## Resource and compatibility boundaries
 
 - File reads are capped at the immutable 1 GiB core ceiling.
@@ -115,3 +166,5 @@ with a dummy audio device.
 - Subtitle and audio extensions are fully validated before presentation.
 - Genuine blinded AM1 speech listening remains required before the final audio
   bitrate profile is frozen.
+- Operating-system and physical-device A/V drift remain platform qualification
+  work rather than a claim of the accelerated synchronization gate.

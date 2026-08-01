@@ -99,10 +99,7 @@ pub fn validate_extension_timelines(file: &V64File) -> Result<ExtensionSummary, 
     let expected_cells = u32::from(file.header.columns)
         .checked_mul(u32::from(file.header.rows))
         .ok_or_else(|| "SUBT cell count overflow".to_owned())?;
-    let has_subtitles = file
-        .chunks
-        .iter()
-        .any(|chunk| chunk.chunk_type == "SUBT");
+    let has_subtitles = file.chunks.iter().any(|chunk| chunk.chunk_type == "SUBT");
     if (file.header.feature_flags & SUBT_FEATURE_FLAG != 0) != has_subtitles {
         return Err("SUBT feature flag and chunk presence disagree".to_owned());
     }
@@ -118,9 +115,7 @@ pub fn validate_extension_timelines(file: &V64File) -> Result<ExtensionSummary, 
             || chunk.timestamp % frame_ticks != 0
             || chunk.duration % frame_ticks != 0
         {
-            return Err(
-                "SUBT timestamp and duration must be whole nominal frame spans".to_owned(),
-            );
+            return Err("SUBT timestamp and duration must be whole nominal frame spans".to_owned());
         }
         let end = chunk
             .timestamp
@@ -174,9 +169,7 @@ pub fn validate_extension_timelines(file: &V64File) -> Result<ExtensionSummary, 
         .iter()
         .filter(|chunk| chunk.chunk_type == "AURN" || chunk.chunk_type == "SILN")
         .collect::<Vec<_>>();
-    let has_audio_run = audio_chunks
-        .iter()
-        .any(|chunk| chunk.chunk_type == "AURN");
+    let has_audio_run = audio_chunks.iter().any(|chunk| chunk.chunk_type == "AURN");
     let audio_declared = file.header.feature_flags & AURN_FEATURE_FLAG != 0;
     if audio_declared != has_audio_run {
         return Err("AURN feature flag and chunk presence disagree".to_owned());

@@ -22,14 +22,12 @@ pub const NORMATIVE_PALETTE_BYTES: &[u8; 768] =
     include_bytes!("../../../assets/palettes/v64-p256-1.rgb");
 
 const CANONICAL_GLYPH_HASH: [u8; 32] = [
-    0x9a, 0x75, 0x06, 0x27, 0x11, 0x50, 0x4d, 0xc9, 0xb2, 0xd4, 0x73, 0xcd, 0xc2, 0x61,
-    0xe0, 0xa8, 0xe3, 0x4f, 0xf3, 0x49, 0xed, 0x9a, 0x8e, 0x1d, 0xc2, 0x93, 0x46, 0x7e,
-    0x92, 0x15, 0xda, 0x2b,
+    0x9a, 0x75, 0x06, 0x27, 0x11, 0x50, 0x4d, 0xc9, 0xb2, 0xd4, 0x73, 0xcd, 0xc2, 0x61, 0xe0, 0xa8,
+    0xe3, 0x4f, 0xf3, 0x49, 0xed, 0x9a, 0x8e, 0x1d, 0xc2, 0x93, 0x46, 0x7e, 0x92, 0x15, 0xda, 0x2b,
 ];
 const NORMATIVE_PALETTE_HASH: [u8; 32] = [
-    0xc0, 0x3d, 0x23, 0x14, 0x1e, 0xb3, 0x3b, 0x80, 0xd7, 0x9d, 0x1a, 0x7f, 0x31, 0x67,
-    0xee, 0xb1, 0x8c, 0xcf, 0x1f, 0x4f, 0x0c, 0x0f, 0x81, 0x57, 0x2f, 0x26, 0x9a, 0xbd,
-    0x51, 0x31, 0x71, 0x05,
+    0xc0, 0x3d, 0x23, 0x14, 0x1e, 0xb3, 0x3b, 0x80, 0xd7, 0x9d, 0x1a, 0x7f, 0x31, 0x67, 0xee, 0xb1,
+    0x8c, 0xcf, 0x1f, 0x4f, 0x0c, 0x0f, 0x81, 0x57, 0x2f, 0x26, 0x9a, 0xbd, 0x51, 0x31, 0x71, 0x05,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -105,7 +103,9 @@ impl PlayerPreferences {
         if !path.exists() {
             return Ok(Self::default());
         }
-        let mut reader = File::open(path).map_err(|error| error.to_string())?.take(4_097);
+        let mut reader = File::open(path)
+            .map_err(|error| error.to_string())?
+            .take(4_097);
         let mut bytes = Vec::new();
         reader
             .read_to_end(&mut bytes)
@@ -164,8 +164,8 @@ impl PlayerSession {
                 max_chunks: MAX_PLAYER_CHUNKS,
             },
         };
-        let decoder = Decoder::from_bytes_with_config(bytes, config)
-            .map_err(|error| error.to_string())?;
+        let decoder =
+            Decoder::from_bytes_with_config(bytes, config).map_err(|error| error.to_string())?;
         let extensions = validate_extension_timelines(decoder.file())?;
         let mut session = Self {
             decoder,
@@ -240,7 +240,13 @@ impl PlayerSession {
     }
 
     pub fn set_rate(&mut self, rate: PlaybackRate) -> Result<(), String> {
-        if ![PlaybackRate::HALF, PlaybackRate::NORMAL, PlaybackRate::DOUBLE].contains(&rate) {
+        if ![
+            PlaybackRate::HALF,
+            PlaybackRate::NORMAL,
+            PlaybackRate::DOUBLE,
+        ]
+        .contains(&rate)
+        {
             return Err("Unsupported playback rate".to_owned());
         }
         self.rate = rate;
@@ -431,7 +437,11 @@ mod tests {
     fn first_launch_defaults_to_scanlines_and_preferences_round_trip() {
         assert!(PlayerPreferences::default().crt_scanlines);
         assert!(PlayerPreferences::parse(b"").unwrap().crt_scanlines);
-        assert!(!PlayerPreferences::parse(b"crt_scanlines=false\n").unwrap().crt_scanlines);
+        assert!(
+            !PlayerPreferences::parse(b"crt_scanlines=false\n")
+                .unwrap()
+                .crt_scanlines
+        );
         assert!(PlayerPreferences::parse(b"crt_scanlines=maybe\n").is_err());
         assert!(PlayerPreferences::parse(b"crt_scanlines=true\ncrt_scanlines=false\n").is_err());
     }

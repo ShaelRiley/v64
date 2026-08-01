@@ -121,9 +121,7 @@ fn default_preferences_path() -> PathBuf {
     }
     #[cfg(target_os = "windows")]
     if let Some(directory) = env::var_os("APPDATA") {
-        return PathBuf::from(directory)
-            .join("Video64")
-            .join("player.conf");
+        return PathBuf::from(directory).join("Video64").join("player.conf");
     }
     #[cfg(target_os = "macos")]
     if let Some(directory) = env::var_os("HOME") {
@@ -153,7 +151,9 @@ fn read_bounded(path: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut bytes = Vec::new();
     reader.read_to_end(&mut bytes)?;
     if bytes.len() > MAX_PLAYER_INPUT_BYTES {
-        return Err(format!("input exceeds the player limit of {MAX_PLAYER_INPUT_BYTES} bytes").into());
+        return Err(
+            format!("input exceeds the player limit of {MAX_PLAYER_INPUT_BYTES} bytes").into(),
+        );
     }
     Ok(bytes)
 }
@@ -485,12 +485,7 @@ fn draw(
     if menu_open {
         canvas.set_draw_color(Color::RGBA(26, 30, 38, 245));
         canvas
-            .fill_rect(Rect::new(
-                0,
-                MENU_HEIGHT,
-                MENU_ITEM_WIDTH,
-                MENU_ITEM_HEIGHT,
-            ))
+            .fill_rect(Rect::new(0, MENU_HEIGHT, MENU_ITEM_WIDTH, MENU_ITEM_HEIGHT))
             .map_err(|error| error.to_string())?;
         let label = if session.preferences().crt_scanlines {
             "CRT SCANLINES  ON"
@@ -539,13 +534,19 @@ fn letterbox(source_width: u32, source_height: u32, viewport: Rect) -> Result<Re
             .checked_mul(u64::from(source_height))
             .ok_or_else(|| "Playback viewport multiplication overflow".to_owned())?
             / u64::from(source_width);
-        (viewport.width(), u32::try_from(height.max(1)).map_err(|_| "Viewport height overflow")?)
+        (
+            viewport.width(),
+            u32::try_from(height.max(1)).map_err(|_| "Viewport height overflow")?,
+        )
     } else {
         let width = u64::from(viewport.height())
             .checked_mul(u64::from(source_width))
             .ok_or_else(|| "Playback viewport multiplication overflow".to_owned())?
             / u64::from(source_height);
-        (u32::try_from(width.max(1)).map_err(|_| "Viewport width overflow")?, viewport.height())
+        (
+            u32::try_from(width.max(1)).map_err(|_| "Viewport width overflow")?,
+            viewport.height(),
+        )
     };
     let x = viewport.x().saturating_add(
         i32::try_from((viewport.width() - width) / 2).map_err(|_| "Viewport x overflow")?,

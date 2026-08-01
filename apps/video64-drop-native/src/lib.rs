@@ -44,7 +44,10 @@ impl Control {
 
     #[must_use]
     pub fn next(self) -> Self {
-        let index = Self::ALL.iter().position(|candidate| *candidate == self).unwrap_or(0);
+        let index = Self::ALL
+            .iter()
+            .position(|candidate| *candidate == self)
+            .unwrap_or(0);
         Self::ALL[(index + 1) % Self::ALL.len()]
     }
 }
@@ -198,8 +201,16 @@ mod tests {
         assert_eq!(
             settings.cli_arguments(),
             [
-                "--fps", "24", "--columns", "80", "--palette", "32", "--glyphs", "32",
-                "--profile", "balanced",
+                "--fps",
+                "24",
+                "--columns",
+                "80",
+                "--palette",
+                "32",
+                "--glyphs",
+                "32",
+                "--profile",
+                "balanced",
             ]
         );
     }

@@ -22,8 +22,8 @@ use sdl2::render::{Canvas, WindowCanvas};
 use sdl2::video::Window;
 use serde_json::{Value, json};
 use video64_drop_native::{
-    Control, SHELL_ENCODE_REPORT_FORMAT, SHELL_REPORT_FORMAT, ShellSettings,
-    control_vocabulary, shell_capabilities,
+    Control, SHELL_ENCODE_REPORT_FORMAT, SHELL_REPORT_FORMAT, ShellSettings, control_vocabulary,
+    shell_capabilities,
 };
 
 const WINDOW_WIDTH: u32 = 1_000;
@@ -190,7 +190,8 @@ fn run() -> Result<(), Box<dyn Error>> {
         return write_headless_encode_report(&core, input, output, report_path).map_err(Into::into);
     }
     if let Some(report_path) = options.headless_report.as_deref() {
-        return write_headless_shell_report(&core, &options.inputs, report_path).map_err(Into::into);
+        return write_headless_shell_report(&core, &options.inputs, report_path)
+            .map_err(Into::into);
     }
 
     run_windowed(core, options.inputs, options.smoke_presents).map_err(Into::into)
@@ -254,8 +255,7 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
 }
 
 fn default_core_cli_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../video64-drop/cli.mjs")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../video64-drop/cli.mjs")
 }
 
 fn core_output(core: &CoreConfig, arguments: &[OsString]) -> Result<std::process::Output, String> {
@@ -299,28 +299,27 @@ fn inspect_job(core: &CoreConfig, settings: &ShellSettings, job: &mut ShellJob) 
     let mut arguments = vec![OsString::from("inspect"), job.input.as_os_str().to_owned()];
     arguments.extend(settings.cli_arguments().into_iter().map(OsString::from));
     match core_output(core, &arguments) {
-        Ok(output) if output.status.success() => match serde_json::from_slice::<Value>(&output.stdout) {
-            Ok(document) => {
-                job.warnings = json_string_array(document.get("warnings"));
-                job.grid = document.get("grid").and_then(|grid| {
-                    Some((
-                        grid.get("columns")?.as_u64()?,
-                        grid.get("rows")?.as_u64()?,
-                    ))
-                });
-                job.audio_present = document
-                    .pointer("/source/audioPresent")
-                    .and_then(Value::as_bool);
-                job.detail = job.grid.map_or_else(
-                    || Some("Source analysis complete".to_owned()),
-                    |(columns, rows)| Some(format!("{columns} X {rows} CELLS")),
-                );
+        Ok(output) if output.status.success() => {
+            match serde_json::from_slice::<Value>(&output.stdout) {
+                Ok(document) => {
+                    job.warnings = json_string_array(document.get("warnings"));
+                    job.grid = document.get("grid").and_then(|grid| {
+                        Some((grid.get("columns")?.as_u64()?, grid.get("rows")?.as_u64()?))
+                    });
+                    job.audio_present = document
+                        .pointer("/source/audioPresent")
+                        .and_then(Value::as_bool);
+                    job.detail = job.grid.map_or_else(
+                        || Some("Source analysis complete".to_owned()),
+                        |(columns, rows)| Some(format!("{columns} X {rows} CELLS")),
+                    );
+                }
+                Err(error) => {
+                    job.status = JobStatus::Failed;
+                    job.detail = Some(format!("Analysis JSON failed: {error}"));
+                }
             }
-            Err(error) => {
-                job.status = JobStatus::Failed;
-                job.detail = Some(format!("Analysis JSON failed: {error}"));
-            }
-        },
+        }
         Ok(output) => {
             job.status = JobStatus::Failed;
             job.detail = Some(String::from_utf8_lossy(&output.stderr).trim().to_owned());
@@ -353,7 +352,10 @@ fn json_string_array(value: Option<&Value>) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn queue_snapshot(core: &CoreConfig, inputs: &[PathBuf]) -> Result<(ShellSettings, Vec<ShellJob>), String> {
+fn queue_snapshot(
+    core: &CoreConfig,
+    inputs: &[PathBuf],
+) -> Result<(ShellSettings, Vec<ShellJob>), String> {
     let settings = ShellSettings::default();
     let mut jobs = plan_jobs(core, &settings, inputs)?;
     for job in &mut jobs {
@@ -485,7 +487,8 @@ fn run_windowed(
                     if worker.is_none() {
                         break 'running;
                     }
-                    state.notice = "Encoding is active; quit after the current file completes".to_owned();
+                    state.notice =
+                        "Encoding is active; quit after the current file completes".to_owned();
                 }
                 Event::DropFile { filename, .. } => {
                     add_inputs(&core, &mut state, vec![PathBuf::from(filename)])?;
@@ -559,11 +562,19 @@ fn run_windowed(
     Ok(())
 }
 
-fn add_inputs(core: &CoreConfig, state: &mut ShellState, inputs: Vec<PathBuf>) -> Result<(), String> {
+fn add_inputs(
+    core: &CoreConfig,
+    state: &mut ShellState,
+    inputs: Vec<PathBuf>,
+) -> Result<(), String> {
     if inputs.is_empty() {
         return Ok(());
     }
-    let mut all_inputs = state.jobs.iter().map(|job| job.input.clone()).collect::<Vec<_>>();
+    let mut all_inputs = state
+        .jobs
+        .iter()
+        .map(|job| job.input.clone())
+        .collect::<Vec<_>>();
     for input in inputs {
         if !all_inputs.contains(&input) {
             all_inputs.push(input);
@@ -600,14 +611,22 @@ fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {
     if !state.settings.adjust(state.focus, direction) {
         return;
     }
-    let inputs = state.jobs.iter().map(|job| job.input.clone()).collect::<Vec<_>>();
+    let inputs = state
+        .jobs
+        .iter()
+        .map(|job| job.input.clone())
+        .collect::<Vec<_>>();
     match plan_jobs(core, &state.settings, &inputs) {
         Ok(mut jobs) => {
             for job in &mut jobs {
                 inspect_job(core, &state.settings, job);
             }
             state.jobs = jobs;
-            state.notice = format!("{} set to {}", state.focus.label(), state.settings.value_label(state.focus));
+            state.notice = format!(
+                "{} set to {}",
+                state.focus.label(),
+                state.settings.value_label(state.focus)
+            );
         }
         Err(error) => state.notice = error,
     }
@@ -623,9 +642,11 @@ fn begin_batch(state: &mut ShellState) {
 }
 
 fn remove_selected(state: &mut ShellState) {
-    if state.jobs.get(state.selected).is_some_and(|job| {
-        matches!(job.status, JobStatus::Queued | JobStatus::Failed)
-    }) {
+    if state
+        .jobs
+        .get(state.selected)
+        .is_some_and(|job| matches!(job.status, JobStatus::Queued | JobStatus::Failed))
+    {
         state.jobs.remove(state.selected);
         state.selected = state.selected.min(state.jobs.len().saturating_sub(1));
         state.notice = "Removed selected file".to_owned();
@@ -684,16 +705,18 @@ fn handle_click(core: &CoreConfig, state: &mut ShellState, x: i32, y: i32) {
 }
 
 fn control_rect(index: usize) -> Rect {
-    let x = 20 + i32::try_from(index).unwrap_or(0) * (i32::try_from(CONTROL_WIDTH).unwrap_or(0) + CONTROL_GAP);
+    let x = 20
+        + i32::try_from(index).unwrap_or(0)
+            * (i32::try_from(CONTROL_WIDTH).unwrap_or(0) + CONTROL_GAP);
     Rect::new(x, CONTROL_Y, CONTROL_WIDTH, CONTROL_HEIGHT)
 }
 
-fn start_next_worker(
-    core: &CoreConfig,
-    state: &mut ShellState,
-    worker: &mut Option<ActiveWorker>,
-) {
-    let Some(index) = state.jobs.iter().position(|job| job.status == JobStatus::Queued) else {
+fn start_next_worker(core: &CoreConfig, state: &mut ShellState, worker: &mut Option<ActiveWorker>) {
+    let Some(index) = state
+        .jobs
+        .iter()
+        .position(|job| job.status == JobStatus::Queued)
+    else {
         state.batch_active = false;
         state.notice = "Queue complete".to_owned();
         return;
@@ -738,7 +761,9 @@ fn run_encode_worker(
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(error) => {
-            let _ = sender.send(WorkerMessage::Failed(format!("Core could not start: {error}")));
+            let _ = sender.send(WorkerMessage::Failed(format!(
+                "Core could not start: {error}"
+            )));
             return;
         }
     };
@@ -749,8 +774,14 @@ fn run_encode_worker(
             for line in BufReader::new(stderr).lines().map_while(Result::ok) {
                 if let Ok(event) = serde_json::from_str::<Value>(&line) {
                     let _ = progress_sender.send(WorkerMessage::Progress {
-                        stage: event.get("stage").and_then(Value::as_str).map(ToOwned::to_owned),
-                        detail: event.get("detail").and_then(Value::as_str).map(ToOwned::to_owned),
+                        stage: event
+                            .get("stage")
+                            .and_then(Value::as_str)
+                            .map(ToOwned::to_owned),
+                        detail: event
+                            .get("detail")
+                            .and_then(Value::as_str)
+                            .map(ToOwned::to_owned),
                     });
                 }
             }
@@ -759,7 +790,9 @@ fn run_encode_worker(
     let mut stdout = String::new();
     if let Some(mut output) = child.stdout.take() {
         if let Err(error) = output.read_to_string(&mut stdout) {
-            let _ = sender.send(WorkerMessage::Failed(format!("Could not read core output: {error}")));
+            let _ = sender.send(WorkerMessage::Failed(format!(
+                "Could not read core output: {error}"
+            )));
             let _ = child.wait();
             let _ = progress_reader.join();
             return;
@@ -781,11 +814,15 @@ fn run_encode_worker(
                 let _ = sender.send(WorkerMessage::Failed(message));
             }
             Err(error) => {
-                let _ = sender.send(WorkerMessage::Failed(format!("Core result was not JSON: {error}")));
+                let _ = sender.send(WorkerMessage::Failed(format!(
+                    "Core result was not JSON: {error}"
+                )));
             }
         },
         Err(error) => {
-            let _ = sender.send(WorkerMessage::Failed(format!("Core process failed: {error}")));
+            let _ = sender.send(WorkerMessage::Failed(format!(
+                "Core process failed: {error}"
+            )));
         }
     }
 }
@@ -875,7 +912,14 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
     canvas
         .draw_rect(Rect::new(20, 76, width.saturating_sub(40), 64))
         .map_err(|error| error.to_string())?;
-    draw_text(canvas, 42, 91, "DROP VIDEO FILES HERE", 2, Color::RGB(224, 230, 241))?;
+    draw_text(
+        canvas,
+        42,
+        91,
+        "DROP VIDEO FILES HERE",
+        2,
+        Color::RGB(224, 230, 241),
+    )?;
     draw_text(
         canvas,
         42,
@@ -928,7 +972,14 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
     )?;
 
     if state.jobs.is_empty() {
-        draw_text(canvas, 34, QUEUE_Y + 24, "NO FILES QUEUED", 2, Color::RGB(92, 105, 125))?;
+        draw_text(
+            canvas,
+            34,
+            QUEUE_Y + 24,
+            "NO FILES QUEUED",
+            2,
+            Color::RGB(92, 105, 125),
+        )?;
     }
     for (index, job) in state.jobs.iter().take(MAX_VISIBLE_JOBS).enumerate() {
         let y = QUEUE_Y + i32::try_from(index).unwrap_or(0) * QUEUE_ROW_HEIGHT;
@@ -939,7 +990,12 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
             Color::RGB(16, 20, 29)
         });
         canvas
-            .fill_rect(Rect::new(20, y, width.saturating_sub(40), u32::try_from(QUEUE_ROW_HEIGHT - 4).unwrap_or(0)))
+            .fill_rect(Rect::new(
+                20,
+                y,
+                width.saturating_sub(40),
+                u32::try_from(QUEUE_ROW_HEIGHT - 4).unwrap_or(0),
+            ))
             .map_err(|error| error.to_string())?;
         let status_color = match job.status {
             JobStatus::Queued => Color::RGB(151, 164, 184),
@@ -966,7 +1022,13 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
             Color::RGB(126, 139, 160),
         )?;
         if job.status == JobStatus::Running {
-            draw_progress(canvas, 760, y + 13, 190, stage_progress(job.stage.as_deref()))?;
+            draw_progress(
+                canvas,
+                760,
+                y + 13,
+                190,
+                stage_progress(job.stage.as_deref()),
+            )?;
         }
     }
 
@@ -1001,12 +1063,18 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
     } else {
         Color::RGB(38, 72, 112)
     });
-    canvas.fill_rect(ENCODE_BUTTON).map_err(|error| error.to_string())?;
+    canvas
+        .fill_rect(ENCODE_BUTTON)
+        .map_err(|error| error.to_string())?;
     draw_text(
         canvas,
         ENCODE_BUTTON.x() + 22,
         ENCODE_BUTTON.y() + 15,
-        if state.batch_active { "ENCODING" } else { "ENCODE QUEUE" },
+        if state.batch_active {
+            "ENCODING"
+        } else {
+            "ENCODE QUEUE"
+        },
         1,
         Color::RGB(244, 248, 252),
     )?;
@@ -1019,8 +1087,15 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
         Color::RGB(87, 100, 120),
     )?;
 
-    let title = format!("Video64 Drop - {} file(s) - {}", state.jobs.len(), state.notice);
-    canvas.window_mut().set_title(&title).map_err(|error| error.to_string())?;
+    let title = format!(
+        "Video64 Drop - {} file(s) - {}",
+        state.jobs.len(),
+        state.notice
+    );
+    canvas
+        .window_mut()
+        .set_title(&title)
+        .map_err(|error| error.to_string())?;
     canvas.present();
     Ok(())
 }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/v64-core", "crates/v64-wasm"]
+members = ["crates/v64-capi", "crates/v64-cli", "crates/v64-core", "crates/v64-wasm"]
 resolver = "2"
 
 [workspace.package]

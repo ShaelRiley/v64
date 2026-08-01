@@ -353,8 +353,8 @@ AM1 preprocessing/bitrate workflow `30597112780`, code head
 
 - [x] `crates/v64-core`
 - [ ] `crates/v64-encoder`
-- [ ] `crates/v64-cli`
-- [ ] Stable C ABI
+- [x] `crates/v64-cli`
+- [x] Stable C ABI
 - [x] JavaScript/Rust golden-state and raster hash agreement
 - [ ] Rust/JavaScript decoded PCM agreement before the audio profile is frozen
 - [x] Fuzz targets and allocation-limit regression corpus
@@ -380,8 +380,26 @@ Coverage-guided fuzzing and deterministic allocation-regression gate, workflow
 - artifact `8810093827`, ZIP SHA-256
   `c33b97798756d363a4b216a20fa9697af2c8de35246cf19c35a49349fc6edb99`.
 
-The next mandatory implementation gate is a stable Rust decoder API and C ABI,
-with a stable CLI surface, before the native player.
+Stable Rust API, CLI, and C ABI workflow `30677740575`, checked
+implementation head `11cb07f609b7cc8b724ee2beaa43dbd106ab3a93`:
+
+- all 131 JavaScript tests and every Rust workspace target passed in debug and
+  optimized release modes;
+- stable decoder API version 1 owns the validated file, borrows current state,
+  reuses repeat state without cloning, and has transactional advancement;
+- stable `v64` inspect, verify, and transactional state-stream commands;
+- pointer-free C ABI version 1 uses only fixed-width scalars and caps live
+  generation-checked sessions at 16;
+- exact 1 GiB configured boundaries and just-outside rejection passed;
+- strict C11/C++17 callers and the exact 22-symbol export manifest passed;
+- JavaScript, Rust CLI, and C emitted identical 64,528-byte state streams,
+  SHA-256
+  `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9`;
+- artifact `8811105113`, ZIP SHA-256
+  `e9fdf29c7e204cbf1779882ea3820dfb171b6abfa839a772ea6223178ec82860`.
+
+The next mandatory implementation gate is the native player, built against the
+promoted stable Rust decoder API.
 
 ## Phase 4 — products
 
@@ -433,10 +451,10 @@ maintainer identity is delegated to those platforms.
 
 ## Next concrete step
 
-Define and freeze the stable Rust decoder API and C ABI around the already
-bounded container, frame, extension, and renderer surfaces. Add a stable CLI
-surface and cross-language ABI conformance fixtures before beginning the native
-player.
+Build the native standalone player against the stable bounded decoder API.
+Preserve the renderer-neutral CRT scanline contract, deterministic seeking,
+extension validation, and the established product order before beginning
+Video64 Drop.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

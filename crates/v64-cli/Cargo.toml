@@ -1,0 +1,19 @@
+[package]
+name = "v64-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Stable command-line decoder surface for Video 64 .v64 files"
+
+[[bin]]
+name = "v64"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1"
+v64-core = { path = "../v64-core" }
+
+[lints]
+workspace = true

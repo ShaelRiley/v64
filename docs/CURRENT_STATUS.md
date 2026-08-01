@@ -82,8 +82,14 @@ Completed:
 - exact allocation and adversarial-size gates across container payload totals,
   frame state, command bounds, subtitle expansion, audio timing, renderer
   arithmetic, recovery, and WebAssembly accessors;
-- permanent read-only CI for resource, rollback, renderer, and WebAssembly
-  conformance.
+- stable owning Rust decoder API version 1 with borrowed current-state access,
+  allocation-free repeats, transactional advancement, stable EOF, and reset;
+- stable bounded `v64` CLI inspect, verify, and state-stream commands;
+- pointer-free C ABI version 1 with 16 generation-checked sessions, caller-set
+  input/payload ceilings, panic containment, and exact export allowlisting;
+- real C11/C++17 caller conformance and JavaScript/Rust/C decoded-state identity;
+- permanent read-only CI for resource, rollback, renderer, WebAssembly, stable
+  Rust API/CLI, and C ABI conformance.
 
 Checked video decoded-state stream:
 
@@ -193,9 +199,31 @@ The SM2 parser now checks declared frame count, expected duration, and
 canonical-entry budgets before retaining repeated planes. This closes the
 allocation-amplification path found while constructing the adversarial corpus.
 
+## Checked stable Rust API, CLI, and C ABI tranche
+
+Permanent workflow `30677740575` passed at implementation head
+`11cb07f609b7cc8b724ee2beaa43dbd106ab3a93`.
+
+- all 131 JavaScript tests passed;
+- every Rust workspace target passed in debug and optimized release modes;
+- exact 22-symbol C export allowlist passed;
+- strict C11 and C++17 callers compiled, linked, and executed;
+- JavaScript, Rust CLI, and C state streams were byte-identical at 64,528 bytes;
+- stable CLI inspect and verify reports repeated byte-for-byte;
+- C valid/one-past access, reset/destroy, and stale-handle behavior passed;
+- state stream SHA-256:
+  `df3e6e261ee73e64524785775fee032d52bd81fc9215079751b67702d9dff3b9`;
+- C report SHA-256:
+  `4655758a3ae0ef6a4161cde64f735cade67a3d9b339dd69ed31b712300ccd9ee`;
+- export manifest SHA-256:
+  `7e6073070792ec1ecc610d9a7eedde99da9a3a318d953f6279ea9766a8858097`;
+- evidence artifact: `8811105113`;
+- artifact ZIP SHA-256:
+  `e9fdf29c7e204cbf1779882ea3820dfb171b6abfa839a772ea6223178ec82860`.
+
 ## Next mandatory gates
 
-1. Stabilize the Rust decoder API, CLI surface, and C ABI.
-2. Proceed toward the native player, Video64 Drop, browser integration, and VLC
+1. Build the native player against the promoted stable Rust decoder API.
+2. Continue with Video64 Drop, broader WebAssembly/browser decoding, and VLC
    integration in the planned product order.
 3. Complete genuine blinded AM1 speech listening before bitrate freeze.

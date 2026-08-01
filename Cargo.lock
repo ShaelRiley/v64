@@ -139,6 +139,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
+name = "v64-capi"
+version = "0.1.0"
+dependencies = [
+ "v64-core",
+]
+
+[[package]]
+name = "v64-cli"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "v64-core",
+]
+
+[[package]]
 name = "v64-core"
 version = "0.1.0"
 dependencies = [

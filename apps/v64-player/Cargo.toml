@@ -23,5 +23,10 @@ name = "v64-player"
 path = "src/main.rs"
 required-features = ["native-ui"]
 
+[[bin]]
+name = "v64-av-sync-gate"
+path = "src/bin/av_sync_gate.rs"
+required-features = ["native-audio"]
+
 [lints]
 workspace = true

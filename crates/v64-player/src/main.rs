@@ -214,6 +214,7 @@ fn write_headless_report(mut session: PlayerSession, output: &Path) -> Result<()
             "frameTicks": session.frame_ticks(),
             "durationTicks": session.duration_ticks(),
             "records": session.video_record_count(),
+            "palette": session.palette_name(),
         },
         "controls": {
             "pausedPositionTicks": paused_position,

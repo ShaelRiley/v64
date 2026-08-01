@@ -5,6 +5,11 @@ uses stable decoder API version 1, the canonical 64-glyph asset, the normative
 `V64-P256-1` palette, a bounded integer playback clock, and an SDL2 software
 presentation surface. Decoding and rendering have no network dependency.
 
+The immutable pre-promotion `V64-P256-CANDIDATE-1` hash remains registered for
+the repository's v0.1 golden files. The player accepts exactly that legacy
+proof palette and normative `V64-P256-1`; every unknown palette hash fails
+closed.
+
 ## Build and run
 
 Ubuntu 24.04 development dependencies:

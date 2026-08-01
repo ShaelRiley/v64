@@ -1,0 +1,172 @@
+name: V64 feature-length AV synchronization gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/native-av-sync.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "apps/v64-player/**"
+      - "crates/v64-core/**"
+      - "prototype/js/audio-*.mjs"
+      - "prototype/js/container.mjs"
+      - "tools/build-feature-length-av-fixture.mjs"
+      - "docs/NATIVE_PLAYER.md"
+      - "docs/CURRENT_STATUS.md"
+      - "IMPLEMENTATION_LEDGER.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-native-av-sync-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  feature-length-av-sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Check out immutable workflow head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install libopus development files
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg libopus-dev
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.85.0
+          rustup default 1.85.0
+          rustc --version
+          cargo --version
+
+      - name: Check formatting and focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustfmt --edition 2024 --check apps/v64-player/src/bin/av_sync_gate.rs
+          cargo test --locked --package v64-player \
+            --bin v64-av-sync-gate --features native-audio
+
+      - name: Build deterministic 30-minute fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/av-sync/fixture target/av-sync/evidence
+          node tools/build-feature-length-av-fixture.mjs target/av-sync/fixture \
+            > target/av-sync/evidence/fixture-build.json
+
+      - name: Build release synchronization gate
+        run: cargo build --locked --release --package v64-player --bin v64-av-sync-gate --features native-audio
+
+      - name: Run deterministic feature-length synchronization evidence twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/time -f '%M' -o target/av-sync/evidence/max-rss-kib.txt \
+            target/release/v64-av-sync-gate \
+              target/av-sync/fixture/feature-length-av.v64 \
+              target/av-sync/evidence/report-a.json
+          target/release/v64-av-sync-gate \
+            target/av-sync/fixture/feature-length-av.v64 \
+            target/av-sync/evidence/report-b.json
+          cmp target/av-sync/evidence/report-a.json target/av-sync/evidence/report-b.json
+
+      - name: Require zero-drift feature-length evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+
+          const manifest = JSON.parse(
+            readFileSync("target/av-sync/fixture/manifest.json")
+          );
+          const report = JSON.parse(
+            readFileSync("target/av-sync/evidence/report-a.json")
+          );
+          const rssKiB = Number(
+            readFileSync("target/av-sync/evidence/max-rss-kib.txt", "utf8").trim()
+          );
+
+          assert.equal(manifest.format, "V64-FEATURE-LENGTH-AV-1");
+          assert.equal(manifest.durationSeconds, 1800);
+          assert.equal(manifest.durationTicks, 108000000);
+          assert.equal(manifest.frames, 43200);
+          assert.equal(manifest.expectedSamples, 86400000);
+          assert.equal(manifest.expectedPcmBytes, 172800000);
+          assert.equal(manifest.container.verification.valid, true);
+          assert.equal(manifest.container.verification.keyframes, 900);
+          assert.equal(manifest.container.verification.repeatSpans, 900);
+          assert.equal(manifest.basePattern.repeatedAudioRuns, 1800);
+          assert.equal(manifest.basePattern.repeatedSilenceRuns, 1800);
+          assert.equal(manifest.basePattern.repeatedOpusPackets, 48600);
+
+          assert.equal(report.format, "V64-AV-SYNC-1");
+          assert.equal(report.realTimeSleepRequired, false);
+          assert.equal(report.hardwareAudioSchedulerMeasured, false);
+          assert.equal(report.input.durationSeconds, 1800);
+          assert.equal(report.input.durationTicks, 108000000);
+          assert.equal(report.audio.samples, 86400000);
+          assert.equal(report.audio.bytes, 172800000);
+          assert.equal(report.audio.runs, 1800);
+          assert.equal(report.audio.silenceRuns, 1800);
+          assert.equal(report.audio.packets, 48600);
+          assert.equal(report.clock.maxAbsoluteTickDrift, 0);
+          assert.equal(report.clock.maxAbsoluteSampleDrift, 0);
+          assert.equal(report.clock.singleChunkPositionTicks, 108000000);
+          assert.equal(report.clock.singleChunkSampleIndex, 86400000);
+          assert.equal(report.clock.chunkingInvariant, true);
+          assert.equal(report.clock.increments > 1000, true);
+          assert.equal(report.seeks.repeatedTargetsStable, true);
+          assert.equal(report.seeks.eof.atEof, true);
+          assert.equal(report.seeks.eof.rasterAbsent, true);
+          assert.equal(report.controls.exact, true);
+          assert.deepEqual(report.result, {
+            featureLength: true,
+            exactEof: true,
+            zeroArithmeticTickDrift: true,
+            zeroTimelineSampleDrift: true,
+            repeatedSeekStable: true,
+            boundedPcm: true
+          });
+          assert.equal(Number.isFinite(rssKiB), true);
+          assert.equal(rssKiB > 0, true);
+          assert.equal(rssKiB <= 524288, true);
+          NODE
+
+      - name: Hash feature-length evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum \
+            target/av-sync/fixture/feature-length-av.v64 \
+            target/av-sync/fixture/manifest.json \
+            target/av-sync/evidence/report-a.json \
+            target/av-sync/evidence/max-rss-kib.txt \
+            target/release/v64-av-sync-gate \
+            | tee target/av-sync/evidence/SHA256SUMS
+
+      - name: Upload feature-length synchronization evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-feature-length-av-sync-evidence
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            target/av-sync/fixture
+            target/av-sync/evidence
+            target/release/v64-av-sync-gate

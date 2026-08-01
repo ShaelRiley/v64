@@ -4,6 +4,7 @@ members = [
   "crates/v64-cli",
   "crates/v64-core",
   "apps/v64-player",
+  "apps/video64-drop-native",
   "crates/v64-wasm",
 ]
 resolver = "2"

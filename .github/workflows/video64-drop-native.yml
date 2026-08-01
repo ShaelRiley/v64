@@ -1,0 +1,148 @@
+name: Video64 Drop native-shell gate
+
+on:
+  pull_request:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "apps/video64-drop/**"
+      - "apps/video64-drop-native/**"
+      - "prototype/js/**"
+      - "tests/video64-drop*.test.mjs"
+      - ".github/workflows/video64-drop-native.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-shell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native and media dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsdl2-dev xvfb
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          components: rustfmt,clippy
+
+      - name: Test application core and queue planning
+        run: npm --prefix apps/video64-drop test
+
+      - name: Check Rust formatting
+        run: cargo fmt --all --check
+
+      - name: Test native shell
+        run: cargo test --locked -p video64-drop-native --features native-ui
+
+      - name: Lint native shell
+        run: cargo clippy --locked -p video64-drop-native --all-targets --features native-ui -- -D warnings
+
+      - name: Build release shell
+        run: cargo build --locked --release -p video64-drop-native --features native-ui
+
+      - name: Generate real audiovisual source
+        run: |
+          mkdir -p evidence
+          ffmpeg -hide_banner -loglevel error \
+            -f lavfi -i testsrc=size=320x180:rate=24 \
+            -f lavfi -i sine=frequency=660:sample_rate=48000 \
+            -t 1 -shortest \
+            -c:v libx264 -pix_fmt yuv420p \
+            -c:a aac -ac 1 -ar 48000 \
+            evidence/source.mp4
+
+      - name: Prove deterministic shell planning and source disclosure
+        run: |
+          ./target/release/video64-drop \
+            --core-cli apps/video64-drop/cli.mjs \
+            --headless-report evidence/shell-report-a.json \
+            evidence/source.mp4
+          ./target/release/video64-drop \
+            --core-cli apps/video64-drop/cli.mjs \
+            --headless-report evidence/shell-report-b.json \
+            evidence/source.mp4
+          cmp evidence/shell-report-a.json evidence/shell-report-b.json
+
+      - name: Encode and verify through the native shell bridge
+        run: |
+          ./target/release/video64-drop \
+            --core-cli apps/video64-drop/cli.mjs \
+            --headless-encode evidence/source.mp4 evidence/output.v64 \
+            --headless-report evidence/encode-report.json
+          node prototype/js/cli.mjs verify evidence/output.v64 > evidence/verify.json
+
+      - name: Exercise the real SDL2 window under Xvfb
+        run: |
+          xvfb-run -a env SDL_AUDIODRIVER=dummy \
+            ./target/release/video64-drop \
+            --core-cli apps/video64-drop/cli.mjs \
+            --smoke-presents 4 \
+            evidence/source.mp4
+
+      - name: Assert native-shell evidence
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          shell = json.loads(Path("evidence/shell-report-a.json").read_text())
+          assert shell["format"] == "VIDEO64-DROP-NATIVE-SHELL-1"
+          assert shell["capabilities"]["desktopShell"] is True
+          assert shell["capabilities"]["dragAndDrop"] is True
+          assert shell["settings"] == {
+              "fps": "24",
+              "columns": 80,
+              "palette": 32,
+              "glyphs": 32,
+              "profile": "balanced",
+          }
+          assert len(shell["queue"]) == 1
+          queued = shell["queue"][0]
+          assert queued["grid"] == {"columns": 80, "rows": 23}
+          assert queued["audioPresent"] is True
+          assert any("audio" in warning.lower() for warning in queued["warnings"])
+
+          encoded = json.loads(Path("evidence/encode-report.json").read_text())
+          assert encoded["format"] == "VIDEO64-DROP-NATIVE-ENCODE-1"
+          assert encoded["coreExitSuccess"] is True
+          final = encoded["finalJob"]
+          assert final["status"] == "completed"
+          assert final["stages"]["audio_encode"]["state"] == "skipped"
+          assert final["result"]["verification"]["valid"] is True
+          assert final["result"]["verification"]["outputBytes"] > 0
+          assert any(event.get("stage") == "verify" for event in encoded["events"])
+          assert Path("evidence/output.v64").stat().st_size == final["result"]["verification"]["outputBytes"]
+
+          verified = json.loads(Path("evidence/verify.json").read_text())
+          assert verified["valid"] is True
+          PY
+
+      - name: Record checksums
+        run: |
+          sha256sum \
+            target/release/video64-drop \
+            evidence/source.mp4 \
+            evidence/output.v64 \
+            evidence/shell-report-a.json \
+            evidence/encode-report.json \
+            evidence/verify.json \
+            > evidence/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video64-drop-native-shell-evidence
+          path: |
+            target/release/video64-drop
+            evidence/
+          if-no-files-found: error

@@ -438,6 +438,44 @@ Native-player base-video workflow `30680126006`, final checked head
 - [ ] Document and check Windows and macOS native-player packaging.
 - [ ] WebAssembly decoder.
 
+First playable prerelease `v0.1.0-alpha.1`:
+
+- release:
+  <https://github.com/ShaelRiley/v64/releases/tag/v0.1.0-alpha.1>;
+- pull request `#7` merged as
+  `9fac7d80e492fe1a414dce3e236a16042d0dd83f`;
+- all ten permanent pull-request workflows passed at checked head
+  `86640ff5fc4bba9c1e3d5e835e6eeb032a4a89a2`;
+- corrected official `.v64`: 5,461,071 bytes, SHA-256
+  `329215856e67d2193a3fea98767fdeba80b461ed63fc72a7eb461417740220f5`,
+  persistent artifact `libfile_27dd47c389148191bee12175028b826d`;
+- manifest: 2,510 bytes, SHA-256
+  `6e02422bda1b903a003f2b78503fc0321fd64879f4e663653781d8e3f590be57`,
+  persistent artifact `libfile_61f6334f50ec8191a7ef78b7dca30c1c`;
+- Linux x86_64 player package: 332,316 bytes, SHA-256
+  `8aac432069b8312662ff14a99f2ff0830a64caae87885a502e4b7475bac1214c`,
+  persistent artifact `libfile_c6788d1a2f408191bbe25c24fbb253ca`;
+- contained player binary SHA-256:
+  `ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`;
+- native headless report SHA-256:
+  `9aa4fb8d0b2d4b9fd9e3927c10decda3abd22a1d457f28efb0c9e0091e08c843`;
+- release checksum file: 301 bytes, SHA-256
+  `b786bf8d2a415d72d4a678c35fcf15fd7ec84a85270ef9aa187f488408e0057d`.
+
+The owned/provided source is stored as 1920×1080 with 90° display rotation.
+The corrected ingest derives the grid from displayed 1080×1920 geometry and
+uses deterministic contain-and-center padding, producing 80×71 cells and a
+640×1136 raster without stretching. The artifact uses 24 fps, 32 colors, the
+primary 32-glyph `balanced` profile, 1,012 frames, and 22 independent groups
+bounded to 48 frames / two seconds. Two complete encodes were byte-identical;
+JavaScript verification, native bounded headless validation, and user-confirmed
+SteamOS portrait playback passed.
+
+This prerelease carries silent base video only. Native subtitle compositing,
+AURN/SILN audio presentation, genuine blinded AM1 speech listening, and
+Windows/macOS packaging remain open gates. Reproducible release evidence is
+retained under `bench/results/first-playable-release/`.
+
 ## Phase 5 — VLC
 
 - [ ] Pin a supported VLC release and install its development SDK.

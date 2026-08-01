@@ -1,0 +1,113 @@
+{
+  "format": "V64-FIRST-PLAYABLE-RELEASE-EVIDENCE-1",
+  "project": "Video 64",
+  "extension": ".v64",
+  "tag": "v0.1.0-alpha.1",
+  "prerelease": true,
+  "releaseUrl": "https://github.com/ShaelRiley/v64/releases/tag/v0.1.0-alpha.1",
+  "pullRequest": {
+    "number": 7,
+    "url": "https://github.com/ShaelRiley/v64/pull/7",
+    "checkedHead": "86640ff5fc4bba9c1e3d5e835e6eeb032a4a89a2",
+    "mergedCommit": "9fac7d80e492fe1a414dce3e236a16042d0dd83f"
+  },
+  "ci": {
+    "permanentWorkflowsTriggered": 10,
+    "permanentWorkflowsPassed": 10,
+    "runs": [
+      { "id": 30682645113, "name": "V64 conformance and visual gates", "result": "success" },
+      { "id": 30682645128, "name": "V64 human raster 32-primary gate", "result": "success" },
+      { "id": 30682645127, "name": "V64 combined grammar decision gate", "result": "success" },
+      { "id": 30682645112, "name": "V64 AM1 audio, container, playback, and bitrate gates", "result": "success" },
+      { "id": 30682645144, "name": "V64 SUBT container and fixture", "result": "success" },
+      { "id": 30682645121, "name": "V64 Rust core golden gate", "result": "success" },
+      { "id": 30682645114, "name": "V64 browser two-second seek conformance", "result": "success" },
+      { "id": 30682645125, "name": "V64 Rust subtitle and audio golden gate", "result": "success" },
+      { "id": 30682645141, "name": "V64 stable Rust API, CLI, and C ABI gate", "result": "success" },
+      { "id": 30682645124, "name": "V64 Rust renderer and WebAssembly gate", "result": "success" }
+    ]
+  },
+  "source": {
+    "fileName": "v64 test vid.mp4",
+    "bytes": 106078404,
+    "sha256": "85f0fca692af91270d4ed0e6d051785374609404c912e317cd472c8a39f76e50",
+    "provenance": "User-owned/provided official test source",
+    "storedWidth": 1920,
+    "storedHeight": 1080,
+    "displayRotationDegrees": 90,
+    "displayWidth": 1080,
+    "displayHeight": 1920,
+    "displayAspectRatio": "9:16"
+  },
+  "encoding": {
+    "columns": 80,
+    "rows": 71,
+    "rasterWidth": 640,
+    "rasterHeight": 1136,
+    "framesPerSecond": 24,
+    "paletteDepth": 32,
+    "paletteAsset": "V64-P256-1",
+    "canonicalAlphabetGlyphs": 64,
+    "encoderGlyphBudget": 32,
+    "target": "balanced",
+    "frames": 1012,
+    "independentGroups": 22,
+    "keyframes": 22,
+    "maximumGroupFrames": 48,
+    "maximumGroupSeconds": 2,
+    "aspectPolicy": "contain",
+    "audioIncluded": false,
+    "subtitlesIncluded": false
+  },
+  "releaseAssets": [
+    {
+      "name": "video64-player-linux-x86_64.tar.gz",
+      "bytes": 332316,
+      "sha256": "8aac432069b8312662ff14a99f2ff0830a64caae87885a502e4b7475bac1214c",
+      "persistentArtifactId": "libfile_c6788d1a2f408191bbe25c24fbb253ca"
+    },
+    {
+      "name": "video64-official-test-01.v64",
+      "bytes": 5461071,
+      "sha256": "329215856e67d2193a3fea98767fdeba80b461ed63fc72a7eb461417740220f5",
+      "persistentArtifactId": "libfile_27dd47c389148191bee12175028b826d"
+    },
+    {
+      "name": "video64-official-test-01.manifest.json",
+      "bytes": 2510,
+      "sha256": "6e02422bda1b903a003f2b78503fc0321fd64879f4e663653781d8e3f590be57",
+      "persistentArtifactId": "libfile_61f6334f50ec8191a7ef78b7dca30c1c"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 301,
+      "sha256": "b786bf8d2a415d72d4a678c35fcf15fd7ec84a85270ef9aa187f488408e0057d"
+    }
+  ],
+  "player": {
+    "platform": "Linux x86_64",
+    "validatedOnSteamOS": true,
+    "binaryBytes": 768616,
+    "binarySha256": "ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88",
+    "headlessReportSha256": "9aa4fb8d0b2d4b9fd9e3927c10decda3abd22a1d457f28efb0c9e0091e08c843"
+  },
+  "validation": {
+    "javascriptTestsPassed": 135,
+    "javascriptVerifyPassed": true,
+    "twoCompleteEncodesByteIdentical": true,
+    "portraitSmokeDecodeVisuallyInspected": true,
+    "nativeBoundedHeadlessValidationPassed": true,
+    "steamOsPlaybackUserConfirmed": true,
+    "successfulPlaybackScreenshotPersistentArtifactId": "libfile_84b452d537c08191a4bdf2f5e510e6da"
+  },
+  "supersedes": {
+    "erroneousLandscapeFileSha256": "d5ae3ab62b70d27fc8500eb5395e38674afb170e825a2fb98fc01d124caa89c3"
+  },
+  "openGates": [
+    "Native subtitle compositing",
+    "AURN/SILN native audio presentation",
+    "Genuine blinded AM1 speech listening before bitrate freeze",
+    "Windows package",
+    "macOS package"
+  ]
+}

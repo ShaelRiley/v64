@@ -1,9 +1,9 @@
 # Native player evidence
 
-Permanent workflow `30679295472` passed at implementation head
-`da0f09e954fba70da301f506e4d3f6f8d4a99b11`. Evidence artifact
-`8811651756` has ZIP SHA-256
-`25cc32166b6c105a05b64ee1bdeca710c8c7876eaa1cc96204574c185d5f53fb`.
+Permanent workflow `30680126006` passed at final checked head
+`0d5a1131b3ea67aeb6589d5c7f40cae852a37f6c`. Evidence artifact
+`8811926753` has ZIP SHA-256
+`cbedec6dc3f538d1eaae6bec7cda8aaa15bb0f87240503ff2ead49aed1e1a162`.
 
 Reproduce the deterministic report after installing SDL2 development headers:
 

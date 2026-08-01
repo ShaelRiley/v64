@@ -398,8 +398,8 @@ implementation head `11cb07f609b7cc8b724ee2beaa43dbd106ab3a93`:
 - artifact `8811105113`, ZIP SHA-256
   `e9fdf29c7e204cbf1779882ea3820dfb171b6abfa839a772ea6223178ec82860`.
 
-Native-player base-video workflow `30679295472`, checked implementation head
-`da0f09e954fba70da301f506e4d3f6f8d4a99b11`:
+Native-player base-video workflow `30680126006`, final checked head
+`0d5a1131b3ea67aeb6589d5c7f40cae852a37f6c`:
 
 - all 131 JavaScript tests and every Rust workspace target passed in debug and
   optimized release modes;
@@ -413,9 +413,9 @@ Native-player base-video workflow `30679295472`, checked implementation head
 - report SHA-256
   `29f730b4fe3f9ecfefc58de7b32b209c78df37989df741606d286ed24fca58cf`;
 - release binary SHA-256
-  `18f3f52cf1a756588659626da0e02ba59c2a59e3f67aeb03a8c5c1146c71edbd`;
-- artifact `8811651756`, ZIP SHA-256
-  `25cc32166b6c105a05b64ee1bdeca710c8c7876eaa1cc96204574c185d5f53fb`.
+  `ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`;
+- artifact `8811926753`, ZIP SHA-256
+  `cbedec6dc3f538d1eaae6bec7cda8aaa15bb0f87240503ff2ead49aed1e1a162`.
 
 ## Phase 4 — products
 

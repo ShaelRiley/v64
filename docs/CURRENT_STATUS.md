@@ -223,8 +223,8 @@ Permanent workflow `30677740575` passed at implementation head
 
 ## Checked native-player tranche
 
-Permanent workflow `30679295472` passed at implementation head
-`da0f09e954fba70da301f506e4d3f6f8d4a99b11`.
+Permanent workflow `30680126006` passed at final checked head
+`0d5a1131b3ea67aeb6589d5c7f40cae852a37f6c`.
 
 - all 131 JavaScript tests passed;
 - every Rust workspace target passed in debug and optimized release modes;
@@ -242,10 +242,10 @@ Permanent workflow `30679295472` passed at implementation head
 - headless report SHA-256:
   `29f730b4fe3f9ecfefc58de7b32b209c78df37989df741606d286ed24fca58cf`;
 - release player SHA-256:
-  `18f3f52cf1a756588659626da0e02ba59c2a59e3f67aeb03a8c5c1146c71edbd`;
-- evidence artifact: `8811651756`;
+  `ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`;
+- evidence artifact: `8811926753`;
 - artifact ZIP SHA-256:
-  `25cc32166b6c105a05b64ee1bdeca710c8c7876eaa1cc96204574c185d5f53fb`.
+  `cbedec6dc3f538d1eaae6bec7cda8aaa15bb0f87240503ff2ead49aed1e1a162`.
 
 The first native tranche presents base glyph video. Subtitle compositing, Opus
 audio output, and Windows/macOS packaging are not yet claimed.

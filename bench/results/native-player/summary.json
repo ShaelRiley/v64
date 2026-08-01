@@ -1,19 +1,19 @@
 {
   "format": "V64-NATIVE-PLAYER-EVIDENCE-1",
   "workflow": {
-    "id": 30679295472,
-    "head": "da0f09e954fba70da301f506e4d3f6f8d4a99b11",
+    "id": 30680126006,
+    "head": "0d5a1131b3ea67aeb6589d5c7f40cae852a37f6c",
     "conclusion": "success"
   },
   "artifact": {
-    "id": 8811651756,
+    "id": 8811926753,
     "name": "v64-native-player-evidence",
-    "zipSha256": "25cc32166b6c105a05b64ee1bdeca710c8c7876eaa1cc96204574c185d5f53fb"
+    "zipSha256": "cbedec6dc3f538d1eaae6bec7cda8aaa15bb0f87240503ff2ead49aed1e1a162"
   },
   "hashes": {
     "normativePaletteSha256": "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105",
     "reportSha256": "29f730b4fe3f9ecfefc58de7b32b209c78df37989df741606d286ed24fca58cf",
-    "releaseBinarySha256": "18f3f52cf1a756588659626da0e02ba59c2a59e3f67aeb03a8c5c1146c71edbd"
+    "releaseBinarySha256": "ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88"
   },
   "passed": [
     "all 131 JavaScript tests",

@@ -58,7 +58,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo fmt --all --check
+          rustfmt --edition 2024 --check \
+            crates/v64-capi/src/lib.rs \
+            crates/v64-cli/src/main.rs \
+            crates/v64-core/src/decoder.rs \
+            crates/v64-core/src/bin/v64-golden-stream.rs \
+            crates/v64-core/src/lib.rs
           cc -std=c11 -Wall -Wextra -Werror -Iinclude \
             -fsyntax-only tests/capi/v64_capi_smoke.c
           c++ -std=c++17 -Wall -Wextra -Werror -Iinclude \

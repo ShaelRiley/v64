@@ -82,10 +82,9 @@ fn read_bounded(path: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut bytes = Vec::new();
     reader.read_to_end(&mut bytes)?;
     if bytes.len() > MAX_CLI_INPUT_BYTES {
-        return Err(format!(
-            "input exceeds the stable CLI limit of {MAX_CLI_INPUT_BYTES} bytes"
-        )
-        .into());
+        return Err(
+            format!("input exceeds the stable CLI limit of {MAX_CLI_INPUT_BYTES} bytes").into(),
+        );
     }
     Ok(bytes)
 }
@@ -138,7 +137,9 @@ fn verify(path: &Path) -> Result<(), Box<dyn Error>> {
             state_hash ^= u64::from(*byte);
             state_hash = state_hash.wrapping_mul(0x0000_0100_0000_01b3);
         }
-        records = records.checked_add(1).ok_or("video record count overflow")?;
+        records = records
+            .checked_add(1)
+            .ok_or("video record count overflow")?;
         keyframes = keyframes
             .checked_add(u32::from(info.keyframe))
             .ok_or("keyframe count overflow")?;
@@ -191,7 +192,9 @@ fn state_stream(input: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
             writer.write_all(&0u16.to_le_bytes())?;
             writer.write_all(&u32::try_from(state.len())?.to_le_bytes())?;
             writer.write_all(state)?;
-            records = records.checked_add(1).ok_or("video record count overflow")?;
+            records = records
+                .checked_add(1)
+                .ok_or("video record count overflow")?;
         }
         if records != decoder.video_record_count() {
             return Err("decoded record count disagrees with container".into());

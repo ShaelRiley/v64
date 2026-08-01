@@ -43,11 +43,8 @@ impl Decoder {
     }
 
     pub fn from_bytes_with_config(input: &[u8], config: DecoderConfig) -> Result<Self> {
-        let file = crate::parse_with_resource_limits(
-            input,
-            config.parse_options,
-            config.resource_limits,
-        )?;
+        let file =
+            crate::parse_with_resource_limits(input, config.parse_options, config.resource_limits)?;
         Ok(Self::from_file(file))
     }
 
@@ -176,9 +173,7 @@ impl Decoder {
                 return Err(crate::Error::new("RPTF payload must be empty"));
             }
             if self.state.is_none() {
-                return Err(crate::Error::new(
-                    "Repeat frame precedes first video frame",
-                ));
+                return Err(crate::Error::new("Repeat frame precedes first video frame"));
             }
             FrameInfo {
                 timestamp: chunk.timestamp,
@@ -214,7 +209,10 @@ mod tests {
         let mut repeats = 0u32;
         while let Some(info) = decoder.advance().expect("timeline should decode") {
             assert_eq!(
-                decoder.current_state().expect("frame should expose state").len(),
+                decoder
+                    .current_state()
+                    .expect("frame should expose state")
+                    .len(),
                 expected_state
             );
             decoded += 1;
@@ -242,7 +240,9 @@ mod tests {
             Some(first_info)
         );
         assert_eq!(
-            decoder.current_state().expect("replayed state should exist"),
+            decoder
+                .current_state()
+                .expect("replayed state should exist"),
             first_state
         );
     }

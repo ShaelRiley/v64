@@ -36,7 +36,9 @@ fn encode_golden_stream(decoder: &mut Decoder) -> Result<Vec<u8>, Box<dyn Error>
         output.extend_from_slice(&0u16.to_le_bytes());
         output.extend_from_slice(&u32::try_from(state.len())?.to_le_bytes());
         output.extend_from_slice(state);
-        records = records.checked_add(1).ok_or("video record count overflow")?;
+        records = records
+            .checked_add(1)
+            .ok_or("video record count overflow")?;
     }
     if records != decoder.video_record_count() {
         return Err("decoded record count disagrees with container".into());

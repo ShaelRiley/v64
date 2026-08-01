@@ -569,7 +569,10 @@ mod tests {
         let _guard = TEST_LOCK.lock().expect("test lock should remain usable");
         let handle = v64_decoder_create(2, 1024);
         assert_ne!(handle, 0);
-        assert_eq!(v64_decoder_push_word_le(handle, 0x0000_3456, 2), V64_STATUS_OK);
+        assert_eq!(
+            v64_decoder_push_word_le(handle, 0x0000_3456, 2),
+            V64_STATUS_OK
+        );
         assert_eq!(
             v64_decoder_push_byte(handle, 0),
             V64_STATUS_LIMIT,

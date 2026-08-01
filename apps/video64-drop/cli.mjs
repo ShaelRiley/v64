@@ -3,6 +3,8 @@ import process from "node:process";
 
 import {
   createDropJob,
+  createDropQueue,
+  enqueueDropInputs,
   suggestDropOutputPath
 } from "./model.mjs";
 import {
@@ -29,16 +31,18 @@ function parseArguments(args) {
 }
 
 function usage() {
-  return `Video64 Drop application-core tranche
+  return `Video64 Drop application core
 
 Usage:
+  video64-drop plan INPUT... [--output-directory DIR] [encoder options]
   video64-drop inspect INPUT [--fps 24] [--columns 80] [--palette 32]
                               [--glyphs 32|64] [--profile balanced]
   video64-drop encode INPUT [OUTPUT.v64] [same options]
 
-This is the tested application core and headless Linux entry point. The native
-drag-and-drop window, sampled size estimator, decoded preview, AM1 source-audio
-encoding, and Particle Lighting controls remain subsequent tranches.`;
+The plan command exposes the deterministic queue and collision-safe output
+allocation used by the native shell. Progress events from encode are written as
+newline-delimited JSON to standard error. The completed job document is written
+to standard output.`;
 }
 
 function settingsFromOptions(options) {
@@ -69,6 +73,16 @@ async function main() {
     return;
   }
   const { positional, options } = parseArguments(rest);
+  if (command === "plan") {
+    if (positional.length === 0) throw new Error("plan requires at least one input file");
+    const queue = enqueueDropInputs(
+      createDropQueue({ settings: settingsFromOptions(options) }),
+      positional,
+      { outputDirectory: options["output-directory"] ?? null }
+    );
+    console.log(JSON.stringify(queue, null, 2));
+    return;
+  }
   if (command === "inspect") {
     if (positional.length !== 1) throw new Error("inspect requires one input file");
     const job = createDropJob({

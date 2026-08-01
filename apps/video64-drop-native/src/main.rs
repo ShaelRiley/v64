@@ -35,7 +35,9 @@ const CONTROL_GAP: i32 = 14;
 const QUEUE_Y: i32 = 286;
 const QUEUE_ROW_HEIGHT: i32 = 48;
 const MAX_VISIBLE_JOBS: usize = 6;
-const ENCODE_BUTTON: Rect = Rect::new(810, 650, 170, 46);
+fn encode_button() -> Rect {
+    Rect::new(810, 650, 170, 46)
+}
 
 #[derive(Clone, Debug)]
 struct CoreConfig {
@@ -682,7 +684,7 @@ fn open_selected_output(state: &mut ShellState) {
 }
 
 fn handle_click(core: &CoreConfig, state: &mut ShellState, x: i32, y: i32) {
-    if ENCODE_BUTTON.contains_point((x, y)) {
+    if encode_button().contains_point((x, y)) {
         begin_batch(state);
         return;
     }
@@ -1064,12 +1066,12 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
         Color::RGB(38, 72, 112)
     });
     canvas
-        .fill_rect(ENCODE_BUTTON)
+        .fill_rect(encode_button())
         .map_err(|error| error.to_string())?;
     draw_text(
         canvas,
-        ENCODE_BUTTON.x() + 22,
-        ENCODE_BUTTON.y() + 15,
+        encode_button().x() + 22,
+        encode_button().y() + 15,
         if state.batch_active {
             "ENCODING"
         } else {

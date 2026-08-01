@@ -196,7 +196,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             .map_err(Into::into);
     }
 
-    run_windowed(core, options.inputs, options.smoke_presents).map_err(Into::into)
+    run_windowed(&core, options.inputs, options.smoke_presents).map_err(Into::into)
 }
 
 fn usage() -> &'static str {
@@ -449,12 +449,12 @@ fn write_json(path: &Path, value: &Value) -> Result<(), String> {
 }
 
 fn run_windowed(
-    core: CoreConfig,
+    core: &CoreConfig,
     inputs: Vec<PathBuf>,
     smoke_presents: Option<u32>,
 ) -> Result<(), String> {
     let mut state = ShellState::default();
-    add_inputs(&core, &mut state, inputs)?;
+    add_inputs(core, &mut state, inputs)?;
 
     let sdl = sdl2::init().map_err(|error| error.to_string())?;
     let video = sdl.video().map_err(|error| error.to_string())?;
@@ -476,7 +476,7 @@ fn run_windowed(
     'running: loop {
         process_worker_messages(&mut state, &mut worker);
         if state.batch_active && worker.is_none() {
-            start_next_worker(&core, &mut state, &mut worker);
+            start_next_worker(core, &mut state, &mut worker);
         }
 
         for event in event_pump.poll_iter() {
@@ -493,7 +493,7 @@ fn run_windowed(
                         "Encoding is active; quit after the current file completes".to_owned();
                 }
                 Event::DropFile { filename, .. } => {
-                    add_inputs(&core, &mut state, vec![PathBuf::from(filename)])?;
+                    add_inputs(core, &mut state, vec![PathBuf::from(filename)])?;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Tab),
@@ -549,7 +549,7 @@ fn run_windowed(
                     x,
                     y,
                     ..
-                } => handle_click(&core, &mut state, x, y),
+                } => handle_click(core, &mut state, x, y),
                 _ => {}
             }
         }
@@ -607,7 +607,7 @@ fn add_inputs(
 
 fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {
     if state.jobs.iter().any(|job| job.status != JobStatus::Queued) {
-        state.notice = "Settings are locked after encoding starts".to_owned();
+        "Settings are locked after encoding starts".clone_into(&mut state.notice);
         return;
     }
     if !state.settings.adjust(state.focus, direction) {
@@ -637,9 +637,9 @@ fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {
 fn begin_batch(state: &mut ShellState) {
     if state.jobs.iter().any(|job| job.status == JobStatus::Queued) {
         state.batch_active = true;
-        state.notice = "Encoding queued files".to_owned();
+        "Encoding queued files".clone_into(&mut state.notice);
     } else {
-        state.notice = "No queued files are ready to encode".to_owned();
+        "No queued files are ready to encode".clone_into(&mut state.notice);
     }
 }
 
@@ -651,9 +651,9 @@ fn remove_selected(state: &mut ShellState) {
     {
         state.jobs.remove(state.selected);
         state.selected = state.selected.min(state.jobs.len().saturating_sub(1));
-        state.notice = "Removed selected file".to_owned();
+        "Removed selected file".clone_into(&mut state.notice);
     } else {
-        state.notice = "Only queued or failed files can be removed".to_owned();
+        "Only queued or failed files can be removed".clone_into(&mut state.notice);
     }
 }
 
@@ -663,7 +663,7 @@ fn retry_selected(state: &mut ShellState) {
             job.status = JobStatus::Queued;
             job.stage = None;
             job.detail = Some("Ready to retry".to_owned());
-            state.notice = "Failed file returned to the queue".to_owned();
+            "Failed file returned to the queue".clone_into(&mut state.notice);
         }
     }
 }
@@ -673,12 +673,12 @@ fn open_selected_output(state: &mut ShellState) {
         return;
     };
     if job.status != JobStatus::Completed {
-        state.notice = "The selected file has no completed output yet".to_owned();
+        "The selected file has no completed output yet".clone_into(&mut state.notice);
         return;
     }
     let directory = job.output.parent().unwrap_or_else(|| Path::new("."));
     match Command::new("xdg-open").arg(directory).spawn() {
-        Ok(_) => state.notice = "Opened the output folder".to_owned(),
+        Ok(_) => "Opened the output folder".clone_into(&mut state.notice),
         Err(error) => state.notice = format!("Could not open output folder: {error}"),
     }
 }
@@ -720,7 +720,7 @@ fn start_next_worker(core: &CoreConfig, state: &mut ShellState, worker: &mut Opt
         .position(|job| job.status == JobStatus::Queued)
     else {
         state.batch_active = false;
-        state.notice = "Queue complete".to_owned();
+        "Queue complete".clone_into(&mut state.notice);
         return;
     };
     let job = state.jobs[index].clone();
@@ -741,15 +741,15 @@ fn spawn_encode_worker(
     job: ShellJob,
 ) -> Receiver<WorkerMessage> {
     let (sender, receiver) = mpsc::channel();
-    thread::spawn(move || run_encode_worker(core, settings, job, sender));
+    thread::spawn(move || run_encode_worker(&core, &settings, &job, &sender));
     receiver
 }
 
 fn run_encode_worker(
-    core: CoreConfig,
-    settings: ShellSettings,
-    job: ShellJob,
-    sender: Sender<WorkerMessage>,
+    core: &CoreConfig,
+    settings: &ShellSettings,
+    job: &ShellJob,
+    sender: &Sender<WorkerMessage>,
 ) {
     let mut command = Command::new(&core.node);
     command
@@ -1107,28 +1107,28 @@ fn draw_progress(
     x: i32,
     y: i32,
     width: u32,
-    progress: f32,
+    progress_percent: u32,
 ) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(31, 37, 48));
     canvas
         .fill_rect(Rect::new(x, y, width, 10))
         .map_err(|error| error.to_string())?;
-    let filled = (progress.clamp(0.0, 1.0) * width as f32).round() as u32;
+    let filled = width.saturating_mul(progress_percent.min(100)) / 100;
     canvas.set_draw_color(Color::RGB(83, 160, 218));
     canvas
         .fill_rect(Rect::new(x, y, filled, 10))
         .map_err(|error| error.to_string())
 }
 
-fn stage_progress(stage: Option<&str>) -> f32 {
+fn stage_progress(stage: Option<&str>) -> u32 {
     match stage {
-        Some("analysis") => 0.12,
-        Some("video_encode") => 0.48,
-        Some("audio_encode") => 0.70,
-        Some("mux") => 0.84,
-        Some("verify") => 0.94,
-        Some("complete") => 1.0,
-        _ => 0.03,
+        Some("analysis") => 12,
+        Some("video_encode") => 48,
+        Some("audio_encode") => 70,
+        Some("mux") => 84,
+        Some("verify") => 94,
+        Some("complete") => 100,
+        _ => 3,
     }
 }
 
@@ -1266,7 +1266,7 @@ mod tests {
             stage_progress(Some("complete")),
         ];
         assert!(values.windows(2).all(|pair| pair[0] <= pair[1]));
-        assert_eq!(values.last().copied(), Some(1.0));
+        assert_eq!(values.last().copied(), Some(100));
     }
 
     #[test]

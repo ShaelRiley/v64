@@ -118,7 +118,9 @@ export function buildOggOpusFromAurn(run) {
 export function decodeAurnRunToPcm(run, options = {}) {
   const ogg = buildOggOpusFromAurn(run);
   const result = spawnSync(options.ffmpegPath || "ffmpeg", [
-    "-v", "error", "-f", "ogg", "-i", "pipe:0",
+    "-v", "error",
+    "-c:a", options.opusDecoder || "libopus",
+    "-f", "ogg", "-i", "pipe:0",
     "-map_metadata", "-1", "-vn", "-ac", "1", "-ar", "48000",
     "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1"
   ], {
@@ -129,7 +131,7 @@ export function decodeAurnRunToPcm(run, options = {}) {
   if (result.error) throw new Error(`ffmpeg could not start: ${result.error.message}`);
   if (result.status !== 0) {
     throw new Error(
-      `ffmpeg Opus decode failed (${result.status}): ${result.stderr.toString("utf8").trim()}`
+      `ffmpeg libopus decode failed (${result.status}): ${result.stderr.toString("utf8").trim()}`
     );
   }
   const pcm = Buffer.from(result.stdout);
@@ -214,5 +216,6 @@ export const OGG_OPUS_WRAPPER = Object.freeze({
   serial: OGG_SERIAL,
   vendor: "V64",
   sampleRate: 48000,
-  channels: 1
+  channels: 1,
+  decoder: "libopus"
 });

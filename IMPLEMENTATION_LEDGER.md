@@ -351,16 +351,37 @@ AM1 preprocessing/bitrate workflow `30597112780`, code head
 
 ## Phase 3 — Rust and stable API
 
-- [ ] `crates/v64-core`
+- [x] `crates/v64-core`
 - [ ] `crates/v64-encoder`
 - [ ] `crates/v64-cli`
 - [ ] Stable C ABI
-- [ ] JavaScript/Rust golden-state and raster/PCM hash agreement
-- [ ] Fuzz targets and allocation-limit regression corpus
+- [x] JavaScript/Rust golden-state and raster hash agreement
+- [ ] Rust/JavaScript decoded PCM agreement before the audio profile is frozen
+- [x] Fuzz targets and allocation-limit regression corpus
 
-The Rust implementation is now the next mandatory cross-language gate. GitHub
-Actions may install a pinned stable toolchain even when Rust is absent from the
-interactive development environment.
+Coverage-guided fuzzing and deterministic allocation-regression gate, workflow
+`30674870112`, checked implementation head
+`5d3ec23a7bcc4fc3fc77abea3ba88a61bf4eba78`:
+
+- all 131 JavaScript tests and every Rust target passed in debug and release;
+- seven cargo-fuzz/libFuzzer targets compiled and completed 512 seeded smoke
+  iterations each;
+- 29 project-owned seeds reproduced byte-for-byte;
+- exact gates cover maximum legal frame/raster state, declared container sizes,
+  DEFLATE expansion, pathological commands, subtitle expansion, audio packet
+  and timing declarations, repeated malformed recovery, and WebAssembly
+  accessor boundaries;
+- corpus manifest SHA-256
+  `acf0e1f72811a687afb2da848cc53a6b28a8f8328b6093a8d2c3e777a1ed3df4`;
+- allocation report SHA-256
+  `76ea255cf40527359e34afc48d66930e72030dc47a0c6f4210c63c0d32ecc5ce`;
+- expansion report SHA-256
+  `564330c69c8e41c3072a660649fc1135bc14ea182c0f33b0277439556df25641`;
+- artifact `8810093827`, ZIP SHA-256
+  `c33b97798756d363a4b216a20fa9697af2c8de35246cf19c35a49349fc6edb99`.
+
+The next mandatory implementation gate is a stable Rust decoder API and C ABI,
+with a stable CLI surface, before the native player.
 
 ## Phase 4 — products
 
@@ -412,11 +433,10 @@ maintainer identity is delegated to those platforms.
 
 ## Next concrete step
 
-Create the `crates/v64-core` Rust workspace and implement the bounded header,
-chunk-framing, cadence, palette-depth, asset-identity, and optional encoder
-profile parser. Add golden tests against the JavaScript fixtures and establish
-cell-state agreement for Phase-1 and direct Grammar B before proceeding to
-subtitle and audio timelines.
+Define and freeze the stable Rust decoder API and C ABI around the already
+bounded container, frame, extension, and renderer surfaces. Add a stable CLI
+surface and cross-language ABI conformance fixtures before beginning the native
+player.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

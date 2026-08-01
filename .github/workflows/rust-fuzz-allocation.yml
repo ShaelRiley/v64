@@ -91,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo "+$FUZZ_TOOLCHAIN" metadata --manifest-path fuzz/Cargo.toml --format-version 1 > target/fuzz-cargo-metadata.json
+          cargo "+$FUZZ_TOOLCHAIN" metadata --manifest-path fuzz/Cargo.toml --locked --format-version 1 > target/fuzz-cargo-metadata.json
           for target in container_parse phase1_frame grammar_b renderer subtitles audio wasm_accessors; do
             cargo "+$FUZZ_TOOLCHAIN" fuzz build "$target"
           done
@@ -127,6 +127,7 @@ jobs:
               -rss_limit_mb=2048 \
               -artifact_prefix="target/fuzz-artifacts/$target/"
           done
+          git diff --exit-code -- fuzz/Cargo.lock
 
       - name: Record checked tool and target identities
         if: always()

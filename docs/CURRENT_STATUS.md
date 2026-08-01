@@ -75,6 +75,13 @@ Completed:
 - byte-identical JavaScript/Rust normative and synthetic-palette rasters;
 - a dependency-free `wasm32-unknown-unknown` renderer conformance module;
 - byte-identical Node and headless-Chrome WebAssembly raster reconstruction;
+- permanent cargo-fuzz targets for the container, Phase-1, direct Grammar B,
+  renderer, subtitle, audio, and WebAssembly-facing surfaces;
+- a reproducible project-owned 29-seed corpus with deterministic PR smoke and
+  scheduled/manual deep profiles;
+- exact allocation and adversarial-size gates across container payload totals,
+  frame state, command bounds, subtitle expansion, audio timing, renderer
+  arithmetic, recovery, and WebAssembly accessors;
 - permanent read-only CI for resource, rollback, renderer, and WebAssembly
   conformance.
 
@@ -157,11 +164,38 @@ Permanent workflow `30655257956` passed at implementation head
 - artifact ZIP SHA-256:
   `150ab65aca1e97b87949c2986ca3be62643726890340de837a4ffacb0962b3d7`.
 
+## Checked fuzz and allocation-regression tranche
+
+Permanent workflow `30674870112` passed at implementation head
+`5d3ec23a7bcc4fc3fc77abea3ba88a61bf4eba78`.
+
+- all 131 JavaScript tests passed;
+- every Rust target passed in debug and optimized release modes;
+- all seven cargo-fuzz/libFuzzer targets compiled;
+- the 29-seed corpus reproduced byte-for-byte;
+- every target completed 512 deterministic smoke iterations with seed 1;
+- maximum legal frame state is 262,144 cells / 786,432 committed bytes;
+- maximum legal raster is 4,096 × 8,192 / 134,217,728 RGBA bytes;
+- 64 repeated malformed/recovery iterations passed for Phase-1 and Grammar B;
+- container aggregate payload, subtitle frame/entry, audio packet/timing, and
+  WebAssembly accessor boundaries rejected deterministically;
+- corpus manifest SHA-256:
+  `acf0e1f72811a687afb2da848cc53a6b28a8f8328b6093a8d2c3e777a1ed3df4`;
+- allocation report SHA-256:
+  `76ea255cf40527359e34afc48d66930e72030dc47a0c6f4210c63c0d32ecc5ce`;
+- expansion report SHA-256:
+  `564330c69c8e41c3072a660649fc1135bc14ea182c0f33b0277439556df25641`;
+- evidence artifact: `8810093827`;
+- artifact ZIP SHA-256:
+  `c33b97798756d363a4b216a20fa9697af2c8de35246cf19c35a49349fc6edb99`.
+
+The SM2 parser now checks declared frame count, expected duration, and
+canonical-entry budgets before retaining repeated planes. This closes the
+allocation-amplification path found while constructing the adversarial corpus.
+
 ## Next mandatory gates
 
-1. Add coverage-guided fuzz targets for the container parser, frame decoder,
-   renderer boundary checks, subtitle/audio extensions, and WebAssembly surface.
-2. Add deterministic allocation-regression budgets and adversarial-size corpora.
-3. Expose the stable C ABI, then proceed toward the native player, Video64 Drop,
-   and VLC integration.
-4. Complete genuine blinded AM1 speech listening before bitrate freeze.
+1. Stabilize the Rust decoder API, CLI surface, and C ABI.
+2. Proceed toward the native player, Video64 Drop, browser integration, and VLC
+   integration in the planned product order.
+3. Complete genuine blinded AM1 speech listening before bitrate freeze.

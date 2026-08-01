@@ -1,0 +1,218 @@
+{
+  "format": "V64-RUST-FUZZ-CORPUS-1",
+  "targets": [
+    "audio",
+    "container_parse",
+    "grammar_b",
+    "phase1_frame",
+    "renderer",
+    "subtitles",
+    "wasm_accessors"
+  ],
+  "seedCount": 29,
+  "seeds": [
+    {
+      "target": "audio",
+      "name": "misaligned-time",
+      "bytes": 53,
+      "sha256": "89f437b32a977b8481c6c4979667d79ae56f2cb2dad002a92c1edf095afbac47",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "audio",
+      "name": "one-packet",
+      "bytes": 53,
+      "sha256": "4a7234873ca459aa68b4587a398d7a8b0813b64298f2a019db6b50c3b2fd0f19",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "audio",
+      "name": "packet-count-bomb",
+      "bytes": 48,
+      "sha256": "cdf030109c746e006e7c4d17d7bebb7613d6ca74b445c120d10503c94bcb64f6",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "audio",
+      "name": "truncated",
+      "bytes": 20,
+      "sha256": "de47c9b27eb8d300dbb5f2c353e632c393262cf06340c4fa7f1b40c4cbd36f90",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "container_parse",
+      "name": "oversized-declaration",
+      "bytes": 128,
+      "sha256": "95b84fcc2563f8945aaa35a0a1a2caf514bb3fec0c0eab44d9c136a70756ee76",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "container_parse",
+      "name": "truncated-magic",
+      "bytes": 8,
+      "sha256": "ceb1711fbbcbc899ef8555775e4a8f5e23978727b441cf106f64be989f64a280",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "container_parse",
+      "name": "valid-procedural.v64",
+      "bytes": 13483,
+      "sha256": "cd72a313c0c71d67e85f8b6c62cabdc72a879b6dff5b933bddee0f0ae9ae2b2c",
+      "source": "tests/golden/procedural.v64"
+    },
+    {
+      "target": "container_parse",
+      "name": "zero-header",
+      "bytes": 128,
+      "sha256": "38723a2e5e8a17aa7950dc008209944e898f69a7bd10a23c839d341e935fd5ca",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "grammar_b",
+      "name": "component-update",
+      "bytes": 11,
+      "sha256": "076d7b6405eb880f0bf05c498f64fbc00d966b88a64c75f6dfb41c77ca4d757f",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "grammar_b",
+      "name": "keyframe-empty",
+      "bytes": 7,
+      "sha256": "fe62ab76b14ad0d7ec7a74e4d8f0b8ed94770d264acef0195c18a6c2d03a2c89",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "grammar_b",
+      "name": "nonzero-padding",
+      "bytes": 9,
+      "sha256": "3d1226dfc1e7cc6ba1fbe90e640a25792569af0df7406b867278fddccc8449c4",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "grammar_b",
+      "name": "oversized-grid",
+      "bytes": 7,
+      "sha256": "00857c48735eb715a3b3030dcf38d9c6a86300197e31e1ec6803e3b0345a337e",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "phase1_frame",
+      "name": "delta-skip",
+      "bytes": 9,
+      "sha256": "c3f3953427d73f5fea4f864da778833ff02cde5c46b1c6d865ca9df2bfcbd0aa",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "phase1_frame",
+      "name": "keyframe-repeat",
+      "bytes": 12,
+      "sha256": "8ffb63cfe4b08f7099f7360036bb36ff4c937284857c8e6c512d248276f35af1",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "phase1_frame",
+      "name": "max-grid-end",
+      "bytes": 7,
+      "sha256": "3f8adb5a157f0e6d741f6e4b9c5311ac4a54f1ab5c033e929508089067f77d7a",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "phase1_frame",
+      "name": "partial-literal",
+      "bytes": 11,
+      "sha256": "5dc79aed628b2220373d3b85b9ad10d2672a4a0c38edc7b53c5f692747195ff5",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "renderer",
+      "name": "invalid-token",
+      "bytes": 8,
+      "sha256": "f377435104a4ab35a2680330e1c2d6c23cd59ee80d303a2e977e132574cd088a",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "renderer",
+      "name": "max-layout",
+      "bytes": 5,
+      "sha256": "66a5b277c6671e6db958dda0dd4f5025c6708ec9f345380383b2ec8f04e4f7e2",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "renderer",
+      "name": "one-cell",
+      "bytes": 8,
+      "sha256": "5c994a6c65f2b62eeddb3340d0e5fbb17562e4dd51e0b9b37891e39e362d1d79",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "renderer",
+      "name": "outside-grid",
+      "bytes": 5,
+      "sha256": "477cf676d1460bfeea863e8086e5d819b4dc11531e7192dcd49923226e9b0a13",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "subtitles",
+      "name": "full-repeat",
+      "bytes": 39,
+      "sha256": "8b02a3db86649426d4c2273d2f55ddd4bc60848cbe0d8a68260b469f7c466377",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "subtitles",
+      "name": "noncanonical-varint",
+      "bytes": 19,
+      "sha256": "63c57e2a8006ffee77f4b7d43773e8be18ef284beb1c7c8dab36f1f7c0b7fdf2",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "subtitles",
+      "name": "repeat-bomb",
+      "bytes": 39,
+      "sha256": "7daa0fc8a254b34c36273b10d842517bde730274f4f9d210553dbc9f446c97ea",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "subtitles",
+      "name": "truncated-entry",
+      "bytes": 19,
+      "sha256": "2485eae898412821e7cf416c0295e35f5160f2e19ddfdc30a77086bff4cf4751",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "wasm_accessors",
+      "name": "boundary",
+      "bytes": 4,
+      "sha256": "94751be059d25844fadecb89656e16fe3ec44058475017859ec762f26173f014",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "wasm_accessors",
+      "name": "first",
+      "bytes": 4,
+      "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "wasm_accessors",
+      "name": "last",
+      "bytes": 4,
+      "sha256": "d62f6e6f4e175a9bbc122e421f2cfeaf0808a20afee57e8d774d7db0cd2f4553",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "wasm_accessors",
+      "name": "outside",
+      "bytes": 4,
+      "sha256": "9cdd3043783c27d0fc66d6514672700be332885b0132636c5f1e467abf79d517",
+      "source": "project-authored structural seed"
+    },
+    {
+      "target": "wasm_accessors",
+      "name": "u32-max",
+      "bytes": 4,
+      "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+      "source": "project-authored structural seed"
+    }
+  ]
+}

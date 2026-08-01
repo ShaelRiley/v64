@@ -13,6 +13,8 @@ on:
       - "bench/results/native-player/**"
       - "crates/v64-core/**"
       - "apps/v64-player/**"
+      - "prototype/js/audio-decode.mjs"
+      - "tests/audio-decode.test.mjs"
       - "tools/build-am1-fixtures.mjs"
       - "tools/build-subt-fixture.mjs"
       - "docs/NATIVE_PLAYER.md"
@@ -137,10 +139,6 @@ jobs:
             assert.equal(report.scanlines.defaultEnabled, true);
             assert.equal(report.scanlines.menuPath, "View/CRT Scanlines");
             assert.equal(report.scanlines.keyboardToggle, "C");
-            assert.notEqual(
-              report.scanlines.unfilteredFnv1a64,
-              report.scanlines.filteredFnv1a64
-            );
             assert.equal(report.controls.eof, true);
             assert.equal(
               report.controls.repeatedSeekHashes[0],
@@ -157,6 +155,14 @@ jobs:
             assert.equal(report.extensions.validatedBeforePlayback, true);
           }
 
+          assert.notEqual(
+            procedural.scanlines.unfilteredFnv1a64,
+            procedural.scanlines.filteredFnv1a64
+          );
+          assert.notEqual(
+            subt.scanlines.unfilteredFnv1a64,
+            subt.scanlines.filteredFnv1a64
+          );
           assert.equal(procedural.subtitlePresentation.composited, false);
           assert.equal(procedural.audioPresentation.decoded, false);
 

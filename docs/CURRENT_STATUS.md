@@ -33,8 +33,8 @@ orientation and proportions.
 
 That release asset is intentionally silent and predates native player profile
 2. Its manifest and checksums remain the authoritative description of that
-specific prerelease; the new subtitle/audio implementation does not
-retroactively alter it.
+specific prerelease; the newer subtitle/audio and feature-length evidence does
+not retroactively alter it.
 
 ## Format, encoder, and core state
 
@@ -104,14 +104,53 @@ head `d3ae297ae9c30d99e221c531346848dd3e3e01ce`.
 - artifact digest:
   `a6218636f1e45968c6acbf92dbf88da6064d244a57d7cda880bbac9a43734c9f`.
 
-The official Google Docs design document records the same checked evidence and
-remaining caveats.
+## Checked feature-length synchronization evidence
+
+Permanent workflow `30709579841` passed at immutable pull-request head
+`554456a037e8393b5793326cddc418f6a7ea8b55`.
+
+The deterministic 30-minute fixture contains:
+
+- 900 independently seekable two-second groups;
+- 43,200 nominal video frames;
+- 900 keyframes and 900 repeat spans;
+- 1,800 `AURN` runs and 1,800 exact `SILN` spans;
+- 48,600 Opus packets;
+- 86,400,000 mono samples at 48 kHz;
+- 172,800,000 decoded PCM bytes, or 64.37% of the player ceiling.
+
+The release gate ran twice and produced byte-identical reports. Across 4,941
+irregular nanosecond increments and a separate single-increment comparison, it
+reported zero accumulated tick drift, zero PCM sample-index drift, exact EOF,
+stable repeated distant seeks, stable recovery after EOF, and exact pause and
+0.5×/2× rate transitions. Peak resident memory was 176,464 KiB.
+
+Checked identities:
+
+- fixture SHA-256:
+  `6cb462f16e2ebf9e0bf576210f1d8c6177cc9b69ba4f1045beef0252034d1f58`;
+- report SHA-256:
+  `4b667cfc198c5a9e9b10846082b4e68be1d2cb07db80e1996e7ca1520b25f2ce`;
+- gate binary SHA-256:
+  `91565e09695271a1af593994ffbc26dfabf8a70e2c082561b28bcd3fdad42443`;
+- evidence artifact: `8821428834`;
+- artifact digest:
+  `3e422742a81fdb004fa85b3f89b8663a42b2a5353a037be1e37b0f096e49bb56`.
+
+This proves deterministic player-clock, decoded video-record, and PCM timeline
+alignment for a feature-length file without waiting thirty wall-clock minutes.
+It does not measure operating-system mixer latency, audio-device oscillator
+error, or physical hardware scheduler drift.
+
+The official Google Docs design document records the checked player evidence
+and remaining caveats.
 
 ## Boundaries not yet claimed
 
 - Genuine blinded AM1 speech listening is still mandatory before freezing the
   normative audio bitrate profile.
-- Feature-length A/V drift evidence is not yet complete.
+- Operating-system and physical-device A/V drift remain platform qualification
+  work; the accelerated gate proves arithmetic and decoded-timeline alignment.
 - Fixed 0.5× and 2× audio currently changes pitch through deterministic sample
   repetition or decimation; no opaque time-stretching algorithm is claimed.
 - Windows and macOS packages are not yet claimed.
@@ -121,9 +160,9 @@ remaining caveats.
 
 1. Complete genuine blinded AM1 speech listening and decide whether the current
    speech bitrate profile can freeze.
-2. Produce feature-length synchronized playback evidence, including repeated
-   seeks and drift measurements across long files.
-3. Begin the Video64 Drop application tranche while preserving the current
+2. Begin the Video64 Drop application tranche while preserving the current
    format, glyph, palette, and primary encoder invariants.
+3. Add platform-specific real-device synchronization and packaging evidence as
+   Windows and macOS player work becomes executable.
 4. Continue broader browser/WebAssembly decoding and VLC integration in the
    planned product order.

@@ -190,8 +190,7 @@ pub fn decode_sm2(bytes: &[u8], limits: SubtitleLimits) -> Result<SubtitleSequen
                     let cell = previous
                         .checked_add(i64::from(delta))
                         .ok_or_else(|| "Invalid SM2 removal".to_owned())?;
-                    let cell =
-                        u32::try_from(cell).map_err(|_| "Invalid SM2 removal".to_owned())?;
+                    let cell = u32::try_from(cell).map_err(|_| "Invalid SM2 removal".to_owned())?;
                     if cell >= cell_count || current.remove(&cell).is_none() {
                         return Err("Invalid SM2 removal".to_owned());
                     }
@@ -201,13 +200,8 @@ pub fn decode_sm2(bytes: &[u8], limits: SubtitleLimits) -> Result<SubtitleSequen
                 if upsert_count > cell_count {
                     return Err("SM2 full plane exceeds cell count".to_owned());
                 }
-                let upserts = read_sm2_entries(
-                    bytes,
-                    &mut offset,
-                    upsert_count,
-                    cell_count,
-                    palette_depth,
-                )?;
+                let upserts =
+                    read_sm2_entries(bytes, &mut offset, upsert_count, cell_count, palette_depth)?;
                 for entry in upserts {
                     current.insert(entry.cell_index, entry);
                 }
@@ -360,8 +354,8 @@ fn read_sm2_entries(
     cell_count: u32,
     palette_depth: u16,
 ) -> Result<Vec<SubtitleEntry>, String> {
-    let count = usize::try_from(count)
-        .map_err(|_| "SM2 entry count exceeds platform range".to_owned())?;
+    let count =
+        usize::try_from(count).map_err(|_| "SM2 entry count exceeds platform range".to_owned())?;
     let minimum_bytes = count
         .checked_mul(19)
         .ok_or_else(|| "Truncated or out-of-bounds SM2 entry".to_owned())?;
@@ -378,8 +372,8 @@ fn read_sm2_entries(
         let cell = previous
             .checked_add(i64::from(delta))
             .ok_or_else(|| "Truncated or out-of-bounds SM2 entry".to_owned())?;
-        let cell_index = u32::try_from(cell)
-            .map_err(|_| "Truncated or out-of-bounds SM2 entry".to_owned())?;
+        let cell_index =
+            u32::try_from(cell).map_err(|_| "Truncated or out-of-bounds SM2 entry".to_owned())?;
         let end = offset
             .checked_add(18)
             .ok_or_else(|| "Truncated or out-of-bounds SM2 entry".to_owned())?;
@@ -407,7 +401,9 @@ fn read_sm2_entries(
 }
 
 fn opus_packet_samples(packet: &[u8]) -> Result<u16, String> {
-    let toc = *packet.first().ok_or_else(|| "Empty Opus packet".to_owned())?;
+    let toc = *packet
+        .first()
+        .ok_or_else(|| "Empty Opus packet".to_owned())?;
     let config = toc >> 3;
     let samples_per_frame = if config < 12 {
         [480u16, 960, 1920, 2880][usize::from(config & 3)]
@@ -437,11 +433,9 @@ fn opus_packet_samples(packet: &[u8]) -> Result<u16, String> {
 }
 
 fn samples_to_ticks(samples: u32) -> Result<u64, String> {
-    let numerator = u64::from(samples)
-        .checked_mul(TICK_RATE)
-        .ok_or_else(|| {
-            "AURN sample count is not exactly representable on the V64 timeline".to_owned()
-        })?;
+    let numerator = u64::from(samples).checked_mul(TICK_RATE).ok_or_else(|| {
+        "AURN sample count is not exactly representable on the V64 timeline".to_owned()
+    })?;
     if numerator % AURN_SAMPLE_RATE != 0 {
         return Err(
             "AURN sample count is not exactly representable on the V64 timeline".to_owned(),

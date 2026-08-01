@@ -190,7 +190,8 @@ pub fn apply_packed_commands(
                 SET_BACKGROUND | REPEAT_BACKGROUND => state[target + 2] = first as u8,
                 SET_COLOR_PAIR | REPEAT_COLOR_PAIR => {
                     state[target + 1] = first as u8;
-                    state[target + 2] = second.expect("color-pair opcodes set a second value") as u8;
+                    state[target + 2] =
+                        second.expect("color-pair opcodes set a second value") as u8;
                 }
                 _ => unreachable!(),
             }

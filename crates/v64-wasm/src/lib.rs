@@ -65,7 +65,10 @@ mod tests {
         assert!(v64_renderer_fixture_byte(0) <= 255);
         assert!(v64_renderer_fixture_byte(v64_renderer_fixture_len() - 1) <= 255);
         assert_eq!(v64_renderer_fixture_byte(v64_renderer_fixture_len()), 256);
-        assert_eq!(v64_renderer_fixture_byte(v64_renderer_fixture_len() + 1), 256);
+        assert_eq!(
+            v64_renderer_fixture_byte(v64_renderer_fixture_len() + 1),
+            256
+        );
         assert_eq!(v64_renderer_fixture_byte(u32::MAX), 256);
         let hash = u64::from(v64_renderer_fixture_fnv_lo())
             | (u64::from(v64_renderer_fixture_fnv_hi()) << 32);

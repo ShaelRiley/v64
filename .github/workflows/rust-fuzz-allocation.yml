@@ -53,6 +53,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install media test dependency
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
       - name: Install pinned Rust toolchains
         shell: bash
         run: |

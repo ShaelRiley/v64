@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   PALETTE_ASSET_IDS,
+  paletteAssetFromHash,
   paletteAssetFromId
 } from "../prototype/js/palette-registry.mjs";
 
@@ -21,6 +22,7 @@ test("V64-P256-1 is the normative executable default", () => {
   assert.equal(normative.metadata.prefix.sha256, PREFIX_HASH);
   assert.deepEqual(normative.bytes, candidate6a.bytes);
   assert.deepEqual(normative.colors, candidate6a.colors);
+  assert.equal(paletteAssetFromHash(Buffer.from(HASH, "hex")).id, "V64-P256-1");
 });
 
 test("normative prefix fixes dark chroma and three neutral rungs", () => {

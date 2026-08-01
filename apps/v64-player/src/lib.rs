@@ -4,16 +4,26 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
 
-use v64_core::decoder::{Decoder, DecoderConfig, FrameInfo};
-use v64_core::extensions::{ExtensionSummary, validate_extension_timelines};
-use v64_core::renderer::{CANONICAL_GLYPH_BYTES, Raster, fnv1a64, render_rgba};
-use v64_core::{ParseOptions, ResourceLimits};
+#[cfg(feature = "native-audio")]
+use opus::{Channels, Decoder as OpusDecoder};
+use v64_core::decoder::{Decoder as VideoDecoder, DecoderConfig, FrameInfo};
+use v64_core::extensions::{
+    AudioLimits, ExtensionSummary, SubtitleEntry, SubtitleLimits, decode_aurn_payload, decode_sm2,
+    validate_extension_timelines,
+};
+use v64_core::renderer::{
+    CANONICAL_GLYPH_BYTES, CELL_HEIGHT, CELL_WIDTH, Raster, fnv1a64, render_rgba,
+};
+use v64_core::{ParseOptions, ResourceLimits, V64File};
 
-pub const PLAYER_PROFILE_VERSION: u32 = 1;
+pub const PLAYER_PROFILE_VERSION: u32 = 2;
 pub const TICK_RATE: u64 = 60_000;
+pub const AUDIO_SAMPLE_RATE: u32 = 48_000;
 pub const MAX_PLAYER_INPUT_BYTES: usize = v64_core::MAX_TOTAL_PAYLOAD_BYTES;
 pub const MAX_PLAYER_CHUNKS: u32 = 1_000_000;
 pub const MAX_PLAYER_INFLATED_CHUNK_BYTES: usize = 256 * 1024 * 1024;
+pub const MAX_PLAYER_AUDIO_PCM_BYTES: usize = 256 * 1024 * 1024;
+pub const MAX_PLAYER_AUDIO_SAMPLES: usize = MAX_PLAYER_AUDIO_PCM_BYTES / 2;
 pub const DEFAULT_SCANLINE_STRENGTH_PERCENT: u8 = 18;
 pub const DEFAULT_SCANLINE_PERIOD: i64 = 2;
 pub const DEFAULT_SCANLINE_PHASE: i64 = 1;
@@ -144,9 +154,45 @@ impl PlayerPreferences {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SubtitleRun {
+    timestamp: u64,
+    end: u64,
+    frames: Vec<Vec<SubtitleEntry>>,
+}
+
+#[cfg(feature = "native-audio")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DecodedAudio {
+    samples: Vec<i16>,
+}
+
+#[cfg(feature = "native-audio")]
+impl DecodedAudio {
+    pub fn samples(&self) -> &[i16] {
+        &self.samples
+    }
+
+    pub fn sample_count(&self) -> usize {
+        self.samples.len()
+    }
+
+    pub fn byte_count(&self) -> usize {
+        self.samples.len() * 2
+    }
+
+    pub fn sample_index_at_ticks(&self, ticks: u64) -> usize {
+        ticks_to_sample_floor(ticks).min(self.samples.len())
+    }
+
+    pub fn fnv1a64(&self) -> u64 {
+        fnv1a64_pcm(&self.samples)
+    }
+}
+
 #[derive(Debug)]
 pub struct PlayerSession {
-    decoder: Decoder,
+    decoder: VideoDecoder,
     current: Option<FrameInfo>,
     raster: Option<Raster>,
     position_ticks: u64,
@@ -155,6 +201,10 @@ pub struct PlayerSession {
     clock_remainder: u128,
     preferences: PlayerPreferences,
     extensions: ExtensionSummary,
+    subtitle_runs: Vec<SubtitleRun>,
+    subtitle_key: Option<(usize, usize)>,
+    #[cfg(feature = "native-audio")]
+    audio: Option<DecodedAudio>,
     palette: &'static [u8; 768],
     palette_name: &'static str,
 }
@@ -172,14 +222,20 @@ impl PlayerSession {
                 max_chunks: MAX_PLAYER_CHUNKS,
             },
         };
-        let decoder =
-            Decoder::from_bytes_with_config(bytes, config).map_err(|error| error.to_string())?;
+        let decoder = VideoDecoder::from_bytes_with_config(bytes, config)
+            .map_err(|error| error.to_string())?;
         let (palette, palette_name) = match decoder.header().palette_hash {
             NORMATIVE_PALETTE_HASH => (NORMATIVE_PALETTE_BYTES, "V64-P256-1"),
             LEGACY_PROOF_PALETTE_HASH => (LEGACY_PROOF_PALETTE_BYTES, "V64-P256-CANDIDATE-1"),
             _ => return Err("Player does not recognize the declared palette hash".to_owned()),
         };
         let extensions = validate_extension_timelines(decoder.file())?;
+        let subtitle_runs = decode_subtitle_runs(
+            decoder.file(),
+            u64::from(decoder.header().cadence.frame_ticks),
+        )?;
+        #[cfg(feature = "native-audio")]
+        let audio = decode_audio_timeline(decoder.file())?;
         let mut session = Self {
             decoder,
             current: None,
@@ -190,6 +246,10 @@ impl PlayerSession {
             clock_remainder: 0,
             preferences,
             extensions,
+            subtitle_runs,
+            subtitle_key: None,
+            #[cfg(feature = "native-audio")]
+            audio,
             palette,
             palette_name,
         };
@@ -243,6 +303,15 @@ impl PlayerSession {
 
     pub fn extensions(&self) -> ExtensionSummary {
         self.extensions
+    }
+
+    pub fn subtitle_composited(&self) -> bool {
+        !self.subtitle_runs.is_empty()
+    }
+
+    #[cfg(feature = "native-audio")]
+    pub fn audio(&self) -> Option<&DecodedAudio> {
+        self.audio.as_ref()
     }
 
     pub fn palette_name(&self) -> &'static str {
@@ -318,6 +387,7 @@ impl PlayerSession {
             self.position_ticks = target;
             self.current = None;
             self.raster = None;
+            self.subtitle_key = None;
             return Ok(());
         }
 
@@ -325,7 +395,12 @@ impl PlayerSession {
             current.timestamp <= target
                 && target < current.timestamp.saturating_add(current.duration)
         }) {
+            let next_subtitle_key = self.subtitle_key_at(target);
+            let subtitle_changed = next_subtitle_key != self.subtitle_key;
             self.position_ticks = target;
+            if subtitle_changed {
+                self.refresh_raster()?;
+            }
             return Ok(());
         }
 
@@ -337,6 +412,7 @@ impl PlayerSession {
             self.decoder.reset_video();
             self.current = None;
             self.raster = None;
+            self.subtitle_key = None;
         }
 
         loop {
@@ -380,14 +456,31 @@ impl PlayerSession {
             .saturating_add(u64::try_from(elapsed_ticks).unwrap_or(u64::MAX))
             .min(self.duration_ticks());
         let prior_frame = self.current;
+        let prior_subtitle_key = self.subtitle_key;
         let remainder = self.clock_remainder;
         self.seek(target)?;
         self.clock_remainder = remainder;
-        Ok(self.current != prior_frame)
+        Ok(self.current != prior_frame || self.subtitle_key != prior_subtitle_key)
     }
 
     pub fn unfiltered_raster_hash(&self) -> Option<u64> {
         self.raster.as_ref().map(|raster| fnv1a64(&raster.rgba))
+    }
+
+    fn subtitle_key_at(&self, ticks: u64) -> Option<(usize, usize)> {
+        let run_index = self
+            .subtitle_runs
+            .partition_point(|run| run.timestamp <= ticks)
+            .checked_sub(1)?;
+        let run = &self.subtitle_runs[run_index];
+        if ticks >= run.end {
+            return None;
+        }
+        let frame_index = usize::try_from(
+            (ticks - run.timestamp) / u64::from(self.decoder.header().cadence.frame_ticks),
+        )
+        .ok()?;
+        run.frames.get(frame_index).map(|_| (run_index, frame_index))
     }
 
     fn refresh_raster(&mut self) -> Result<(), String> {
@@ -395,16 +488,246 @@ impl PlayerSession {
             .decoder
             .current_state()
             .ok_or_else(|| "Decoder exposed no state for the current frame".to_owned())?;
-        self.raster = Some(render_rgba(
+        let mut raster = render_rgba(
             state,
             usize::from(self.decoder.header().columns),
             usize::from(self.decoder.header().rows),
             usize::from(self.decoder.header().palette_depth),
             CANONICAL_GLYPH_BYTES,
             self.palette,
-        )?);
+        )?;
+        let subtitle_key = self.subtitle_key_at(self.position_ticks);
+        if let Some((run_index, frame_index)) = subtitle_key {
+            let entries = &self.subtitle_runs[run_index].frames[frame_index];
+            composite_subtitle_entries(
+                &mut raster,
+                usize::from(self.decoder.header().columns),
+                usize::from(self.decoder.header().rows),
+                usize::from(self.decoder.header().palette_depth),
+                self.palette,
+                entries,
+            )?;
+        }
+        self.subtitle_key = subtitle_key;
+        self.raster = Some(raster);
         Ok(())
     }
+}
+
+fn decode_subtitle_runs(file: &V64File, frame_ticks: u64) -> Result<Vec<SubtitleRun>, String> {
+    let mut runs = Vec::new();
+    for chunk in file
+        .chunks
+        .iter()
+        .filter(|chunk| chunk.chunk_type == "SUBT")
+    {
+        let expected_frames = usize::try_from(chunk.duration / frame_ticks)
+            .map_err(|_| "SUBT frame count exceeds platform range".to_owned())?;
+        let sequence = decode_sm2(
+            &chunk.payload,
+            SubtitleLimits {
+                expected_frames: Some(expected_frames),
+                ..SubtitleLimits::default()
+            },
+        )?;
+        runs.push(SubtitleRun {
+            timestamp: chunk.timestamp,
+            end: chunk
+                .timestamp
+                .checked_add(chunk.duration)
+                .ok_or_else(|| "SUBT timestamp overflow".to_owned())?,
+            frames: sequence.frames,
+        });
+    }
+    Ok(runs)
+}
+
+pub fn composite_subtitle_entries(
+    raster: &mut Raster,
+    columns: usize,
+    rows: usize,
+    palette_depth: usize,
+    palette: &[u8],
+    entries: &[SubtitleEntry],
+) -> Result<(), String> {
+    let expected_width = columns
+        .checked_mul(CELL_WIDTH)
+        .ok_or_else(|| "Subtitle raster width overflow".to_owned())?;
+    let expected_height = rows
+        .checked_mul(CELL_HEIGHT)
+        .ok_or_else(|| "Subtitle raster height overflow".to_owned())?;
+    let expected_rgba = expected_width
+        .checked_mul(expected_height)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| "Subtitle raster length overflow".to_owned())?;
+    let cell_count = columns
+        .checked_mul(rows)
+        .ok_or_else(|| "Subtitle cell count overflow".to_owned())?;
+    let required_palette = palette_depth
+        .checked_mul(3)
+        .ok_or_else(|| "Subtitle palette length overflow".to_owned())?;
+    if columns == 0
+        || rows == 0
+        || raster.width != expected_width
+        || raster.height != expected_height
+        || raster.rgba.len() != expected_rgba
+        || palette_depth < 2
+        || palette_depth > 256
+        || palette.len() < required_palette
+    {
+        return Err("Subtitle compositor received incompatible raster metadata".to_owned());
+    }
+
+    for entry in entries {
+        let cell = usize::try_from(entry.cell_index)
+            .map_err(|_| "Subtitle cell index exceeds platform range".to_owned())?;
+        if cell >= cell_count
+            || usize::from(entry.foreground) >= palette_depth
+            || usize::from(entry.background) >= palette_depth
+        {
+            return Err("Subtitle entry exceeds the active grid or palette".to_owned());
+        }
+        let cell_x = cell % columns;
+        let cell_y = cell / columns;
+        let foreground = usize::from(entry.foreground) * 3;
+        let background = usize::from(entry.background) * 3;
+        for pixel_y in 0..CELL_HEIGHT {
+            for pixel_x in 0..CELL_WIDTH {
+                let palette_offset = if entry.mask[pixel_y] & (0x80 >> pixel_x) != 0 {
+                    foreground
+                } else {
+                    background
+                };
+                let output_offset = ((cell_y * CELL_HEIGHT + pixel_y) * expected_width
+                    + cell_x * CELL_WIDTH
+                    + pixel_x)
+                    * 4;
+                raster.rgba[output_offset..output_offset + 3]
+                    .copy_from_slice(&palette[palette_offset..palette_offset + 3]);
+                raster.rgba[output_offset + 3] = 255;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "native-audio")]
+fn decode_audio_timeline(file: &V64File) -> Result<Option<DecodedAudio>, String> {
+    let has_audio = file.chunks.iter().any(|chunk| chunk.chunk_type == "AURN");
+    if !has_audio {
+        return Ok(None);
+    }
+    let expected_samples = exact_samples_from_ticks(file.header.duration_ticks)?;
+    if expected_samples > MAX_PLAYER_AUDIO_SAMPLES {
+        return Err(format!(
+            "Decoded audio exceeds the player ceiling of {MAX_PLAYER_AUDIO_PCM_BYTES} PCM bytes"
+        ));
+    }
+    let mut samples = Vec::with_capacity(expected_samples.min(4_194_304));
+    for chunk in file
+        .chunks
+        .iter()
+        .filter(|chunk| chunk.chunk_type == "AURN" || chunk.chunk_type == "SILN")
+    {
+        if chunk.chunk_type == "SILN" {
+            let silence_samples = exact_samples_from_ticks(chunk.duration)?;
+            let next = samples
+                .len()
+                .checked_add(silence_samples)
+                .ok_or_else(|| "Decoded audio sample count overflow".to_owned())?;
+            if next > MAX_PLAYER_AUDIO_SAMPLES {
+                return Err("Decoded audio exceeds the player PCM ceiling".to_owned());
+            }
+            samples.resize(next, 0);
+            continue;
+        }
+
+        let run = decode_aurn_payload(
+            &chunk.payload,
+            chunk.timestamp,
+            chunk.duration,
+            AudioLimits::default(),
+        )?;
+        let decoded_sample_count = usize::try_from(run.decoded_samples)
+            .map_err(|_| "AURN decoded sample count exceeds platform range".to_owned())?;
+        if decoded_sample_count > MAX_PLAYER_AUDIO_SAMPLES {
+            return Err("AURN run exceeds the player PCM ceiling".to_owned());
+        }
+        let mut decoded = Vec::with_capacity(decoded_sample_count);
+        let mut decoder = OpusDecoder::new(AUDIO_SAMPLE_RATE, Channels::Mono)
+            .map_err(|error| error.to_string())?;
+        let mut frame = [0i16; 5_760];
+        for packet in &run.packets {
+            let count = decoder
+                .decode(&packet.bytes, &mut frame, false)
+                .map_err(|error| error.to_string())?;
+            if count != usize::from(packet.samples) {
+                return Err("Native Opus decode disagrees with the AURN packet duration".to_owned());
+            }
+            decoded.extend_from_slice(&frame[..count]);
+        }
+        if decoded.len() != decoded_sample_count {
+            return Err("Native Opus decode disagrees with AURN sample accounting".to_owned());
+        }
+        let start = usize::try_from(run.pre_skip)
+            .map_err(|_| "AURN pre-skip exceeds platform range".to_owned())?;
+        let kept = usize::try_from(run.kept_samples)
+            .map_err(|_| "AURN kept samples exceed platform range".to_owned())?;
+        let end = start
+            .checked_add(kept)
+            .ok_or_else(|| "AURN trim range overflow".to_owned())?;
+        let trimmed_end = end
+            .checked_add(
+                usize::try_from(run.end_trim)
+                    .map_err(|_| "AURN end trim exceeds platform range".to_owned())?,
+            )
+            .ok_or_else(|| "AURN trim range overflow".to_owned())?;
+        if trimmed_end != decoded.len() {
+            return Err("Native Opus trim range disagrees with AURN accounting".to_owned());
+        }
+        let next = samples
+            .len()
+            .checked_add(kept)
+            .ok_or_else(|| "Decoded audio sample count overflow".to_owned())?;
+        if next > MAX_PLAYER_AUDIO_SAMPLES {
+            return Err("Decoded audio exceeds the player PCM ceiling".to_owned());
+        }
+        samples.extend_from_slice(&decoded[start..end]);
+    }
+    if samples.len() != expected_samples {
+        return Err("Native audio timeline does not cover the declared duration".to_owned());
+    }
+    Ok(Some(DecodedAudio { samples }))
+}
+
+#[cfg(feature = "native-audio")]
+fn exact_samples_from_ticks(ticks: u64) -> Result<usize, String> {
+    let numerator = u128::from(ticks)
+        .checked_mul(u128::from(AUDIO_SAMPLE_RATE))
+        .ok_or_else(|| "Audio timeline sample conversion overflow".to_owned())?;
+    if numerator % u128::from(TICK_RATE) != 0 {
+        return Err("Audio timeline is not aligned to a 48 kHz sample boundary".to_owned());
+    }
+    usize::try_from(numerator / u128::from(TICK_RATE))
+        .map_err(|_| "Audio timeline sample count exceeds platform range".to_owned())
+}
+
+#[cfg(feature = "native-audio")]
+fn ticks_to_sample_floor(ticks: u64) -> usize {
+    let samples = u128::from(ticks) * u128::from(AUDIO_SAMPLE_RATE) / u128::from(TICK_RATE);
+    usize::try_from(samples).unwrap_or(usize::MAX)
+}
+
+#[cfg(feature = "native-audio")]
+pub fn fnv1a64_pcm(samples: &[i16]) -> u64 {
+    let mut hash = 0xcbf29ce484222325u64;
+    for sample in samples {
+        for byte in sample.to_le_bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+    }
+    hash
 }
 
 pub fn apply_crt_scanlines(
@@ -499,6 +822,30 @@ mod tests {
         session.set_rate(PlaybackRate::DOUBLE).unwrap();
         session.advance_wall_clock(500_000_000).unwrap();
         assert_eq!(session.position_ticks(), 90_000);
+    }
+
+    #[test]
+    fn subtitle_compositor_replaces_only_declared_cells() {
+        let mut raster = Raster {
+            width: 8,
+            height: 16,
+            rgba: vec![99; 8 * 16 * 4],
+        };
+        let mut palette = [0u8; 768];
+        palette[3..6].copy_from_slice(&[10, 20, 30]);
+        palette[6..9].copy_from_slice(&[200, 210, 220]);
+        let mut mask = [0u8; 16];
+        mask[0] = 0x80;
+        let entry = SubtitleEntry {
+            cell_index: 0,
+            foreground: 2,
+            background: 1,
+            mask,
+        };
+        composite_subtitle_entries(&mut raster, 1, 1, 3, &palette, &[entry]).unwrap();
+        assert_eq!(&raster.rgba[0..4], &[200, 210, 220, 255]);
+        assert_eq!(&raster.rgba[4..8], &[10, 20, 30, 255]);
+        assert_eq!(&raster.rgba[8 * 4..8 * 4 + 4], &[10, 20, 30, 255]);
     }
 
     #[test]

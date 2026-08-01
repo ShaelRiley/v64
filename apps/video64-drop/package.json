@@ -1,0 +1,11 @@
+{
+  "name": "video64-drop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test ../../tests/video64-drop.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

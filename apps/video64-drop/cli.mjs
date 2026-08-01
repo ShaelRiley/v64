@@ -1,0 +1,108 @@
+#!/usr/bin/env node
+import process from "node:process";
+
+import {
+  createDropJob,
+  suggestDropOutputPath
+} from "./model.mjs";
+import {
+  analyzeDropJob,
+  runDropJob
+} from "./runner.mjs";
+
+function parseArguments(args) {
+  const positional = [];
+  const options = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index];
+    if (!value.startsWith("--")) {
+      positional.push(value);
+      continue;
+    }
+    const key = value.slice(2);
+    const next = args[index + 1];
+    if (!next || next.startsWith("--")) throw new Error(`Option --${key} requires a value`);
+    options[key] = next;
+    index += 1;
+  }
+  return { positional, options };
+}
+
+function usage() {
+  return `Video64 Drop application-core tranche
+
+Usage:
+  video64-drop inspect INPUT [--fps 24] [--columns 80] [--palette 32]
+                              [--glyphs 32|64] [--profile balanced]
+  video64-drop encode INPUT [OUTPUT.v64] [same options]
+
+This is the tested application core and headless Linux entry point. The native
+drag-and-drop window, sampled size estimator, decoded preview, AM1 source-audio
+encoding, and Particle Lighting controls remain subsequent tranches.`;
+}
+
+function settingsFromOptions(options) {
+  return {
+    fps: options.fps,
+    columns: options.columns,
+    palette: options.palette,
+    glyphs: options.glyphs,
+    profile: options.profile
+  };
+}
+
+function eventSummary(job) {
+  const stage = Object.values(job.stages).find((entry) => entry.state === "running") ?? null;
+  return {
+    format: "VIDEO64-DROP-EVENT-1",
+    jobId: job.id,
+    status: job.status,
+    stage: stage?.id ?? null,
+    detail: stage?.detail ?? null
+  };
+}
+
+async function main() {
+  const [command, ...rest] = process.argv.slice(2);
+  if (!command || command === "help" || command === "--help") {
+    console.log(usage());
+    return;
+  }
+  const { positional, options } = parseArguments(rest);
+  if (command === "inspect") {
+    if (positional.length !== 1) throw new Error("inspect requires one input file");
+    const job = createDropJob({
+      id: "drop-0001",
+      inputPath: positional[0],
+      settings: settingsFromOptions(options)
+    });
+    console.log(JSON.stringify(analyzeDropJob(job), null, 2));
+    return;
+  }
+  if (command === "encode") {
+    if (positional.length < 1 || positional.length > 2) {
+      throw new Error("encode requires INPUT and an optional OUTPUT.v64");
+    }
+    const outputPath = positional[1] ?? suggestDropOutputPath(positional[0]);
+    const job = createDropJob({
+      id: "drop-0001",
+      inputPath: positional[0],
+      outputPath,
+      settings: settingsFromOptions(options)
+    });
+    const result = await runDropJob(job, {
+      onUpdate(snapshot) {
+        process.stderr.write(`${JSON.stringify(eventSummary(snapshot))}\n`);
+      }
+    });
+    console.log(JSON.stringify(result, null, 2));
+    if (result.status !== "completed") process.exitCode = 1;
+    return;
+  }
+  throw new Error(`Unknown command "${command}"\n\n${usage()}`);
+}
+
+main().catch((error) => {
+  console.error(`video64-drop: ${error.message}`);
+  process.exitCode = 1;
+});

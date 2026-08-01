@@ -67,7 +67,8 @@ test("AURN reconstructs deterministic Ogg Opus framing", () => {
     serial: 0x56363401,
     vendor: "V64",
     sampleRate: 48000,
-    channels: 1
+    channels: 1,
+    decoder: "libopus"
   });
   for (const run of runs) {
     const first = buildOggOpusFromAurn(run);

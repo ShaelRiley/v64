@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
+import process from "node:process";
 
 import {
   DEFAULT_DROP_SETTINGS,
@@ -12,6 +13,7 @@ import {
 } from "../apps/video64-drop/model.mjs";
 import {
   analyzeDropJob,
+  encodeDropVideo,
   runDropJob,
   runDropQueue
 } from "../apps/video64-drop/runner.mjs";
@@ -54,6 +56,19 @@ test("queue ingestion is stable, sequential, and deduplicated", () => {
   assert.deepEqual(queue.jobs.map((job) => job.inputPath), [resolve("a.mp4"), resolve("b.mkv")]);
 });
 
+test("queue output names cannot collide inside a batch", () => {
+  const queue = enqueueDropInputs(
+    createDropQueue(),
+    ["/one/movie.mp4", "/two/movie.mkv", "/three/movie.webm"],
+    { outputDirectory: "/tmp/drop-output" }
+  );
+  assert.deepEqual(queue.jobs.map((job) => job.outputPath), [
+    "/tmp/drop-output/movie.v64",
+    "/tmp/drop-output/movie.2.v64",
+    "/tmp/drop-output/movie.3.v64"
+  ]);
+});
+
 test("source analysis derives the cell grid and discloses silent output", () => {
   const job = createDropJob({ id: "drop-0001", inputPath: "speech.mp4" });
   const analysis = analyzeDropJob(job, {
@@ -76,6 +91,42 @@ test("source analysis derives the cell grid and discloses silent output", () => 
   });
   assert.equal(analysis.capabilities.audioEncoding, false);
   assert.match(analysis.warnings[0], /silent proof encoder/);
+});
+
+test("the proof encoder is invoked as an isolated child process", () => {
+  let invocation = null;
+  const result = encodeDropVideo("/tmp/input.mp4", "/tmp/output.v64", {
+    fps: "24",
+    columns: "80",
+    palette: "32",
+    glyphs: "32",
+    profile: "balanced"
+  }, {
+    spawnSyncImpl(program, args, options) {
+      invocation = { program, args, options };
+      return {
+        status: 0,
+        stdout: JSON.stringify({ frames: 24, bytes: 4096 }),
+        stderr: "",
+        error: null
+      };
+    }
+  });
+  assert.equal(invocation.program, process.execPath);
+  assert.match(invocation.args[0], /prototype\/js\/cli\.mjs$/);
+  assert.deepEqual(invocation.args.slice(1, 4), [
+    "encode",
+    "/tmp/input.mp4",
+    "/tmp/output.v64"
+  ]);
+  assert.deepEqual(invocation.args.slice(4), [
+    "--fps", "24",
+    "--columns", "80",
+    "--palette", "32",
+    "--glyphs", "32",
+    "--profile", "balanced"
+  ]);
+  assert.deepEqual(result, { frames: 24, bytes: 4096 });
 });
 
 test("a Drop job drives the real stage contract and verifies its output", async () => {

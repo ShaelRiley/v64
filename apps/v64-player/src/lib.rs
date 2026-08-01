@@ -20,6 +20,8 @@ pub const DEFAULT_SCANLINE_PHASE: i64 = 1;
 
 pub const NORMATIVE_PALETTE_BYTES: &[u8; 768] =
     include_bytes!("../../../assets/palettes/v64-p256-1.rgb");
+pub const LEGACY_PROOF_PALETTE_BYTES: &[u8; 768] =
+    include_bytes!("../../../assets/palettes/v64-p256-candidate-1.rgb");
 
 const CANONICAL_GLYPH_HASH: [u8; 32] = [
     0x9a, 0x75, 0x06, 0x27, 0x11, 0x50, 0x4d, 0xc9, 0xb2, 0xd4, 0x73, 0xcd, 0xc2, 0x61, 0xe0, 0xa8,
@@ -28,6 +30,10 @@ const CANONICAL_GLYPH_HASH: [u8; 32] = [
 const NORMATIVE_PALETTE_HASH: [u8; 32] = [
     0xc0, 0x3d, 0x23, 0x14, 0x1e, 0xb3, 0x3b, 0x80, 0xd7, 0x9d, 0x1a, 0x7f, 0x31, 0x67, 0xee, 0xb1,
     0x8c, 0xcf, 0x1f, 0x4f, 0x0c, 0x0f, 0x81, 0x57, 0x2f, 0x26, 0x9a, 0xbd, 0x51, 0x31, 0x71, 0x05,
+];
+const LEGACY_PROOF_PALETTE_HASH: [u8; 32] = [
+    0xf2, 0xb6, 0xae, 0x13, 0x2b, 0xc2, 0x69, 0xe1, 0x7e, 0x66, 0x37, 0x81, 0x84, 0xe6, 0x6f, 0x2d,
+    0xfd, 0xf0, 0xa0, 0x79, 0xff, 0x02, 0x81, 0xfa, 0x69, 0x85, 0x81, 0x44, 0x25, 0x2f, 0xef, 0xb2,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,6 +155,8 @@ pub struct PlayerSession {
     clock_remainder: u128,
     preferences: PlayerPreferences,
     extensions: ExtensionSummary,
+    palette: &'static [u8; 768],
+    palette_name: &'static str,
 }
 
 impl PlayerSession {
@@ -156,7 +164,7 @@ impl PlayerSession {
         let config = DecoderConfig {
             parse_options: ParseOptions {
                 expected_glyph_hash: Some(CANONICAL_GLYPH_HASH),
-                expected_palette_hash: Some(NORMATIVE_PALETTE_HASH),
+                expected_palette_hash: None,
             },
             resource_limits: ResourceLimits {
                 max_inflated_chunk_bytes: MAX_PLAYER_INFLATED_CHUNK_BYTES,
@@ -166,6 +174,11 @@ impl PlayerSession {
         };
         let decoder =
             Decoder::from_bytes_with_config(bytes, config).map_err(|error| error.to_string())?;
+        let (palette, palette_name) = match decoder.header().palette_hash {
+            NORMATIVE_PALETTE_HASH => (NORMATIVE_PALETTE_BYTES, "V64-P256-1"),
+            LEGACY_PROOF_PALETTE_HASH => (LEGACY_PROOF_PALETTE_BYTES, "V64-P256-CANDIDATE-1"),
+            _ => return Err("Player does not recognize the declared palette hash".to_owned()),
+        };
         let extensions = validate_extension_timelines(decoder.file())?;
         let mut session = Self {
             decoder,
@@ -177,6 +190,8 @@ impl PlayerSession {
             clock_remainder: 0,
             preferences,
             extensions,
+            palette,
+            palette_name,
         };
         session.seek(0)?;
         Ok(session)
@@ -228,6 +243,10 @@ impl PlayerSession {
 
     pub fn extensions(&self) -> ExtensionSummary {
         self.extensions
+    }
+
+    pub fn palette_name(&self) -> &'static str {
+        self.palette_name
     }
 
     pub fn at_eof(&self) -> bool {
@@ -382,7 +401,7 @@ impl PlayerSession {
             usize::from(self.decoder.header().rows),
             usize::from(self.decoder.header().palette_depth),
             CANONICAL_GLYPH_BYTES,
-            NORMATIVE_PALETTE_BYTES,
+            self.palette,
         )?);
         Ok(())
     }

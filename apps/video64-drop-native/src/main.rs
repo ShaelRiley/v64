@@ -489,8 +489,8 @@ fn run_windowed(
                     if worker.is_none() {
                         break 'running;
                     }
-                    state.notice =
-                        "Encoding is active; quit after the current file completes".to_owned();
+                    "Encoding is active; quit after the current file completes"
+                        .clone_into(&mut state.notice);
                 }
                 Event::DropFile { filename, .. } => {
                     add_inputs(core, &mut state, vec![PathBuf::from(filename)])?;
@@ -504,12 +504,12 @@ fn run_windowed(
                     keycode: Some(Keycode::Left),
                     repeat: false,
                     ..
-                } => adjust_settings(&core, &mut state, -1),
+                } => adjust_settings(core, &mut state, -1),
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     repeat: false,
                     ..
-                } => adjust_settings(&core, &mut state, 1),
+                } => adjust_settings(core, &mut state, 1),
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     repeat: false,

@@ -4,10 +4,12 @@ use std::env;
 use std::error::Error;
 use std::ffi::OsString;
 use std::fs::{self, File};
-use std::io::Read;
+use std::io::{BufWriter, Read, Write};
+use std::mem::size_of;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use sdl2::audio::{AudioQueue, AudioSpecDesired};
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
@@ -17,8 +19,8 @@ use sdl2::render::{BlendMode, Canvas};
 use sdl2::video::Window;
 use serde_json::json;
 use v64_player::{
-    MAX_PLAYER_INPUT_BYTES, PLAYER_PROFILE_VERSION, PlayerPreferences, PlayerSession, TICK_RATE,
-    apply_crt_scanlines,
+    AUDIO_SAMPLE_RATE, MAX_PLAYER_INPUT_BYTES, PLAYER_PROFILE_VERSION, PlaybackRate,
+    PlayerPreferences, PlayerSession, TICK_RATE, apply_crt_scanlines,
 };
 
 const MENU_HEIGHT: i32 = 24;
@@ -26,13 +28,133 @@ const MENU_WIDTH: i32 = 72;
 const MENU_ITEM_WIDTH: u32 = 220;
 const MENU_ITEM_HEIGHT: u32 = 32;
 const SEEK_STEP_TICKS: i64 = 5 * TICK_RATE as i64;
+const AUDIO_QUEUE_LOW_SAMPLES: usize = 6_000;
+const AUDIO_QUEUE_TARGET_SAMPLES: usize = 24_000;
+const AUDIO_SOURCE_CHUNK_SAMPLES: usize = 16_384;
 
 #[derive(Debug)]
 struct Options {
     input: PathBuf,
     preferences: PathBuf,
     headless_report: Option<PathBuf>,
+    dump_audio_pcm: Option<PathBuf>,
     smoke_presents: Option<u32>,
+}
+
+struct NativeAudioOutput {
+    queue: AudioQueue<i16>,
+    source_cursor: usize,
+    rate: PlaybackRate,
+    paused: bool,
+}
+
+impl NativeAudioOutput {
+    fn open(
+        subsystem: &sdl2::AudioSubsystem,
+        session: &PlayerSession,
+    ) -> Result<Option<Self>, String> {
+        if session.audio().is_none() {
+            return Ok(None);
+        }
+        let desired = AudioSpecDesired {
+            freq: Some(i32::try_from(AUDIO_SAMPLE_RATE).map_err(|_| "Audio rate overflow")?),
+            channels: Some(1),
+            samples: Some(1024),
+        };
+        let queue = subsystem
+            .open_queue::<i16, _>(None, &desired)
+            .map_err(|error| error.to_string())?;
+        let mut output = Self {
+            queue,
+            source_cursor: 0,
+            rate: session.rate(),
+            paused: true,
+        };
+        output.resync(session)?;
+        Ok(Some(output))
+    }
+
+    fn maintain(&mut self, session: &PlayerSession, force_resync: bool) -> Result<(), String> {
+        if force_resync || self.rate != session.rate() {
+            return self.resync(session);
+        }
+        if session.at_eof() {
+            self.queue.clear();
+            self.queue.pause();
+            self.paused = true;
+            self.source_cursor = session.audio().map_or(0, |audio| audio.sample_count());
+            return Ok(());
+        }
+        if session.paused() {
+            if !self.paused {
+                self.queue.pause();
+                self.paused = true;
+            }
+            return Ok(());
+        }
+        if self.paused {
+            self.queue.resume();
+            self.paused = false;
+        }
+        let queued = usize::try_from(self.queue.size()).unwrap_or(usize::MAX) / size_of::<i16>();
+        if queued < AUDIO_QUEUE_LOW_SAMPLES {
+            self.refill(session)?;
+        }
+        Ok(())
+    }
+
+    fn resync(&mut self, session: &PlayerSession) -> Result<(), String> {
+        self.queue.clear();
+        self.rate = session.rate();
+        self.source_cursor = session.audio().map_or(0, |audio| {
+            audio.sample_index_at_ticks(session.position_ticks())
+        });
+        self.refill(session)?;
+        if session.paused() || session.at_eof() {
+            self.queue.pause();
+            self.paused = true;
+        } else {
+            self.queue.resume();
+            self.paused = false;
+        }
+        Ok(())
+    }
+
+    fn refill(&mut self, session: &PlayerSession) -> Result<(), String> {
+        let Some(audio) = session.audio() else {
+            return Ok(());
+        };
+        while self.source_cursor < audio.sample_count() {
+            let queued =
+                usize::try_from(self.queue.size()).unwrap_or(usize::MAX) / size_of::<i16>();
+            if queued >= AUDIO_QUEUE_TARGET_SAMPLES {
+                break;
+            }
+            let desired_output = AUDIO_QUEUE_TARGET_SAMPLES - queued;
+            let desired_source = match self.rate {
+                PlaybackRate::HALF => desired_output.div_ceil(2),
+                PlaybackRate::NORMAL => desired_output,
+                PlaybackRate::DOUBLE => desired_output.saturating_mul(2),
+                _ => return Err("Unsupported audio playback rate".to_owned()),
+            }
+            .min(AUDIO_SOURCE_CHUNK_SAMPLES)
+            .max(1);
+            let end = self
+                .source_cursor
+                .saturating_add(desired_source)
+                .min(audio.sample_count());
+            let source = &audio.samples()[self.source_cursor..end];
+            let output = transform_audio(source, self.rate)?;
+            if output.is_empty() {
+                break;
+            }
+            self.queue
+                .queue_audio(&output)
+                .map_err(|error| error.to_string())?;
+            self.source_cursor = end;
+        }
+        Ok(())
+    }
 }
 
 fn main() {
@@ -57,6 +179,9 @@ fn run() -> Result<(), Box<dyn Error>> {
     let preferences = PlayerPreferences::load(&options.preferences)?;
     let session = PlayerSession::from_bytes(&bytes, preferences)?;
 
+    if let Some(output) = options.dump_audio_pcm.as_deref() {
+        write_audio_pcm(&session, output)?;
+    }
     if let Some(output) = options.headless_report {
         return write_headless_report(session, &output).map_err(Into::into);
     }
@@ -64,13 +189,14 @@ fn run() -> Result<(), Box<dyn Error>> {
 }
 
 fn usage() -> &'static str {
-    "usage: v64-player [--preferences PATH] [--headless-report OUTPUT.json] [--smoke-presents N] INPUT.v64"
+    "usage: v64-player [--preferences PATH] [--headless-report OUTPUT.json] [--dump-audio-pcm OUTPUT.pcm] [--smoke-presents N] INPUT.v64"
 }
 
 fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
     let mut input = None;
     let mut preferences = None;
     let mut headless_report = None;
+    let mut dump_audio_pcm = None;
     let mut smoke_presents = None;
     let mut index = 0usize;
     while index < arguments.len() {
@@ -82,6 +208,10 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
             Some("--headless-report") => {
                 index += 1;
                 headless_report = Some(PathBuf::from(arguments.get(index).ok_or_else(|| usage())?));
+            }
+            Some("--dump-audio-pcm") => {
+                index += 1;
+                dump_audio_pcm = Some(PathBuf::from(arguments.get(index).ok_or_else(|| usage())?));
             }
             Some("--smoke-presents") => {
                 index += 1;
@@ -111,6 +241,7 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
         input,
         preferences: preferences.unwrap_or_else(default_preferences_path),
         headless_report,
+        dump_audio_pcm,
         smoke_presents,
     })
 }
@@ -158,9 +289,42 @@ fn read_bounded(path: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
     Ok(bytes)
 }
 
+fn write_audio_pcm(session: &PlayerSession, output: &Path) -> Result<(), String> {
+    let audio = session
+        .audio()
+        .ok_or_else(|| "The input has no AURN/SILN audio timeline".to_owned())?;
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    let file = File::create(output).map_err(|error| error.to_string())?;
+    let mut writer = BufWriter::new(file);
+    let mut encoded = Vec::with_capacity(16_384);
+    for chunk in audio.samples().chunks(8_192) {
+        encoded.clear();
+        for sample in chunk {
+            encoded.extend_from_slice(&sample.to_le_bytes());
+        }
+        writer
+            .write_all(&encoded)
+            .map_err(|error| error.to_string())?;
+    }
+    writer.flush().map_err(|error| error.to_string())
+}
+
 fn write_headless_report(mut session: PlayerSession, output: &Path) -> Result<(), String> {
     let frame_ticks = u64::from(session.frame_ticks());
-    let seek_order = [0u64, 8, 23, 8, 0];
+    let nominal_frames = session.duration_ticks() / frame_ticks;
+    if nominal_frames == 0 {
+        return Err("Headless conformance requires at least one nominal frame".to_owned());
+    }
+    let last_frame = nominal_frames - 1;
+    let seek_order = [
+        0u64,
+        8.min(last_frame),
+        23.min(last_frame),
+        8.min(last_frame),
+        0,
+    ];
     let mut seek_hashes = Vec::new();
     for frame in seek_order {
         session.seek(frame * frame_ticks)?;
@@ -171,6 +335,28 @@ fn write_headless_report(mut session: PlayerSession, output: &Path) -> Result<()
                 .ok_or_else(|| "Seek conformance produced no raster".to_owned())?
         ));
     }
+
+    let mut presentation_frames = vec![
+        0,
+        last_frame / 4,
+        last_frame / 2,
+        last_frame.saturating_mul(3) / 4,
+        last_frame,
+    ];
+    presentation_frames.sort_unstable();
+    presentation_frames.dedup();
+    let mut presentation_hashes = Vec::new();
+    for frame in &presentation_frames {
+        session.seek(*frame * frame_ticks)?;
+        presentation_hashes.push(format!(
+            "{:016x}",
+            session
+                .unfiltered_raster_hash()
+                .ok_or_else(|| "Presentation conformance produced no raster".to_owned())?
+        ));
+    }
+
+    session.seek(0)?;
     let first = session
         .raster()
         .ok_or_else(|| "Headless conformance produced no raster".to_owned())?;
@@ -200,13 +386,36 @@ fn write_headless_report(mut session: PlayerSession, output: &Path) -> Result<()
             .ok_or_else(|| "EOF recovery produced no raster".to_owned())?
     );
     let extensions = session.extensions();
+    let audio_report = session.audio().map_or_else(
+        || {
+            json!({
+                "decoded": false,
+                "sampleRate": AUDIO_SAMPLE_RATE,
+                "channels": 1,
+                "samples": 0,
+                "bytes": 0,
+                "pcmFnv1a64": null,
+            })
+        },
+        |audio| {
+            json!({
+                "decoded": true,
+                "sampleRate": AUDIO_SAMPLE_RATE,
+                "channels": 1,
+                "samples": audio.sample_count(),
+                "bytes": audio.byte_count(),
+                "pcmFnv1a64": format!("{:016x}", audio.fnv1a64()),
+            })
+        },
+    );
     let report = json!({
-        "format": "V64-NATIVE-PLAYER-1",
+        "format": "V64-NATIVE-PLAYER-2",
         "playerProfileVersion": PLAYER_PROFILE_VERSION,
         "bounded": {
             "maxInputBytes": MAX_PLAYER_INPUT_BYTES,
             "maxChunks": v64_player::MAX_PLAYER_CHUNKS,
             "maxInflatedChunkBytes": v64_player::MAX_PLAYER_INFLATED_CHUNK_BYTES,
+            "maxAudioPcmBytes": v64_player::MAX_PLAYER_AUDIO_PCM_BYTES,
         },
         "video": {
             "columns": session.columns(),
@@ -245,6 +454,12 @@ fn write_headless_report(mut session: PlayerSession, output: &Path) -> Result<()
             "audioPackets": extensions.audio_packets,
             "validatedBeforePlayback": true,
         },
+        "subtitlePresentation": {
+            "composited": session.subtitle_composited(),
+            "sampleFrames": presentation_frames,
+            "sampleFnv1a64": presentation_hashes,
+        },
+        "audioPresentation": audio_report,
     });
     let encoded = format!(
         "{}\n",
@@ -275,6 +490,16 @@ fn run_windowed(
         .clamp(480, 800);
 
     let sdl = sdl2::init().map_err(|error| error.to_string())?;
+    let audio_subsystem = if session.audio().is_some() {
+        Some(sdl.audio().map_err(|error| error.to_string())?)
+    } else {
+        None
+    };
+    let mut audio_output = audio_subsystem
+        .as_ref()
+        .map(|subsystem| NativeAudioOutput::open(subsystem, &session))
+        .transpose()?
+        .flatten();
     let video = sdl.video().map_err(|error| error.to_string())?;
     let window = video
         .window("Video 64", window_width, window_height)
@@ -303,12 +528,11 @@ fn run_windowed(
         let elapsed = now.saturating_duration_since(last_clock);
         last_clock = now;
         let elapsed_ns = u64::try_from(elapsed.as_nanos()).unwrap_or(u64::MAX);
-        if session.advance_wall_clock(elapsed_ns)? {
-            if session.raster().is_some() {
-                update_texture(&mut texture, &session)?;
-            }
+        if session.advance_wall_clock(elapsed_ns)? && session.raster().is_some() {
+            update_texture(&mut texture, &session)?;
         }
 
+        let mut audio_resync = false;
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -332,7 +556,10 @@ fn run_windowed(
                     ..
                 } => {
                     session.seek_relative(-SEEK_STEP_TICKS)?;
-                    update_texture(&mut texture, &session)?;
+                    if session.raster().is_some() {
+                        update_texture(&mut texture, &session)?;
+                    }
+                    audio_resync = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
@@ -343,6 +570,7 @@ fn run_windowed(
                     if session.raster().is_some() {
                         update_texture(&mut texture, &session)?;
                     }
+                    audio_resync = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Home),
@@ -351,22 +579,32 @@ fn run_windowed(
                 } => {
                     session.seek(0)?;
                     update_texture(&mut texture, &session)?;
+                    audio_resync = true;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::End),
                     repeat: false,
                     ..
-                } => session.seek(session.duration_ticks())?,
+                } => {
+                    session.seek(session.duration_ticks())?;
+                    audio_resync = true;
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     repeat: false,
                     ..
-                } => session.faster(),
+                } => {
+                    session.faster();
+                    audio_resync = true;
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     repeat: false,
                     ..
-                } => session.slower(),
+                } => {
+                    session.slower();
+                    audio_resync = true;
+                }
                 Event::MouseButtonDown {
                     mouse_btn: MouseButton::Left,
                     x,
@@ -392,6 +630,9 @@ fn run_windowed(
                 _ => {}
             }
         }
+        if let Some(output) = audio_output.as_mut() {
+            output.maintain(&session, audio_resync)?;
+        }
 
         draw(&mut canvas, &texture, &session, menu_open)?;
         presented = presented.saturating_add(1);
@@ -401,6 +642,22 @@ fn run_windowed(
         std::thread::sleep(Duration::from_millis(2));
     }
     Ok(())
+}
+
+fn transform_audio(source: &[i16], rate: PlaybackRate) -> Result<Vec<i16>, String> {
+    match rate {
+        PlaybackRate::HALF => {
+            let mut output = Vec::with_capacity(source.len().saturating_mul(2));
+            for sample in source {
+                output.push(*sample);
+                output.push(*sample);
+            }
+            Ok(output)
+        }
+        PlaybackRate::NORMAL => Ok(source.to_vec()),
+        PlaybackRate::DOUBLE => Ok(source.iter().step_by(2).copied().collect()),
+        _ => Err("Unsupported audio playback rate".to_owned()),
+    }
 }
 
 fn update_texture(
@@ -624,13 +881,33 @@ mod tests {
             "prefs.conf".into(),
             "--headless-report".into(),
             "report.json".into(),
+            "--dump-audio-pcm".into(),
+            "audio.pcm".into(),
             "input.v64".into(),
         ])
         .unwrap();
         assert_eq!(options.input, PathBuf::from("input.v64"));
         assert_eq!(options.preferences, PathBuf::from("prefs.conf"));
+        assert_eq!(options.dump_audio_pcm, Some(PathBuf::from("audio.pcm")));
         assert!(parse_options(&["a.v64".into(), "b.v64".into()]).is_err());
         assert!(parse_options(&["--smoke-presents".into(), "0".into(), "a.v64".into()]).is_err());
+    }
+
+    #[test]
+    fn fixed_rate_audio_transform_is_deterministic() {
+        let source = [10, 20, 30, 40];
+        assert_eq!(
+            transform_audio(&source, PlaybackRate::HALF).unwrap(),
+            [10, 10, 20, 20, 30, 30, 40, 40]
+        );
+        assert_eq!(
+            transform_audio(&source, PlaybackRate::NORMAL).unwrap(),
+            source
+        );
+        assert_eq!(
+            transform_audio(&source, PlaybackRate::DOUBLE).unwrap(),
+            [10, 30]
+        );
     }
 
     #[test]

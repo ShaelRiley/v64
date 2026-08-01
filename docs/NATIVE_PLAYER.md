@@ -1,9 +1,11 @@
 # Video 64 native player
 
 `v64-player` is the Linux-first native standalone player for `.v64` files. It
-uses stable decoder API version 1, the canonical 64-glyph asset, the normative
-`V64-P256-1` palette, a bounded integer playback clock, and an SDL2 software
-presentation surface. Decoding and rendering have no network dependency.
+uses stable decoder API version 1, native player profile version 2, the
+canonical 64-glyph asset, the normative `V64-P256-1` palette, a bounded integer
+playback clock, SDL2 software presentation, and libopus decoding. Decoding,
+rendering, subtitle compositing, and audio presentation have no network
+dependency.
 
 The immutable pre-promotion `V64-P256-CANDIDATE-1` hash remains registered for
 the repository's v0.1 golden files. The player accepts exactly that legacy
@@ -15,20 +17,20 @@ closed.
 Ubuntu 24.04 development dependencies:
 
 ```bash
-sudo apt-get install libsdl2-dev
+sudo apt-get install libopus-dev libsdl2-dev
 cargo build --locked --release --package v64-player --features native-ui
 target/release/v64-player example.v64
 ```
 
-The initial native gate is Linux-first. SDL2 also supports Windows and macOS,
-but packaging and platform-specific dependency instructions remain future
-work rather than claimed compatibility.
+The native gate is Linux-first. SDL2 and libopus support Windows and macOS, but
+packaging and platform-specific dependency instructions remain future work
+rather than claimed compatibility.
 
 ## Controls
 
 | Control | Action |
 | --- | --- |
-| Space | Pause or resume |
+| Space | Pause or resume video and audio |
 | Left / Right | Seek backward or forward five seconds |
 | Home / End | Seek to the start or declared EOF |
 | Up / Down | Select 0.5×, 1×, or 2× playback |
@@ -40,8 +42,46 @@ The CRT option is enabled on first launch and persisted as
 `crt_scanlines=true` or `crt_scanlines=false`. Set `V64_PLAYER_CONFIG` to an
 explicit preference path; otherwise the player uses the platform configuration
 directory. Scanlines use the shared 0.18 strength, period 2, phase 1 profile.
-They are applied only after deterministic rasterization, anchored to display
-rows, and never modify decoded state or the unfiltered raster.
+They are applied only after deterministic rasterization and subtitle
+compositing, anchored to display rows, and never modify decoded state or the
+unfiltered raster.
+
+## Subtitle presentation
+
+Validated `SUBT` chunks are decoded with the normative SM2 sparse-cell syntax.
+At each active subtitle frame, every declared cell replaces that cell's final
+8×16 raster area using the entry's exact one-bit mask and foreground/background
+palette indices. Cells absent from the sparse frame remain untouched. Subtitle
+transitions refresh the presentation raster even when the underlying video
+record is a repeat span.
+
+A seek reconstructs the base video state through the bounded core decoder and
+then selects the subtitle frame directly from the validated timeline. The
+player does not cache a raster for every subtitle or video frame.
+
+## Audio presentation
+
+Validated `AURN` packets are decoded as mono 48 kHz Opus. The player checks each
+packet's decoded sample count, applies the declared pre-skip and end trim, and
+inserts exact zero-valued PCM for every `SILN` span. The complete timeline must
+cover the declared container duration on an exact 48 kHz sample boundary.
+
+Decoded PCM is capped at 256 MiB. The SDL queue is bounded and refilled from the
+single validated timeline. Pause, resume, seeking, EOF, and recovery resynchronize
+the queue to the integer Video 64 clock. The fixed 0.5× and 2× modes currently
+use deterministic sample repetition or decimation, respectively; therefore
+pitch follows playback rate rather than invoking an opaque time-stretching
+algorithm.
+
+For deterministic inspection, the player can emit raw little-endian mono
+PCM16 without opening an audio device:
+
+```bash
+v64-player \
+  --dump-audio-pcm target/native-player/audio.pcm \
+  --headless-report target/native-player/report.json \
+  example.v64
+```
 
 ## Deterministic headless gate
 
@@ -52,22 +92,26 @@ cargo run --locked --release --package v64-player --features native-ui -- \
   tests/golden/procedural.v64
 ```
 
-The report checks repeated forward/backward seeks, pause, fixed playback rates,
-declared EOF, recovery after EOF, unfiltered raster identity, viewport-anchored
-scanlines, default configuration, and extension validation. The CI gate also
-runs the real SDL window loop under Xvfb for a fixed number of presentations.
+Player-profile-v2 reports check repeated forward/backward seeks, pause, fixed
+playback rates, declared EOF, recovery after EOF, unfiltered raster identity,
+viewport-anchored scanlines, default configuration, subtitle presentation
+hashes, extension validation, decoded PCM dimensions, and decoded PCM identity.
+
+The CI gate builds the canonical procedural, SUBT, and AM1 fixtures twice;
+requires byte-identical reports; compares native AM1 PCM byte-for-byte with the
+reference decoder output; and runs the real SDL video/audio loop under Xvfb
+with a dummy audio device.
 
 ## Resource and compatibility boundaries
 
 - File reads are capped at the immutable 1 GiB core ceiling.
 - The player accepts at most 1,000,000 container chunks and a 256 MiB inflated
   chunk, both beneath the core ceilings.
+- Decoded audio is capped at 256 MiB of mono PCM16.
 - Renderer grids and RGBA allocations retain the core's checked maximums.
 - Playback rates are the exact rational values 1/2, 1, and 2.
-- Seeking reuses one decoder state and one raster; it does not retain every
-  decoded frame.
-- Subtitle and audio extensions are fully validated before playback. This first
-  native tranche presents base glyph video only; subtitle compositing and Opus
-  audio output remain explicit follow-up work.
+- Seeking reuses one decoder state, one raster, and one validated audio
+  timeline; it does not retain every decoded frame or subtitle raster.
+- Subtitle and audio extensions are fully validated before presentation.
 - Genuine blinded AM1 speech listening remains required before the final audio
   bitrate profile is frozen.

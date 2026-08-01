@@ -8,13 +8,15 @@ repository.workspace = true
 description = "Bounded native Video 64 player"
 
 [dependencies]
+opus = { version = "=0.3.1", optional = true }
 sdl2 = { version = "=0.38.0", optional = true }
 serde_json = "1"
 v64-core = { path = "../../crates/v64-core" }
 
 [features]
 default = []
-native-ui = ["dep:sdl2"]
+native-audio = ["dep:opus"]
+native-ui = ["dep:sdl2", "native-audio"]
 
 [[bin]]
 name = "v64-player"

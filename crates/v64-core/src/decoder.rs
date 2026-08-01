@@ -198,7 +198,7 @@ mod tests {
     const PROCEDURAL: &[u8] = include_bytes!("../../../tests/golden/procedural.v64");
 
     #[test]
-    fn stable_decoder_streams_the_golden_timeline_without_repeat_clones() {
+    fn stable_decoder_streams_the_complete_golden_timeline() {
         let mut decoder = Decoder::from_bytes(PROCEDURAL).expect("golden file should open");
         assert_eq!(DECODER_API_VERSION, 1);
         assert_eq!(decoder.header().columns, 40);
@@ -206,7 +206,6 @@ mod tests {
         let expected_state = 40 * 11 * 3;
         let records = decoder.video_record_count();
         let mut decoded = 0u32;
-        let mut repeats = 0u32;
         while let Some(info) = decoder.advance().expect("timeline should decode") {
             assert_eq!(
                 decoder
@@ -216,10 +215,9 @@ mod tests {
                 expected_state
             );
             decoded += 1;
-            repeats += u32::from(info.repeat);
+            assert!(!info.repeat, "the procedural fixture contains no RPTF");
         }
         assert_eq!(decoded, records);
-        assert!(repeats > 0);
         assert!(decoder.advance().expect("EOF should be stable").is_none());
     }
 
@@ -244,6 +242,52 @@ mod tests {
                 .current_state()
                 .expect("replayed state should exist"),
             first_state
+        );
+    }
+
+    #[test]
+    fn repeat_records_reuse_the_prior_committed_state() {
+        let mut file = crate::parse(PROCEDURAL).expect("golden file should parse");
+        let first_video = file
+            .chunks
+            .iter()
+            .position(|chunk| chunk.chunk_type == "VFRM")
+            .expect("golden file should contain video");
+        let mut repeat = file.chunks[first_video].clone();
+        repeat.chunk_type = "RPTF".to_owned();
+        repeat.timestamp += repeat.duration;
+        repeat.payload.clear();
+        let repeat_duration = repeat.duration;
+        for chunk in &mut file.chunks[first_video + 1..] {
+            if chunk.chunk_type == "VFRM" || chunk.chunk_type == "RPTF" {
+                chunk.timestamp += repeat_duration;
+            }
+        }
+        file.header.duration_ticks += repeat_duration;
+        file.chunks.insert(first_video + 1, repeat);
+
+        let mut decoder = Decoder::from_file(file);
+        let first = decoder
+            .advance()
+            .expect("first frame should decode")
+            .expect("first frame should exist");
+        assert!(!first.repeat);
+        let state_pointer = decoder
+            .current_state()
+            .expect("first frame should expose state")
+            .as_ptr();
+        let repeated = decoder
+            .advance()
+            .expect("repeat should decode")
+            .expect("repeat should exist");
+        assert!(repeated.repeat);
+        assert_eq!(
+            decoder
+                .current_state()
+                .expect("repeat should expose state")
+                .as_ptr(),
+            state_pointer,
+            "repeat records must not clone the prior state"
         );
     }
 }

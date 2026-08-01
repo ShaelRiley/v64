@@ -195,24 +195,42 @@ jobs:
           python3 -m http.server 8124 --bind 127.0.0.1 > target/renderer-http.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          server_ready=false
           for attempt in $(seq 1 30); do
             if curl --fail --silent \
               http://127.0.0.1:8124/prototype/browser/wasm-renderer-harness.html \
               > /dev/null; then
+              server_ready=true
               break
             fi
             sleep 0.2
           done
-          timeout 30s "$browser" \
-            --headless=new \
-            --no-sandbox \
-            --disable-gpu \
-            --disable-dev-shm-usage \
-            --run-all-compositor-stages-before-draw \
-            --virtual-time-budget=15000 \
-            --dump-dom \
-            http://127.0.0.1:8124/prototype/browser/wasm-renderer-harness.html \
-            > target/renderer-golden/browser-result.html
+          test "$server_ready" = true
+          browser_pass=false
+          for attempt in $(seq 1 5); do
+            timeout 30s "$browser" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --run-all-compositor-stages-before-draw \
+              --virtual-time-budget=15000 \
+              --dump-dom \
+              "http://127.0.0.1:8124/prototype/browser/wasm-renderer-harness.html?attempt=$attempt" \
+              > "target/renderer-golden/browser-result-$attempt.html"
+            cp \
+              "target/renderer-golden/browser-result-$attempt.html" \
+              target/renderer-golden/browser-result.html
+            if grep -q 'data-status="pass"' target/renderer-golden/browser-result.html; then
+              browser_pass=true
+              break
+            fi
+            if grep -q 'data-status="fail"' target/renderer-golden/browser-result.html; then
+              cat target/renderer-golden/browser-result.html
+              exit 1
+            fi
+          done
+          test "$browser_pass" = true
           cat target/renderer-golden/browser-result.html
           grep -q 'data-status="pass"' target/renderer-golden/browser-result.html
           node --input-type=module <<'NODE'

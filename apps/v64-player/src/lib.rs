@@ -480,7 +480,9 @@ impl PlayerSession {
             (ticks - run.timestamp) / u64::from(self.decoder.header().cadence.frame_ticks),
         )
         .ok()?;
-        run.frames.get(frame_index).map(|_| (run_index, frame_index))
+        run.frames
+            .get(frame_index)
+            .map(|_| (run_index, frame_index))
     }
 
     fn refresh_raster(&mut self) -> Result<(), String> {

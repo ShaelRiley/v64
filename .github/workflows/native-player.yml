@@ -1,0 +1,141 @@
+name: V64 native player gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/native-player.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "assets/glyphs/video64-v1.bin"
+      - "assets/palettes/v64-p256-1.**"
+      - "bench/results/native-player/**"
+      - "crates/v64-core/**"
+      - "apps/v64-player/**"
+      - "docs/NATIVE_PLAYER.md"
+      - "docs/PLAYBACK_PROFILE.md"
+      - "docs/CURRENT_STATUS.md"
+      - "IMPLEMENTATION_LEDGER.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v64-native-player-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-player:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out immutable workflow head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install native player dependencies
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg libsdl2-dev xvfb
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.85.0
+          rustup default 1.85.0
+          rustc --version
+          cargo --version
+
+      - name: Check formatting and normative palette identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustfmt --edition 2024 --check \
+            crates/v64-core/src/extensions.rs \
+            apps/v64-player/src/lib.rs \
+            apps/v64-player/src/main.rs
+          test "$(wc -c < assets/palettes/v64-p256-1.rgb)" = 768
+          echo "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105  assets/palettes/v64-p256-1.rgb" \
+            | sha256sum --check
+
+      - name: Run JavaScript and Rust regression suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+          cargo test --locked --workspace --all-targets --features v64-player/native-ui
+          cargo test --locked --workspace --all-targets --release \
+            --features v64-player/native-ui
+
+      - name: Build native release player
+        run: cargo build --locked --release --package v64-player --features native-ui
+
+      - name: Require deterministic playback report
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target/native-player
+          target/release/v64-player \
+            --preferences target/native-player/default.conf \
+            --headless-report target/native-player/report-a.json \
+            tests/golden/procedural.v64
+          target/release/v64-player \
+            --preferences target/native-player/default.conf \
+            --headless-report target/native-player/report-b.json \
+            tests/golden/procedural.v64
+          cmp target/native-player/report-a.json target/native-player/report-b.json
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const report = JSON.parse(readFileSync("target/native-player/report-a.json"));
+          assert.equal(report.format, "V64-NATIVE-PLAYER-1");
+          assert.equal(report.playerProfileVersion, 1);
+          assert.equal(report.scanlines.defaultEnabled, true);
+          assert.equal(report.scanlines.menuPath, "View/CRT Scanlines");
+          assert.equal(report.scanlines.keyboardToggle, "C");
+          assert.notEqual(report.scanlines.unfilteredFnv1a64, report.scanlines.filteredFnv1a64);
+          assert.equal(report.controls.eof, true);
+          assert.equal(report.controls.repeatedSeekHashes[0], report.controls.repeatedSeekHashes[4]);
+          assert.equal(report.controls.repeatedSeekHashes[1], report.controls.repeatedSeekHashes[3]);
+          assert.equal(report.controls.eofRecoveryHash, report.controls.repeatedSeekHashes[0]);
+          assert.equal(report.extensions.validatedBeforePlayback, true);
+          NODE
+
+      - name: Run real native window loop under Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 20s xvfb-run --auto-servernum --server-args="-screen 0 1280x800x24" \
+            target/release/v64-player \
+              --preferences target/native-player/window.conf \
+              --smoke-presents 3 \
+              tests/golden/procedural.v64
+
+      - name: Hash native player evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum \
+            assets/palettes/v64-p256-1.rgb \
+            target/native-player/report-a.json \
+            target/release/v64-player \
+            | tee target/native-player/SHA256SUMS
+
+      - name: Upload native player evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v64-native-player-evidence
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            target/native-player
+            target/release/v64-player
+            bench/results/native-player
+            docs/NATIVE_PLAYER.md

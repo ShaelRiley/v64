@@ -47,11 +47,13 @@ real binary `.v64` implementation, not a mock UI:
 - a deterministic Rust hostile-input and process-resource gate;
 - a stable bounded Rust decoder API and `v64` command-line surface;
 - a pointer-free, generation-checked C ABI with a real C11 conformance caller;
+- a Linux-first native SDL2 video player with bounded seeking, fixed-rate
+  playback, persistent viewport-anchored CRT scanlines, and headless evidence;
 - Node conformance tests and golden hashes.
 
-Video64 Drop's desktop shell, the native player, WebAssembly delivery, the
-complete WebAssembly decoder, and VLC modules remain staged in the ledger
-rather than represented as finished.
+Video64 Drop's desktop shell, native-player subtitle/audio presentation,
+WebAssembly delivery, the complete WebAssembly decoder, and VLC modules remain
+staged in the ledger rather than represented as finished.
 
 ## Requirements
 
@@ -87,6 +89,8 @@ npm run rust:hostile
 npm run fuzz:corpus
 cargo run --locked --package v64-cli -- inspect tests/golden/procedural.v64
 cargo run --locked --package v64-cli -- verify tests/golden/procedural.v64
+cargo run --locked --package v64-player --features native-ui -- \
+  tests/golden/procedural.v64
 ```
 
 Encode any FFmpeg-readable video with the primary 32-glyph profile:
@@ -165,6 +169,11 @@ only fixed-width scalars: callers stream bytes into a bounded handle and read
 decoded state through checked accessors, so no caller-owned pointer crosses the
 Rust boundary. The corresponding Rust ownership and CLI contract is
 [`docs/RUST_API.md`](docs/RUST_API.md).
+
+Native player build requirements, controls, resource ceilings, deterministic
+headless checks, and the explicit first-tranche subtitle/audio presentation
+limitation are documented in
+[`docs/NATIVE_PLAYER.md`](docs/NATIVE_PLAYER.md).
 
 ## Contributing and forks
 

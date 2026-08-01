@@ -221,9 +221,38 @@ Permanent workflow `30677740575` passed at implementation head
 - artifact ZIP SHA-256:
   `e9fdf29c7e204cbf1779882ea3820dfb171b6abfa839a772ea6223178ec82860`.
 
+## Checked native-player tranche
+
+Permanent workflow `30680126006` passed at final checked head
+`0d5a1131b3ea67aeb6589d5c7f40cae852a37f6c`.
+
+- all 131 JavaScript tests passed;
+- every Rust workspace target passed in debug and optimized release modes;
+- Linux-first SDL2 glyph-video playback compiled on Rust 1.85.0;
+- pause, exact 0.5×/1×/2× rates, repeated forward/backward seeking, EOF, and
+  recovery after EOF passed;
+- `View → CRT Scanlines` and the `C` keyboard toggle use the default-on 0.18,
+  period-2, phase-1 viewport-anchored presentation profile;
+- the deterministic headless report repeated byte-for-byte;
+- the real native window loop completed three presentations under Xvfb;
+- SUBT/AURN/SILN timelines are validated before playback, including rejection
+  of orphan `SILN` chunks;
+- normative `V64-P256-1` and the immutable legacy proof-palette hash are the
+  only registered native palette identities;
+- headless report SHA-256:
+  `29f730b4fe3f9ecfefc58de7b32b209c78df37989df741606d286ed24fca58cf`;
+- release player SHA-256:
+  `ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`;
+- evidence artifact: `8811926753`;
+- artifact ZIP SHA-256:
+  `cbedec6dc3f538d1eaae6bec7cda8aaa15bb0f87240503ff2ead49aed1e1a162`.
+
+The first native tranche presents base glyph video. Subtitle compositing, Opus
+audio output, and Windows/macOS packaging are not yet claimed.
+
 ## Next mandatory gates
 
-1. Build the native player against the promoted stable Rust decoder API.
+1. Complete native-player SUBT compositing and AURN/SILN audio presentation.
 2. Continue with Video64 Drop, broader WebAssembly/browser decoding, and VLC
-   integration in the planned product order.
+   integration in the planned product order after native playback is complete.
 3. Complete genuine blinded AM1 speech listening before bitrate freeze.

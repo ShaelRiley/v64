@@ -398,8 +398,24 @@ implementation head `11cb07f609b7cc8b724ee2beaa43dbd106ab3a93`:
 - artifact `8811105113`, ZIP SHA-256
   `e9fdf29c7e204cbf1779882ea3820dfb171b6abfa839a772ea6223178ec82860`.
 
-The next mandatory implementation gate is the native player, built against the
-promoted stable Rust decoder API.
+Native-player base-video workflow `30680126006`, final checked head
+`0d5a1131b3ea67aeb6589d5c7f40cae852a37f6c`:
+
+- all 131 JavaScript tests and every Rust workspace target passed in debug and
+  optimized release modes;
+- the Linux-first SDL2 player uses stable decoder API v1, a bounded integer
+  clock, exact fixed rates, one live decoder state, and deterministic seeking;
+- repeated seeks, pause, EOF, EOF recovery, default-on CRT behavior, live
+  toggle wiring, and viewport phase stability passed;
+- complete SUBT/AURN/SILN validation runs before playback and now rejects
+  orphan `SILN` chunks;
+- the SDL window loop completed three real presentations under Xvfb;
+- report SHA-256
+  `29f730b4fe3f9ecfefc58de7b32b209c78df37989df741606d286ed24fca58cf`;
+- release binary SHA-256
+  `ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`;
+- artifact `8811926753`, ZIP SHA-256
+  `cbedec6dc3f538d1eaae6bec7cda8aaa15bb0f87240503ff2ead49aed1e1a162`.
 
 ## Phase 4 — products
 
@@ -409,13 +425,17 @@ promoted stable Rust decoder API.
   and six-stage progress reporting.
 - [ ] Expose 32-glyph balanced as the primary preset and 64-glyph quality as the
   explicit additional option.
-- [ ] `apps/v64-player`: native standalone player.
+- [x] `apps/v64-player`: Linux-first native standalone base-video player.
 - [x] Specify and test renderer-neutral CRT scanlines at strength 0.18, period 2,
   and phase 1.
 - [x] Require CRT scanlines enabled by default, live-toggleable, persisted after
   user changes, viewport-anchored, and presentation-only.
-- [ ] Wire **View → CRT Scanlines**, the keyboard toggle, and persisted native
+- [x] Wire **View → CRT Scanlines**, the keyboard toggle, and persisted native
   preference.
+- [ ] Composite validated `SUBT` planes in the native presentation path.
+- [ ] Decode validated `AURN` packets and synthesize exact `SILN` audio in the
+  native presentation path.
+- [ ] Document and check Windows and macOS native-player packaging.
 - [ ] WebAssembly decoder.
 
 ## Phase 5 — VLC
@@ -451,10 +471,10 @@ maintainer identity is delegated to those platforms.
 
 ## Next concrete step
 
-Build the native standalone player against the stable bounded decoder API.
-Preserve the renderer-neutral CRT scanline contract, deterministic seeking,
-extension validation, and the established product order before beginning
-Video64 Drop.
+Complete native subtitle compositing and Opus/silence presentation against the
+stable bounded decoder API. Preserve the renderer-neutral CRT scanline
+contract, deterministic seeking, and the established product order before
+beginning Video64 Drop.
 
 Keep the AM1 bitrate key sealed until genuine blinded speech listening is
 recorded. CRT scanlines remain mandatory and enabled by default for both the

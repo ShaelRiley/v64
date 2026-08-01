@@ -1,0 +1,58 @@
+{
+  "bounded": {
+    "maxChunks": 1000000,
+    "maxInflatedChunkBytes": 268435456,
+    "maxInputBytes": 1073741824
+  },
+  "controls": {
+    "doubleRatePositionTicks": 90000,
+    "eof": true,
+    "eofRecoveryHash": "c5b02ac90395e71d",
+    "halfRatePositionTicks": 30000,
+    "pausedPositionTicks": 0,
+    "repeatedSeekHashes": [
+      "c5b02ac90395e71d",
+      "0fa6c3a6b4a87f9d",
+      "d721b0a9c7ab44dd",
+      "0fa6c3a6b4a87f9d",
+      "c5b02ac90395e71d"
+    ],
+    "repeatedSeekOrder": [
+      0,
+      8,
+      23,
+      8,
+      0
+    ]
+  },
+  "extensions": {
+    "audioPackets": 0,
+    "audioRuns": 0,
+    "silenceRuns": 0,
+    "subtitleChunks": 0,
+    "subtitleEntries": 0,
+    "subtitleFrames": 0,
+    "validatedBeforePlayback": true
+  },
+  "format": "V64-NATIVE-PLAYER-1",
+  "playerProfileVersion": 1,
+  "scanlines": {
+    "defaultEnabled": true,
+    "filteredFnv1a64": "acde7d27d7090f45",
+    "keyboardToggle": "C",
+    "menuPath": "View/CRT Scanlines",
+    "period": 2,
+    "phase": 1,
+    "strength": 0.18,
+    "unfilteredFnv1a64": "c5b02ac90395e71d",
+    "viewportY": 7
+  },
+  "video": {
+    "columns": 40,
+    "durationTicks": 120000,
+    "frameTicks": 2500,
+    "palette": "V64-P256-CANDIDATE-1",
+    "records": 48,
+    "rows": 11
+  }
+}

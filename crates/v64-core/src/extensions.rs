@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use crate::V64File;
+
 pub const SM2_MASK_ROWS: usize = 16;
 pub const MAX_SUBTITLE_FRAMES: usize = 1_000_000;
 pub const MAX_SUBTITLE_CANONICAL_ENTRIES: usize = 4_194_304;
@@ -12,6 +14,18 @@ const AURN_HEADER_BYTES: usize = 32;
 const AURN_DESCRIPTOR_BYTES: usize = 4;
 const AURN_SAMPLE_RATE: u64 = 48_000;
 const TICK_RATE: u64 = 60_000;
+const SUBT_FEATURE_FLAG: u32 = 0x80;
+const AURN_FEATURE_FLAG: u32 = 0x40;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ExtensionSummary {
+    pub subtitle_chunks: u32,
+    pub subtitle_frames: u64,
+    pub subtitle_entries: u64,
+    pub audio_runs: u32,
+    pub silence_runs: u32,
+    pub audio_packets: u64,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SubtitleLimits {
@@ -77,6 +91,150 @@ pub struct AudioRun {
     pub decoded_samples: u32,
     pub packet_data_bytes: u32,
     pub packets: Vec<AudioPacket>,
+}
+
+pub fn validate_extension_timelines(file: &V64File) -> Result<ExtensionSummary, String> {
+    let mut summary = ExtensionSummary::default();
+    let frame_ticks = u64::from(file.header.cadence.frame_ticks);
+    let expected_cells = u32::from(file.header.columns)
+        .checked_mul(u32::from(file.header.rows))
+        .ok_or_else(|| "SUBT cell count overflow".to_owned())?;
+    let has_subtitles = file.chunks.iter().any(|chunk| chunk.chunk_type == "SUBT");
+    if (file.header.feature_flags & SUBT_FEATURE_FLAG != 0) != has_subtitles {
+        return Err("SUBT feature flag and chunk presence disagree".to_owned());
+    }
+
+    let mut previous_subtitle_end = 0u64;
+    let mut saw_subtitle = false;
+    for chunk in file
+        .chunks
+        .iter()
+        .filter(|chunk| chunk.chunk_type == "SUBT")
+    {
+        if chunk.duration == 0
+            || chunk.timestamp % frame_ticks != 0
+            || chunk.duration % frame_ticks != 0
+        {
+            return Err("SUBT timestamp and duration must be whole nominal frame spans".to_owned());
+        }
+        let end = chunk
+            .timestamp
+            .checked_add(chunk.duration)
+            .ok_or_else(|| "SUBT timestamp overflow".to_owned())?;
+        if end > file.header.duration_ticks {
+            return Err("SUBT chunk exceeds the declared file duration".to_owned());
+        }
+        if saw_subtitle && chunk.timestamp < previous_subtitle_end {
+            return Err("SUBT chunks overlap or are out of timeline order".to_owned());
+        }
+        let expected_frames = usize::try_from(chunk.duration / frame_ticks)
+            .map_err(|_| "SUBT frame count exceeds platform range".to_owned())?;
+        let sequence = decode_sm2(
+            &chunk.payload,
+            SubtitleLimits {
+                expected_frames: Some(expected_frames),
+                ..SubtitleLimits::default()
+            },
+        )?;
+        if sequence.cell_count != expected_cells {
+            return Err("SUBT cell count disagrees with the V64 grid".to_owned());
+        }
+        if sequence.palette_depth != file.header.palette_depth {
+            return Err("SUBT palette depth disagrees with the V64 header".to_owned());
+        }
+        summary.subtitle_chunks = summary
+            .subtitle_chunks
+            .checked_add(1)
+            .ok_or_else(|| "Subtitle chunk count overflow".to_owned())?;
+        summary.subtitle_frames = summary
+            .subtitle_frames
+            .checked_add(
+                u64::try_from(sequence.frames.len())
+                    .map_err(|_| "Subtitle frame count overflow".to_owned())?,
+            )
+            .ok_or_else(|| "Subtitle frame count overflow".to_owned())?;
+        summary.subtitle_entries = summary
+            .subtitle_entries
+            .checked_add(
+                u64::try_from(sequence.canonical_entries)
+                    .map_err(|_| "Subtitle entry count overflow".to_owned())?,
+            )
+            .ok_or_else(|| "Subtitle entry count overflow".to_owned())?;
+        previous_subtitle_end = end;
+        saw_subtitle = true;
+    }
+
+    let audio_chunks = file
+        .chunks
+        .iter()
+        .filter(|chunk| chunk.chunk_type == "AURN" || chunk.chunk_type == "SILN")
+        .collect::<Vec<_>>();
+    let has_audio_run = audio_chunks.iter().any(|chunk| chunk.chunk_type == "AURN");
+    let audio_declared = file.header.feature_flags & AURN_FEATURE_FLAG != 0;
+    if audio_declared != has_audio_run {
+        return Err("AURN feature flag and chunk presence disagree".to_owned());
+    }
+    if !audio_declared && !audio_chunks.is_empty() {
+        return Err("SILN requires an AURN audio timeline".to_owned());
+    }
+    if audio_declared {
+        let mut expected_timestamp = 0u64;
+        for chunk in audio_chunks {
+            if chunk.timestamp != expected_timestamp {
+                return Err(format!(
+                    "Discontinuous audio timeline at {}; expected {expected_timestamp}",
+                    chunk.timestamp
+                ));
+            }
+            if chunk.duration == 0 {
+                return Err(format!(
+                    "{} audio duration must be nonzero",
+                    chunk.chunk_type
+                ));
+            }
+            if chunk.chunk_type == "AURN" {
+                let run = decode_aurn_payload(
+                    &chunk.payload,
+                    chunk.timestamp,
+                    chunk.duration,
+                    AudioLimits::default(),
+                )?;
+                summary.audio_runs = summary
+                    .audio_runs
+                    .checked_add(1)
+                    .ok_or_else(|| "Audio run count overflow".to_owned())?;
+                summary.audio_packets = summary
+                    .audio_packets
+                    .checked_add(
+                        u64::try_from(run.packets.len())
+                            .map_err(|_| "Audio packet count overflow".to_owned())?,
+                    )
+                    .ok_or_else(|| "Audio packet count overflow".to_owned())?;
+            } else {
+                if !chunk.payload.is_empty() {
+                    return Err("SILN payload must be empty".to_owned());
+                }
+                ticks_to_samples(chunk.timestamp)?;
+                ticks_to_samples(
+                    chunk
+                        .timestamp
+                        .checked_add(chunk.duration)
+                        .ok_or_else(|| "Audio timeline duration overflow".to_owned())?,
+                )?;
+                summary.silence_runs = summary
+                    .silence_runs
+                    .checked_add(1)
+                    .ok_or_else(|| "Silence run count overflow".to_owned())?;
+            }
+            expected_timestamp = expected_timestamp
+                .checked_add(chunk.duration)
+                .ok_or_else(|| "Audio timeline duration overflow".to_owned())?;
+        }
+        if expected_timestamp != file.header.duration_ticks {
+            return Err("Audio timeline does not cover the declared file duration".to_owned());
+        }
+    }
+    Ok(summary)
 }
 
 pub fn decode_sm2(bytes: &[u8], limits: SubtitleLimits) -> Result<SubtitleSequence, String> {
@@ -503,6 +661,8 @@ fn read_u32(bytes: &[u8], offset: usize) -> Result<u32, String> {
 mod tests {
     use super::*;
 
+    const PROCEDURAL: &[u8] = include_bytes!("../../../tests/golden/procedural.v64");
+
     fn one_plane_two_frame_sequence() -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(b"SM2\0");
@@ -554,5 +714,29 @@ mod tests {
             .expect("one Opus packet should validate");
         assert_eq!(run.packets.len(), 1);
         assert!(decode_aurn_payload(&payload, 1, 600, AudioLimits::default()).is_err());
+    }
+
+    #[test]
+    fn complete_extension_validator_accepts_the_extension_free_golden() {
+        let file = crate::parse(PROCEDURAL).expect("golden file should parse");
+        assert_eq!(
+            validate_extension_timelines(&file).expect("empty extensions should validate"),
+            ExtensionSummary::default()
+        );
+    }
+
+    #[test]
+    fn complete_extension_validator_rejects_orphan_silence() {
+        let mut file = crate::parse(PROCEDURAL).expect("golden file should parse");
+        let mut silence = file.chunks[0].clone();
+        silence.chunk_type = "SILN".to_owned();
+        silence.timestamp = 0;
+        silence.duration = 600;
+        silence.payload.clear();
+        file.chunks.push(silence);
+        assert_eq!(
+            validate_extension_timelines(&file).unwrap_err(),
+            "SILN requires an AURN audio timeline"
+        );
     }
 }

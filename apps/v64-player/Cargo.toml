@@ -1,0 +1,25 @@
+[package]
+name = "v64-player"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Bounded native Video 64 player"
+
+[dependencies]
+sdl2 = { version = "=0.38.0", optional = true }
+serde_json = "1"
+v64-core = { path = "../../crates/v64-core" }
+
+[features]
+default = []
+native-ui = ["dep:sdl2"]
+
+[[bin]]
+name = "v64-player"
+path = "src/main.rs"
+required-features = ["native-ui"]
+
+[lints]
+workspace = true

@@ -40,7 +40,7 @@ jobs:
           node-version: 22
 
       - name: Install native player dependencies
-        run: sudo apt-get update && sudo apt-get install --yes ffmpeg libsdl2-dev xvfb
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg libopus-dev libsdl2-dev xvfb
 
       - name: Install pinned Rust toolchain
         shell: bash
@@ -51,6 +51,9 @@ jobs:
           rustup default 1.85.0
           rustc --version
           cargo --version
+
+      - name: Resolve staged native audio lockfile
+        run: cargo generate-lockfile
 
       - name: Check formatting and normative palette identity
         shell: bash
@@ -135,6 +138,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           path: |
+            Cargo.lock
             target/native-player
             target/release/v64-player
             bench/results/native-player

@@ -1,6 +1,7 @@
 # Video 64 stable C API v1
 
-Status: implemented compatibility boundary pending promoted CI evidence.
+Status: ABI version 1 promoted by workflow `30677740575` at implementation
+head `11cb07f609b7cc8b724ee2beaa43dbd106ab3a93`.
 
 This document freezes version 1 of Video 64's decoder-facing C ABI. The public
 header is [`include/video64/v64.h`](../include/video64/v64.h), and the exact

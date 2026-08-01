@@ -6,6 +6,7 @@ on:
       - ".github/workflows/rust-api-cabi.yml"
       - "Cargo.toml"
       - "Cargo.lock"
+      - "bench/results/rust-api-cabi/**"
       - "crates/**"
       - "include/video64/**"
       - "spec/V64-c-api-v1.md"
@@ -183,6 +184,7 @@ jobs:
           retention-days: 30
           path: |
             target/api-cabi
+            bench/results/rust-api-cabi
             include/video64/v64.h
             docs/RUST_API.md
             spec/V64-c-api-v1.md

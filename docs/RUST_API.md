@@ -1,6 +1,7 @@
 # Stable Rust decoder and CLI API
 
-Status: API version 1 implemented pending promoted CI evidence.
+Status: API version 1 promoted by workflow `30677740575` at implementation
+head `11cb07f609b7cc8b724ee2beaa43dbd106ab3a93`.
 
 Video 64's stable Rust decoding surface lives in
 [`v64_core::decoder`](../crates/v64-core/src/decoder.rs). Its explicit

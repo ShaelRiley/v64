@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 import { deriveRows } from "../../prototype/js/constants.mjs";
 import { verifyV64 } from "../../prototype/js/container.mjs";
-import { encodeVideo } from "../../prototype/js/cli.mjs";
 import { displayGeometryFromProbe } from "../../prototype/js/source-geometry.mjs";
 import {
   DROP_CAPABILITIES,
@@ -15,6 +16,10 @@ import {
   failDropJob,
   updateDropStage
 } from "./model.mjs";
+
+const PROOF_CLI_PATH = fileURLToPath(
+  new URL("../../prototype/js/cli.mjs", import.meta.url)
+);
 
 function runProgram(program, args, spawn = spawnSync) {
   const result = spawn(program, args, {
@@ -82,6 +87,17 @@ export function analyzeDropJob(job, { probe = probeDropSource } = {}) {
   };
 }
 
+export function encodeDropVideo(inputPath, outputPath, options, {
+  spawnSyncImpl = spawnSync
+} = {}) {
+  const args = [PROOF_CLI_PATH, "encode", inputPath, outputPath];
+  for (const [key, value] of Object.entries(options)) {
+    if (value === undefined || value === null) continue;
+    args.push(`--${key}`, String(value));
+  }
+  return JSON.parse(runProgram(process.execPath, args, spawnSyncImpl));
+}
+
 export function verifyDropOutput(outputPath) {
   const bytes = readFileSync(outputPath);
   return {
@@ -92,7 +108,7 @@ export function verifyDropOutput(outputPath) {
 
 export async function runDropJob(job, {
   probe = probeDropSource,
-  encode = encodeVideo,
+  encode = encodeDropVideo,
   verify = verifyDropOutput,
   onUpdate = () => {}
 } = {}) {

@@ -10,7 +10,7 @@ on:
       - "assets/palettes/v64-p256-1.**"
       - "bench/results/native-player/**"
       - "crates/v64-core/**"
-      - "crates/v64-player/**"
+      - "apps/v64-player/**"
       - "docs/NATIVE_PLAYER.md"
       - "docs/PLAYBACK_PROFILE.md"
       - "docs/CURRENT_STATUS.md"
@@ -58,8 +58,8 @@ jobs:
           set -euo pipefail
           rustfmt --edition 2024 --check \
             crates/v64-core/src/extensions.rs \
-            crates/v64-player/src/lib.rs \
-            crates/v64-player/src/main.rs
+            apps/v64-player/src/lib.rs \
+            apps/v64-player/src/main.rs
           test "$(wc -c < assets/palettes/v64-p256-1.rgb)" = 768
           echo "c03d23141eb33b80d79d1a7f3167eeb18ccf1f4f0c0f81572f269abd51317105  assets/palettes/v64-p256-1.rgb" \
             | sha256sum --check

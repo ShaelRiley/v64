@@ -3,7 +3,7 @@ members = [
   "crates/v64-capi",
   "crates/v64-cli",
   "crates/v64-core",
-  "crates/v64-player",
+  "apps/v64-player",
   "crates/v64-wasm",
 ]
 resolver = "2"

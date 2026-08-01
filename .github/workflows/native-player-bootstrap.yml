@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/native-player
+  pull_request:
   workflow_dispatch:
 
 permissions:

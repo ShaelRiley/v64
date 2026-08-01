@@ -31,6 +31,7 @@ import {
   encoderProfileFromDemuxed
 } from "./encoder-profile.mjs";
 import { paletteAssetFromHash } from "./palette-registry.mjs";
+import { containAspect, displayGeometryFromProbe } from "./source-geometry.mjs";
 
 const PROFILES = Object.freeze({
   smallest: { target: "compact", dictionary: true },
@@ -79,13 +80,14 @@ function parseOptions(args) {
 function probeVideo(input) {
   const text = run("ffprobe", [
     "-v", "error", "-select_streams", "v:0", "-show_entries",
-    "stream=width,height,duration:format=duration", "-of", "json", input
+    "stream=width,height,duration,sample_aspect_ratio,display_aspect_ratio:stream_side_data=rotation:format=duration",
+    "-of", "json", input
   ]);
   const data = JSON.parse(text);
   const stream = data.streams?.[0];
-  if (!stream?.width || !stream?.height) throw new Error("Input has no decodable video stream");
+  if (!stream) throw new Error("Input has no decodable video stream");
   const duration = Number(stream.duration || data.format?.duration || 0);
-  return { width: stream.width, height: stream.height, duration };
+  return { ...displayGeometryFromProbe(stream), duration };
 }
 
 function changedCellPercentage(frames) {
@@ -116,14 +118,20 @@ function encodeVideo(inputPath, outputPath, rawOptions = {}) {
   );
   const dictionary = rawOptions.dictionary ?? profile.dictionary;
   const source = probeVideo(inputPath);
-  const rows = deriveRows(columns, source.width / source.height);
+  const rows = deriveRows(columns, source.displayAspectRatio);
   const proxyWidth = columns * 4;
   const proxyHeight = rows * 8;
+  const content = containAspect(proxyWidth, proxyHeight, source.displayAspectRatio);
   const maximumSeconds = rawOptions["max-seconds"] ? Number(rawOptions["max-seconds"]) : null;
   if (maximumSeconds !== null && (!Number.isFinite(maximumSeconds) || maximumSeconds <= 0)) {
     throw new Error("--max-seconds must be positive");
   }
-  const filter = `fps=${cadenceRational(cadence)},scale=${proxyWidth}:${proxyHeight}:flags=area`;
+  const filter = [
+    `fps=${cadenceRational(cadence)}`,
+    `scale=${content.width}:${content.height}:flags=area`,
+    "setsar=1",
+    `pad=${proxyWidth}:${proxyHeight}:${content.x}:${content.y}:color=black`
+  ].join(",");
   const ffmpegArgs = ["-v", "error", "-i", inputPath];
   if (maximumSeconds) ffmpegArgs.push("-t", String(maximumSeconds));
   ffmpegArgs.push("-vf", filter, "-an", "-pix_fmt", "rgba", "-f", "rawvideo", "pipe:1");
@@ -168,6 +176,12 @@ function encodeVideo(inputPath, outputPath, rawOptions = {}) {
     rasterWidth: columns * 8, rasterHeight: rows * 16,
     cadence: cadence.label, paletteDepth: depth, profile: profileName,
     targetMode, glyphCount, encoderProfile,
+    sourceStoredWidth: source.storedWidth,
+    sourceStoredHeight: source.storedHeight,
+    sourceRotationDegrees: source.rotationDegrees,
+    sourceDisplayAspectRatio: source.displayAspectRatio,
+    aspectPolicy: "contain",
+    proxyContent: content,
     sourceDurationSeconds: source.duration || null, encodedDurationSeconds: duration,
     frames: frameCount,
     changedCellPercentage: Number(changedCellPercentage(analysis.frames).toFixed(3)),

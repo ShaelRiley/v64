@@ -100,6 +100,11 @@ node prototype/js/cli.mjs encode input.mp4 output.v64 \
   --fps 24 --columns 80 --palette 32 --glyphs 32 --target balanced
 ```
 
+Source ingest honors FFmpeg display-rotation and pixel-aspect metadata before
+deriving the glyph grid. When integer grid rounding cannot exactly represent
+the source display aspect, the encoder contains and centers the image with
+black padding instead of stretching it.
+
 `--glyphs 32` is the default and may be omitted. Use the complete source
 alphabet as an additional option when its quality gain is worth the extra rate:
 

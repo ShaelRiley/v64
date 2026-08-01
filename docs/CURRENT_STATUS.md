@@ -37,6 +37,43 @@ latest active frontier.
 - Maximum independent-group duration: two seconds, derived from cadence.
 - Scene cuts may create shorter groups.
 
+## First playable prerelease
+
+Tag `v0.1.0-alpha.1` is the first playable public Video 64 test release:
+<https://github.com/ShaelRiley/v64/releases/tag/v0.1.0-alpha.1>.
+
+- pull request: `#7`;
+- merged implementation commit:
+  `9fac7d80e492fe1a414dce3e236a16042d0dd83f`;
+- pull-request CI head:
+  `86640ff5fc4bba9c1e3d5e835e6eeb032a4a89a2`;
+- permanent workflows triggered: 10;
+- permanent workflows passed: 10;
+- official `.v64` asset: 5,461,071 bytes,
+  `329215856e67d2193a3fea98767fdeba80b461ed63fc72a7eb461417740220f5`;
+- Linux x86_64 player package: 332,316 bytes,
+  `8aac432069b8312662ff14a99f2ff0830a64caae87885a502e4b7475bac1214c`;
+- player binary:
+  `ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`;
+- manifest: 2,510 bytes,
+  `6e02422bda1b903a003f2b78503fc0321fd64879f4e663653781d8e3f590be57`;
+- checksums: 301 bytes,
+  `b786bf8d2a415d72d4a678c35fcf15fd7ec84a85270ef9aa187f488408e0057d`.
+
+The source is stored 1920×1080 with 90° display rotation. Correct ingest uses
+the displayed 1080×1920 geometry, derives an 80×71 cell grid, and contains the
+image in a 640×1136 raster with deterministic black padding. The release uses
+the 32-glyph `balanced` default from the canonical 64-glyph alphabet, 24 fps,
+32 colors, 1,012 frames, and 22 groups no longer than two seconds. The user
+played the corrected artifact successfully on SteamOS and confirmed portrait
+orientation and proportions.
+
+This base-video release is silent. Native subtitle compositing and AURN/SILN
+audio presentation remain future work. Genuine blinded AM1 speech listening
+remains mandatory before bitrate freeze. Windows and macOS packages are not
+claimed. Reproducible evidence is retained under
+`bench/results/first-playable-release/`.
+
 ## Grammar and compression
 
 The human-heavy combined decision gives human raster material 75% weight and

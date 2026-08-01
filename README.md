@@ -10,6 +10,28 @@ viewable
 Repository files under `spec/` are implementation snapshots and experimental
 bitstream notes; the linked document governs architectural intent.
 
+## First playable prerelease
+
+[Video 64 v0.1.0-alpha.1 — First Playable Test Release](https://github.com/ShaelRiley/v64/releases/tag/v0.1.0-alpha.1)
+publishes the first real `.v64` test video and the Linux x86_64 native player.
+The tag points to merged commit
+`9fac7d80e492fe1a414dce3e236a16042d0dd83f`; all ten permanent workflows
+triggered by pull request [#7](https://github.com/ShaelRiley/v64/pull/7)
+passed before merge.
+
+The corrected official test video is a silent 80×71-cell, 640×1136 portrait
+encode at 24 fps, using the normative 32-color palette, the primary 32-glyph
+`balanced` profile, and 22 independent groups capped at 48 frames / two
+seconds. Its SHA-256 is
+`329215856e67d2193a3fea98767fdeba80b461ed63fc72a7eb461417740220f5`.
+The Linux player package SHA-256 is
+`8aac432069b8312662ff14a99f2ff0830a64caae87885a502e4b7475bac1214c`;
+the contained player binary SHA-256 is
+`ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`.
+Exact provenance, sizes, workflow identities, persistent artifact identities,
+and reproduction commands are retained in
+[`bench/results/first-playable-release/`](bench/results/first-playable-release/).
+
 This repository currently contains the executable Phase 1 proof codec. It is a
 real binary `.v64` implementation, not a mock UI:
 

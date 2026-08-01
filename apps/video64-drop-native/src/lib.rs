@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+use std::cmp::Ordering;
+
 use serde_json::{Value, json};
 
 pub const SHELL_REPORT_FORMAT: &str = "VIDEO64-DROP-NATIVE-SHELL-1";
@@ -108,10 +110,10 @@ impl ShellSettings {
             Control::Profile => (&mut self.profile_index, PROFILES.len()),
         };
         let before = *index;
-        if direction < 0 {
-            *index = index.saturating_sub(1);
-        } else if direction > 0 {
-            *index = (*index + 1).min(length - 1);
+        match direction.cmp(&0) {
+            Ordering::Less => *index = index.saturating_sub(1),
+            Ordering::Greater => *index = (*index + 1).min(length - 1),
+            Ordering::Equal => {}
         }
         before != *index
     }

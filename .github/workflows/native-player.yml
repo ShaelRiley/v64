@@ -69,11 +69,12 @@ jobs:
         run: |
           set -euo pipefail
           npm test
-          cargo test --locked --workspace --all-targets
-          cargo test --locked --workspace --all-targets --release
+          cargo test --locked --workspace --all-targets --features v64-player/native-ui
+          cargo test --locked --workspace --all-targets --release \
+            --features v64-player/native-ui
 
       - name: Build native release player
-        run: cargo build --locked --release --package v64-player
+        run: cargo build --locked --release --package v64-player --features native-ui
 
       - name: Require deterministic playback report
         shell: bash

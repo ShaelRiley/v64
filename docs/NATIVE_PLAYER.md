@@ -16,7 +16,7 @@ Ubuntu 24.04 development dependencies:
 
 ```bash
 sudo apt-get install libsdl2-dev
-cargo build --locked --release --package v64-player
+cargo build --locked --release --package v64-player --features native-ui
 target/release/v64-player example.v64
 ```
 
@@ -46,7 +46,7 @@ rows, and never modify decoded state or the unfiltered raster.
 ## Deterministic headless gate
 
 ```bash
-cargo run --locked --release --package v64-player -- \
+cargo run --locked --release --package v64-player --features native-ui -- \
   --preferences target/native-player/preferences.conf \
   --headless-report target/native-player/report.json \
   tests/golden/procedural.v64

@@ -10,7 +10,7 @@ Reproduce the deterministic report after installing SDL2 development headers:
 ```bash
 cargo test --locked --workspace --all-targets
 cargo test --locked --workspace --all-targets --release
-cargo build --locked --release --package v64-player
+cargo build --locked --release --package v64-player --features native-ui
 target/release/v64-player \
   --preferences target/native-player/default.conf \
   --headless-report target/native-player/report.json \

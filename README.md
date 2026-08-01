@@ -89,7 +89,8 @@ npm run rust:hostile
 npm run fuzz:corpus
 cargo run --locked --package v64-cli -- inspect tests/golden/procedural.v64
 cargo run --locked --package v64-cli -- verify tests/golden/procedural.v64
-cargo run --locked --package v64-player -- tests/golden/procedural.v64
+cargo run --locked --package v64-player --features native-ui -- \
+  tests/golden/procedural.v64
 ```
 
 Encode any FFmpeg-readable video with the primary 32-glyph profile:

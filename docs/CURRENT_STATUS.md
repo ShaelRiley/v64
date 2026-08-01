@@ -2,58 +2,55 @@
 
 Updated: 2026-08-01
 
-This file is the compact current-state companion to `IMPLEMENTATION_LEDGER.md`.
-The ledger retains the historical evidence chain; this document records the
-latest active frontier.
+This is the compact current-state companion to `IMPLEMENTATION_LEDGER.md`. The
+ledger retains the complete historical evidence chain; this document records the
+latest checked implementation and active frontier.
 
 ## Project invariants
 
 - Project name: **Video 64**.
 - File extension: `.v64`.
-- Encoder application name: **Video64 Drop**.
-- License: standard MIT, SPDX `MIT`.
+- Encoder application: **Video64 Drop**.
+- License: MIT, SPDX `MIT`, Copyright (c) 2026 Shael Riley.
 - Canonical source alphabet: exactly 64 original 8×16 glyphs.
-- Primary/default encoder budget: 32 glyphs.
-- Explicit full-alphabet option: 64 glyphs.
-- 16 glyphs remains research-only.
-- Ordinary target: `balanced`; optional higher-rate target: `quality`.
-- Independent groups remain capped at two seconds, with shorter groups allowed
-  at scene cuts.
-- Normative palette identity remains `V64-P256-1`.
-- Human developers have primacy in outreach; AI-assisted and autonomous-agent
+- Primary/default encoder budget: 32 glyphs; 64 is the explicit full-alphabet
+  option; 16 remains research-only.
+- Legal cadences: 0.10, 0.5, 1, 3, 6, 12, 15, 24, 30, 48, and 60 fps; default
+  24 fps.
+- Default target: `balanced`.
+- Maximum independently decodable group duration: two seconds, with shorter
+  groups permitted at scene cuts.
+- Normative palette: `V64-P256-1`.
+- Human developers have primacy in outreach. AI-assisted and autonomous-agent
   contributors are also explicitly welcome to fork, modify, test, and submit
   implementations under the same permissive license.
 
 ## Public release state
 
-Tag `v0.1.0-alpha.1` remains the first playable public Video 64 test release.
-It contains the corrected portrait test video and Linux x86_64 base-video
-player. The user played the release successfully on SteamOS and confirmed the
+Tag `v0.1.0-alpha.1` remains the first playable public Video 64 prerelease. It
+contains the corrected portrait test video and Linux x86_64 base-video player.
+The user successfully played that release on SteamOS and confirmed its
 orientation and proportions.
 
-That release asset is intentionally silent and predates native player profile
-2. Its manifest and checksums remain the authoritative description of that
-specific prerelease; the newer subtitle/audio and feature-length evidence does
-not retroactively alter it.
+That prerelease is intentionally silent and predates native player profile 2.
+Its release manifest and checksums remain authoritative for those assets; newer
+subtitle, audio, synchronization, and encoder-application evidence does not
+retroactively alter it.
 
-## Format, encoder, and core state
+## Permanently gated codec and decoder state
 
-Implemented and permanently gated:
+The repository now includes and continuously checks:
 
-- bounded V64 header/chunk/index/CRC/raw-DEFLATE parsing;
-- complete Phase-1 and direct Grammar B command decoding;
-- provisional Grammar B decision evidence, with Phase-1 retained as the
-  compatibility and simplicity baseline;
+- bounded header, chunk, index, CRC, and raw-DEFLATE parsing;
+- complete Phase-1 and direct Grammar B frame-command decoding;
 - exact 32-glyph primary and 64-glyph full-alphabet encoder profiles;
-- two-second independent-group ceiling derived from cadence;
-- independent JavaScript and Rust `SUBT`/SM2 validation and canonicalization;
-- independent JavaScript and Rust `AURN`/`SILN` validation and
-  canonicalization;
+- cadence-derived two-second independent-group enforcement;
+- JavaScript and Rust `SUBT`/SM2 validation and canonicalization;
+- JavaScript and Rust `AURN`/`SILN` validation and canonicalization;
 - stable owning Rust decoder API version 1;
 - stable bounded CLI inspect, verify, and state-stream commands;
 - pointer-free C ABI version 1 with generation-checked sessions;
-- bounded deterministic RGBA rendering from canonical glyph and palette
-  assets;
+- deterministic RGBA rendering from canonical assets;
 - dependency-free `wasm32-unknown-unknown` renderer conformance;
 - hostile-input, rollback, decompression, allocation, fuzz, renderer,
   WebAssembly, stable API, CLI, and C ABI gates.
@@ -61,167 +58,145 @@ Implemented and permanently gated:
 Raw DEFLATE remains the current entropy leader. Grammar B remains provisional
 rather than a frozen V1 grammar decision.
 
-## Native standalone player profile 2
+## Native player profile 2
 
-Pull request `#9` was squash-merged into `main` as
+PR #9 merged native subtitle and audio presentation as
 `0b50c7d5fbaeace10b9dba33dccda63f12302815`.
 
-Player profile 2 adds:
-
-- exact native `SUBT`/SM2 sparse-cell compositing after base-video
-  rasterization;
-- subtitle-frame transitions during underlying video repeat spans;
-- mono 48 kHz libopus decoding for validated `AURN` packets;
-- exact zero-valued PCM synthesis for validated `SILN` spans;
-- declared pre-skip and end-trim enforcement;
-- pause/resume, repeated seeking, EOF, and recovery synchronization;
-- deterministic fixed 0.5×, 1×, and 2× presentation;
-- bounded SDL audio-queue refill;
-- a 256 MiB decoded PCM-timeline ceiling;
-- raw little-endian PCM16 export for deterministic inspection;
-- deterministic profile-v2 headless reports;
-- real SDL video/audio smoke presentation under Xvfb with a dummy audio
-  device.
-
-CRT scanlines remain default-on, persisted, immediately toggleable through
-`View → CRT Scanlines` or `C`, viewport-anchored, and strictly
+The standalone player composites validated `SUBT`/SM2 subtitles, decodes
+validated `AURN` Opus packets, synthesizes exact `SILN` zeros, enforces trim and
+sample accounting, supports deterministic seeking, pause, EOF recovery, and
+0.5×/1×/2× playback, and presents through bounded SDL video and audio queues.
+CRT scanlines remain default-on, immediately toggleable, persisted, and strictly
 presentation-only.
 
-## Checked profile-v2 evidence
+Permanent workflow `30703860943` passed at immutable head
+`d3ae297ae9c30d99e221c531346848dd3e3e01ce`. Its AM1 fixture decoded 54 Opus
+packets into 96,000 mono 48 kHz samples, and native PCM matched the explicit
+libopus reference decode byte-for-byte with SHA-256
+`d34fe310f0a9aa00f128d00ff7a8fa4b50d2e125d20347b83908e20bb25f89c0`.
+Evidence artifact `8819701746` has digest
+`a6218636f1e45968c6acbf92dbf88da6064d244a57d7cda880bbac9a43734c9f`.
 
-Permanent native-player workflow `30703860943` passed at immutable pull-request
-head `d3ae297ae9c30d99e221c531346848dd3e3e01ce`.
+## Feature-length synchronization evidence
 
-- all 12 permanent pull-request workflows passed;
-- duplicate procedural, subtitle, and audio reports were byte-identical;
-- SUBT fixture: 2 chunks, 5 frames, 10 sparse entries;
-- AM1 fixture: 2 AURN runs, 2 SILN spans, 54 Opus packets;
-- decoded audio: 96,000 mono samples at 48 kHz, 192,000 PCM bytes;
-- native PCM matched the explicit libopus reference decode byte-for-byte;
-- PCM SHA-256:
-  `d34fe310f0a9aa00f128d00ff7a8fa4b50d2e125d20347b83908e20bb25f89c0`;
-- evidence artifact: `8819701746`;
-- artifact digest:
-  `a6218636f1e45968c6acbf92dbf88da6064d244a57d7cda880bbac9a43734c9f`.
-
-## Checked feature-length synchronization evidence
-
-Permanent workflow `30709579841` passed at immutable pull-request head
+PR #11 added the deterministic feature-length player-clock gate. Permanent
+workflow `30709579841` passed at immutable head
 `554456a037e8393b5793326cddc418f6a7ea8b55`.
 
-The deterministic 30-minute fixture contains:
+The 30-minute fixture contains 900 independently seekable groups, 43,200 nominal
+frames, 1,800 `AURN` runs, 1,800 exact `SILN` spans, 48,600 Opus packets, and
+86,400,000 mono samples. Duplicate accelerated runs reported zero accumulated
+tick drift, zero PCM sample-index drift, exact EOF, stable distant seeks, stable
+recovery, and exact pause and rate transitions. Peak resident memory was
+176,464 KiB.
 
-- 900 independently seekable two-second groups;
-- 43,200 nominal video frames;
-- 900 keyframes and 900 repeat spans;
-- 1,800 `AURN` runs and 1,800 exact `SILN` spans;
-- 48,600 Opus packets;
-- 86,400,000 mono samples at 48 kHz;
-- 172,800,000 decoded PCM bytes, or 64.37% of the player ceiling.
+Fixture SHA-256 is
+`6cb462f16e2ebf9e0bf576210f1d8c6177cc9b69ba4f1045beef0252034d1f58`;
+report SHA-256 is
+`4b667cfc198c5a9e9b10846082b4e68be1d2cb07db80e1996e7ca1520b25f2ce`;
+evidence artifact `8821428834` has digest
+`3e422742a81fdb004fa85b3f89b8663a42b2a5353a037be1e37b0f096e49bb56`.
 
-The release gate ran twice and produced byte-identical reports. Across 4,941
-irregular nanosecond increments and a separate single-increment comparison, it
-reported zero accumulated tick drift, zero PCM sample-index drift, exact EOF,
-stable repeated distant seeks, stable recovery after EOF, and exact pause and
-0.5×/2× rate transitions. Peak resident memory was 176,464 KiB.
-
-Checked identities:
-
-- fixture SHA-256:
-  `6cb462f16e2ebf9e0bf576210f1d8c6177cc9b69ba4f1045beef0252034d1f58`;
-- report SHA-256:
-  `4b667cfc198c5a9e9b10846082b4e68be1d2cb07db80e1996e7ca1520b25f2ce`;
-- gate binary SHA-256:
-  `91565e09695271a1af593994ffbc26dfabf8a70e2c082561b28bcd3fdad42443`;
-- evidence artifact: `8821428834`;
-- artifact digest:
-  `3e422742a81fdb004fa85b3f89b8663a42b2a5353a037be1e37b0f096e49bb56`.
-
-This proves deterministic player-clock, decoded video-record, and PCM timeline
-alignment for a feature-length file without waiting thirty wall-clock minutes.
-It does not measure operating-system mixer latency, audio-device oscillator
-error, or physical hardware scheduler drift.
+This proves deterministic decoded video, PCM timeline, and player-clock
+alignment. It does not measure operating-system mixer latency, audio-device
+oscillator error, or physical hardware scheduler drift.
 
 ## Video64 Drop application core
 
-Pull request `#12` establishes the first executable Video64 Drop application
-tranche around the existing verified proof encoder. It intentionally freezes a
-testable application contract before choosing the native desktop-shell toolkit.
+PR #12 merged the first executable Video64 Drop application foundation as
+`728059d3bce9ea619a610bd583b94b3e24b9139b`.
 
-The application core now provides:
+The application core owns normative defaults and validation, FFprobe source
+analysis, aspect-aware grid derivation, deterministic collision-safe queue
+planning, stable job documents, analysis/video/audio/mux/verify stages,
+machine-readable progress, actionable failure state, isolated proof-encoder
+execution, and independent output verification.
 
-- normative 24 fps, 80-column, 32-color, 32-glyph, `balanced` defaults;
-- validation for all frozen cadence, palette, glyph-budget, and profile choices;
-- FFprobe-backed source metadata and display-aspect analysis;
-- aspect-aware row and raster-dimension derivation;
-- deterministic output naming and collision-free batch output allocation;
-- immutable queue and job documents with stable identifiers;
-- explicit analysis, video encode, audio encode, mux, and verify stages;
-- actionable failed-stage state and machine-readable progress events;
-- isolated child-process invocation of the existing proof encoder rather than
-  copied codec logic;
-- independent final V64 verification;
-- a headless Linux command surface suitable for the later desktop host.
+Permanent workflow `30712779947` passed at immutable head
+`f5eed760bced9b2a0234abe1f3fd8d542fa3ff59`. Its one-second 320×180 H.264/AAC
+source encoded 24 frames to a verified 7,282-byte `.v64` file. Source audio was
+detected and explicitly disclosed; the audio stage was skipped rather than
+silently ignored. Evidence artifact `8822412544` has digest
+`25af6009ce9ded104af5b790215fa5570351bd43eaebbdd4aeed930db7a02cbc`.
 
-Permanent workflow `30712779947` passed at immutable code head
-`f5eed760bced9b2a0234abe1f3fd8d542fa3ff59`. The focused suite contains ten
-application tests. The workflow then generated a real one-second H.264/AAC
-source and encoded it through Video64 Drop with 24 fps, 40 columns, 16 colors,
-32 glyphs, and the `balanced` profile.
+## Linux native Video64 Drop shell
 
-Checked application evidence:
+PR #13 implements the first Linux/SteamOS native Video64 Drop window on top of
+the checked application core. The optional Rust/SDL2 host does not duplicate the
+codec or queue logic.
 
-- source analysis: 320×180 H.264 video with mono 48 kHz AAC audio;
-- derived grid: 40×11 cells, or 320×176 decoded raster pixels;
-- encoded frames: 24;
-- output bytes: 7,282;
-- output bitrate: 58,256 bits per second;
-- changed-cell percentage: 20.939%;
-- keyframes: 1;
-- chunks: 26;
-- independent verification: valid;
-- output SHA-256:
-  `75d3d98a318aaa354aaad42b892126b9be0c60445b6f1ed24f00fad688353c7d`;
-- evidence artifact: `8822412544`;
+The shell now provides:
+
+- startup file arguments and SDL file-drop events;
+- the complete eleven-position cadence control;
+- discrete columns, palette, 32/64-glyph, and profile controls;
+- deterministic multi-file queue planning and collision-safe output paths;
+- keyboard control for focus, settings, queue selection, encoding, retry,
+  removal, output-folder access, and quit behavior;
+- visible source-audio warnings;
+- analysis, video, audio, mux, verify, completion, and failure presentation;
+- sequential background encoding through the application core;
+- independent final `.v64` verification;
+- deterministic headless shell and encode reports;
+- a real SDL2 window smoke test under Xvfb.
+
+Permanent read-only workflow `30721506431` passed at immutable head
+`80bc00b5c2a4374a0f4ce6838a9ae0a7be2da2f0`. Twelve Node application tests and
+six Rust shell tests passed; strict formatting and clippy checks passed; and the
+release binary opened the real SDL2 window under Xvfb.
+
+The gate generated a one-second 320×180 H.264/AAC source, analyzed it as an
+80×23-cell output, emitted 11 machine-readable progress events, encoded 24 video
+frames, and independently verified a 7,186-byte `.v64` container with one
+keyframe and 26 chunks. The audio stage was explicitly skipped and the result
+remained silent.
+
+Checked identities:
+
+- native release binary SHA-256:
+  `468ee00c2e22e68eab1fd65b47ffd65ecea6bf0ac292b0902eb38c1f25a64617`;
+- source fixture SHA-256:
+  `0d6f12104377d87549b857fc7f94ddf2e722d4b250e6be743cd1a7566dc60cfe`;
+- output `.v64` SHA-256:
+  `eadd4be993177b8559bea1bb15f76ea7c076ed4f7a64bb31c8b0f6436886342d`;
+- deterministic shell report SHA-256:
+  `0483071ce60baed1b727458cb637db02204c98c0e236c50c75dc7f0f8562d82d`;
+- encode report SHA-256:
+  `d40f0f795a46b35898dbcc49d2aad2d0048391c61f8f58b85778f21829ec3994`;
+- independent verification report SHA-256:
+  `20e5fb0b66a6509d2521271a002c7be025761b28d0073735b5550945a30cd62b`;
+- evidence artifact: `8825009901`;
 - artifact digest:
-  `25af6009ce9ded104af5b790215fa5570351bd43eaebbdd4aeed930db7a02cbc`.
-
-The source audio was detected and disclosed, the audio stage was explicitly
-marked skipped, and the completed file was identified as silent. This tranche
-does not silently discard audio or claim AM1 source encoding before it exists.
-
-The official Google Docs design document records the checked player evidence
-and remaining caveats; the Video64 Drop application-core evidence will be added
-there after merge.
+  `3c26b076ea1a03850ea9e7fe71a55ddbd03dd164a4c09f317f76da75741f2e49`.
 
 ## Boundaries not yet claimed
 
-- Genuine blinded AM1 speech listening is still mandatory before freezing the
-  normative audio bitrate profile.
-- Video64 Drop does not yet encode source audio; application-core outputs remain
-  silent and disclose that limitation.
-- The native drag-and-drop window, file picker, control surface, decoded preview,
-  sampled size estimator, Particle Lighting controls, and packaged application
-  are not yet claimed.
+- Genuine blinded AM1 speech listening remains mandatory before the normative
+  audio bitrate profile can freeze.
+- Video64 Drop does not yet encode source audio. The native shell detects and
+  visibly discloses source audio, but current output remains silent.
+- The native shell does not yet include decoded source/V64 preview, sampled size
+  estimation, Particle Lighting controls, active-job cancellation, a bundled
+  Node runtime, desktop file picker, or installable Linux package.
 - Operating-system and physical-device A/V drift remain platform qualification
-  work; the accelerated gate proves arithmetic and decoded-timeline alignment.
-- Fixed 0.5× and 2× audio currently changes pitch through deterministic sample
+  work.
+- Fixed 0.5× and 2× player audio changes pitch through deterministic sample
   repetition or decimation; no opaque time-stretching algorithm is claimed.
-- Windows and macOS packages are not yet claimed.
+- Windows and macOS player and encoder packages are not yet claimed.
 - The first public prerelease remains silent.
 
 ## Next mandatory gates
 
-1. Build the Linux-first native Video64 Drop shell on the checked application
-   core, including drag/drop or file selection, the frozen controls, queue state,
-   visible warnings, progress, and completion output.
+1. Connect AM1 source-audio encoding and muxing to Video64 Drop so ordinary
+   audiovisual inputs no longer produce silent outputs.
 2. Complete genuine blinded AM1 speech listening and decide whether the current
    speech bitrate profile can freeze.
-3. Connect AM1 source-audio encoding to Video64 Drop so ordinary audiovisual
-   inputs no longer produce silent outputs.
-4. Add the sampled size estimator and decoded source/V64 preview without
+3. Add the sampled size estimator and decoded source/V64 preview without
    replacing exact post-encode verification.
-5. Add platform-specific real-device synchronization and packaging evidence as
-   Windows and macOS player and encoder work becomes executable.
-6. Continue broader browser/WebAssembly decoding and VLC integration in the
-   planned product order.
+4. Add a Linux package with bundled runtime dependencies, desktop file selection,
+   application icon handling, and install/uninstall evidence.
+5. Add Particle Lighting controls after its normative event and recovery policy
+   is ready for application integration.
+6. Continue broader browser/WebAssembly decoding, physical-device qualification,
+   Windows/macOS packaging, and VLC integration in the planned product order.

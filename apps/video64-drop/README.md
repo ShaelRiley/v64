@@ -31,6 +31,11 @@ The current profile is identified as `AM1-PROVISIONAL-8K`: constrained VBR,
 explicitly `normative: false`. Genuine blinded speech listening remains
 mandatory before this bitrate can freeze.
 
+The present implementation buffers source PCM before silence analysis and has a
+hard 256 MiB PCM ceiling, which is roughly 46 minutes of mono 48 kHz PCM16.
+Inputs exceeding that bound fail before FFmpeg extraction begins. Streaming
+long-form AM1 encoding remains a later tranche.
+
 Sources without audio retain an explicit skipped audio stage and produce valid
 video-only output.
 
@@ -47,9 +52,9 @@ completed job document is written to standard output.
 
 ## Remaining product boundary
 
-Decoded source/V64 preview, sampled size estimation, Particle Lighting controls,
-active-job cancellation, a bundled runtime, desktop file selection, and an
-installable Linux package remain later tranches.
+Streaming long-form audio, decoded source/V64 preview, sampled size estimation,
+Particle Lighting controls, active-job cancellation, a bundled runtime, desktop
+file selection, and an installable Linux package remain later tranches.
 
 ## Test
 

@@ -104,6 +104,8 @@ jobs:
           assert shell["capabilities"]["desktopShell"] is True
           assert shell["capabilities"]["dragAndDrop"] is True
           assert shell["capabilities"]["audioEncoding"] is True
+          assert shell["transitionalBoundary"]["sourceAudioEncoding"] is True
+          assert shell["transitionalBoundary"]["audioBitrateFrozen"] is False
           assert shell["settings"] == {
               "fps": "24",
               "columns": 80,

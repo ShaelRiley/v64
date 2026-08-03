@@ -11,7 +11,7 @@ import { join } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { deriveRows } from "../../prototype/js/constants.mjs";
+import { TICK_RATE, deriveRows } from "../../prototype/js/constants.mjs";
 import {
   demuxV64,
   makeChunk,
@@ -45,6 +45,17 @@ function runProgram(program, args, spawn = spawnSync) {
     throw new Error(`${program} failed (${result.status}): ${String(result.stderr).trim()}`);
   }
   return result.stdout;
+}
+
+function rateMetrics(bytes, durationTicks) {
+  if (!Number.isSafeInteger(bytes) || bytes < 0 ||
+      !Number.isSafeInteger(durationTicks) || durationTicks <= 0) {
+    return { bitsPerSecond: null, bytesPerMinute: null };
+  }
+  return {
+    bitsPerSecond: Math.round(bytes * 8 * TICK_RATE / durationTicks),
+    bytesPerMinute: Math.round(bytes * 60 * TICK_RATE / durationTicks)
+  };
 }
 
 export function probeDropSource(inputPath, { spawnSyncImpl = spawnSync } = {}) {
@@ -241,13 +252,24 @@ export async function runDropJob(job, {
     const verification = await Promise.resolve(verify(snapshot.outputPath));
     stage("verify", "completed", { detail: "V64 verification passed" });
 
+    const videoOnlyBytes = Number.isSafeInteger(videoEncoded.bytes)
+      ? videoEncoded.bytes
+      : null;
+    const finalBytes = Number.isSafeInteger(muxed.bytes)
+      ? muxed.bytes
+      : verification.outputBytes;
+    const finalRate = rateMetrics(finalBytes, durationTicks);
     snapshot = completeDropJob(snapshot, {
       analysis,
       encoded: {
         ...videoEncoded,
         durationTicks,
-        videoOnlyBytes: videoEncoded.bytes ?? null,
-        bytes: muxed.bytes ?? verification.outputBytes,
+        videoOnlyBytes,
+        videoOnlyBitsPerSecond: videoEncoded.bitsPerSecond ?? null,
+        videoOnlyBytesPerMinute: videoEncoded.bytesPerMinute ?? null,
+        bytes: finalBytes,
+        bitsPerSecond: finalRate.bitsPerSecond,
+        bytesPerMinute: finalRate.bytesPerMinute,
         audio: audio.summary,
         mux: muxed
       },

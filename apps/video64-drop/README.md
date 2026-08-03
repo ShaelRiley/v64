@@ -16,25 +16,34 @@ The application core provides:
 - provisional AM1 source-audio encoding as mono 48 kHz constrained-VBR Opus;
 - exact `SILN` spans for qualifying long silence;
 - bounded `AURN` runs for audible source regions;
+- bounded disk-spooled long-form source-audio processing;
 - deterministic audiovisual remuxing and final V64 verification;
 - actionable failure state and machine-readable progress events.
 
 ## AM1 status
 
-Ordinary audiovisual inputs now produce audiovisual `.v64` files. The first
-audio stream is converted to mono 48 kHz PCM16 and aligned exactly to the
-encoded video duration. Long silence is represented by `SILN`; audible spans
-are encoded into standard Opus packets carried by `AURN` chunks.
+Ordinary audiovisual inputs produce audiovisual `.v64` files. The first audio
+stream is converted to mono 48 kHz PCM16 and aligned exactly to the encoded
+video duration. Long silence is represented by `SILN`; audible spans are encoded
+into standard Opus packets carried by `AURN` chunks.
 
 The current profile is identified as `AM1-PROVISIONAL-8K`: constrained VBR,
 8 kbps, 20 ms packets, with individual audible runs bounded to 60 seconds. It is
 explicitly `normative: false`. Genuine blinded speech listening remains
 mandatory before this bitrate can freeze.
 
-The present implementation buffers source PCM before silence analysis and has a
-hard 256 MiB PCM ceiling, which is roughly 46 minutes of mono 48 kHz PCM16.
-Inputs exceeding that bound fail before FFmpeg extraction begins. Streaming
-long-form AM1 encoding remains a later tranche.
+Production encoding no longer buffers the complete PCM recording in memory.
+FFmpeg writes exact-duration PCM to a temporary disk spool. A first pass scans
+that file in fixed-size reads using the same checked hysteretic silence detector;
+a second pass reads and encodes only one bounded audible run at a time. The
+default source-PCM buffer bound is 5,760,000 bytes, the size of one 60-second
+mono 48 kHz PCM16 run. Temporary disk use is approximately 96,000 bytes per
+second of source duration.
+
+A permanent sparse-file gate processes 47 minutes / 270,720,000 PCM bytes,
+beyond the former 256 MiB ceiling, in 259 scan reads while keeping source-PCM
+buffers below 6 MiB. The small in-memory helper remains available only for
+fixtures and focused tests and retains its explicit 256 MiB ceiling.
 
 Sources without audio retain an explicit skipped audio stage and produce valid
 video-only output.
@@ -52,9 +61,11 @@ completed job document is written to standard output.
 
 ## Remaining product boundary
 
-Streaming long-form audio, decoded source/V64 preview, sampled size estimation,
-Particle Lighting controls, active-job cancellation, a bundled runtime, desktop
-file selection, and an installable Linux package remain later tranches.
+The AM1 bitrate is not frozen. Decoded source/V64 preview, sampled size
+estimation, Particle Lighting controls, active-job cancellation, a bundled
+runtime, desktop file selection, and an installable Linux package remain later
+tranches. The disk-spooled implementation is not a one-pass live-capture
+encoder.
 
 ## Test
 

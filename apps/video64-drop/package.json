@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test ../../tests/video64-drop.test.mjs ../../tests/video64-drop-cli.test.mjs"
+    "test": "node --test ../../tests/video64-drop.test.mjs ../../tests/video64-drop-streaming-audio.test.mjs ../../tests/video64-drop-cli.test.mjs"
   },
   "engines": {
     "node": ">=20"

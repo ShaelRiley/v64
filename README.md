@@ -74,7 +74,8 @@ real binary `.v64` implementation, not a mock UI:
   subtitle/audio presentation, persistent viewport-anchored CRT scanlines, and
   headless evidence;
 - the Linux-first SDL2 Video64 Drop shell with drag-and-drop, queue controls,
-  staged progress, audiovisual encoding, and independent output verification;
+  staged progress, bounded disk-spooled long-form AM1 encoding, and independent
+  output verification;
 - Node conformance tests and golden hashes.
 
 The broader browser/WebAssembly decoder, decoded Video64 Drop preview and size
@@ -135,9 +136,15 @@ node apps/video64-drop/cli.mjs encode input.mp4 output-av.v64 \
 
 Video64 Drop converts the first audio stream to mono 48 kHz and encodes audible
 regions as AM1 `AURN` Opus runs while representing qualifying long silence as
-exact `SILN` spans. The current `AM1-PROVISIONAL-8K` speech setting is not
-normative; genuine blinded listening remains required before its bitrate can
-freeze.
+exact `SILN` spans. Production source audio is processed through a bounded
+two-pass temporary disk spool: fixed-size silence-analysis reads followed by at
+most one 60-second audible run in source-PCM memory. A permanent gate processes
+47 minutes / 270,720,000 PCM bytes with a 5,760,000-byte source-PCM buffer bound.
+
+The current `AM1-PROVISIONAL-8K` speech setting is not normative; genuine
+blinded listening remains required before its bitrate can freeze. The spool is
+not a one-pass live-capture encoder and requires temporary disk space
+proportional to source duration.
 
 Source ingest honors FFmpeg display-rotation and pixel-aspect metadata before
 deriving the glyph grid. When integer grid rounding cannot exactly represent

@@ -125,7 +125,7 @@ The application and shell provide:
 
 ## Video64 Drop AM1 source-audio encoding
 
-PR #14 connects ordinary source audio to Video64 Drop using the existing AM1
+PR #14 connected ordinary source audio to Video64 Drop using the existing AM1
 container and decoder semantics. The implementation:
 
 - extracts the first source-audio stream as mono 48 kHz PCM16;
@@ -144,28 +144,51 @@ The active profile is `AM1-PROVISIONAL-8K`: mono 48 kHz, constrained VBR,
 8 kbps, and 20 ms packets. It is explicitly marked `normative: false`. Genuine
 blinded speech listening remains mandatory before this bitrate can freeze.
 
-The current encoder performs whole-file PCM analysis under a hard 256 MiB
-ceiling, roughly 46 minutes of mono 48 kHz PCM16. Oversized inputs fail before
-FFmpeg extraction starts. Streaming long-form AM1 encoding is not yet claimed.
+PR #15 replaces the former duration-limited whole-file PCM production path with
+bounded disk-spooled two-pass processing:
 
-### Checked application-core evidence
+- FFmpeg writes exact-duration PCM directly to a temporary spool file;
+- the checked hysteretic silence detector now has a stateful form that preserves
+  exact decisions across arbitrary input chunk boundaries;
+- pass one scans the spool in fixed-size reads without buffering the recording;
+- pass two reads and encodes at most one bounded 60-second audible run at a time;
+- the default source-PCM buffer bound is 5,760,000 bytes;
+- temporary disk use is 96,000 bytes per second of mono 48 kHz PCM16 duration;
+- the legacy in-memory helper remains available for fixtures only and retains an
+  explicit 256 MiB ceiling.
 
-All six workflows triggered on immutable code head
-`7e929bb40ec9c1cc45c4df503a6cd83c245dfa40` passed. Permanent application
-workflow `30781816136` ran the focused tests, encoded the same real H.264/AAC
-source twice, required byte-identical audiovisual outputs, independently decoded
-the AM1 timeline, and independently verified the container.
+This is bounded long-form file encoding, not a one-pass live-capture encoder.
 
-The one-second source produced:
+### Checked streaming application-core evidence
+
+All eight workflows triggered on immutable code head
+`15a72e9862d682339936595601e7aa20ac589082` passed or were retained as broad
+regressions before documentation finalization. Permanent application workflow
+`30783825634` passed the 18 focused tests, stateful-detector parity, disk-spooled
+versus in-memory AM1 byte equality, the long-form bound, deterministic duplicate
+Video64 Drop output, independent AM1 decoding, and independent container
+verification.
+
+The long-form sparse-spool gate processed:
+
+- 47 minutes / 2,820 seconds;
+- 169,200,000 V64 ticks;
+- 135,360,000 mono samples;
+- 270,720,000 PCM bytes, beyond the former 268,435,456-byte ceiling;
+- 259 fixed-size scan reads of at most 1,048,576 bytes;
+- one exact full-duration `SILN` span;
+- a 5,760,000-byte maximum configured source-PCM buffer, under 6 MiB;
+- zero whole-file PCM buffering.
+
+The ordinary one-second audiovisual fixture remained byte-identical to the
+pre-streaming output and produced:
 
 - 40×11 cells and 24 video frames;
-- 7,282 video-only bytes, or 58,256 bits per second;
 - one `AURN` run containing 51 Opus packets;
-- 48,000 kept mono samples and zero `SILN` spans;
-- 8,417 final audiovisual bytes, or 67,336 bits per second and 505,020 bytes per
-  minute;
-- 27 total chunks and independent verification success;
-- 48,000 decoded samples / 96,000 PCM bytes with nonzero signal.
+- 48,000 kept mono samples;
+- 8,417 final audiovisual bytes and 27 chunks;
+- exactly 48,000 decoded samples / 96,000 nonzero PCM bytes;
+- independent verification success.
 
 Checked identities:
 
@@ -176,54 +199,50 @@ Checked identities:
 - decoded PCM SHA-256:
   `2e9b8818c3e9272c8ad1aec9fcccb47776708cafbc5351b6ffeefd551ed38edc`;
 - completed job SHA-256:
-  `78c1c55ed06a8104a4546b9d9f094247951bed80d274f53dad6588fad5bb842d`;
-- evidence artifact: `8843920073`;
+  `2720557f30f108baed9cdb215a80a8334600f15ab5a50722703bcf932513ddb1`;
+- long-form report SHA-256:
+  `8c7112aa1deb12af2fd35a5f33a1d127e9adf839da28bf94929539b9a7787119`;
+- evidence artifact: `8844560891`;
 - artifact digest:
-  `75cf2720c6d7e2946839dc472ba334d07c654f49928f45f82522e97c515c6d96`.
+  `2f2146407f578370b095e133ed32fb647a34fcafbd488f8c41f57f63a7067cca`.
 
-### Checked native-shell evidence
+### Checked streaming native-shell evidence
 
-Permanent native-shell workflow `30781816155` passed on the same immutable code
-head. It passed twelve-plus focused Node tests, six Rust shell tests, formatting,
-strict clippy, release compilation, deterministic duplicate shell reports,
-actual SDL2 window presentation under Xvfb, audiovisual encoding, and
-independent verification.
+Permanent native-shell workflow `30783825616` passed on the same immutable code
+head. It passed the expanded Node tests, Rust shell tests, formatting, strict
+clippy, release compilation, deterministic duplicate shell reports, actual SDL2
+window presentation under Xvfb, streaming audiovisual encoding, and independent
+verification.
 
-The native default 80-column fixture produced:
-
-- 80×23 cells and 24 video frames;
-- 6,991 video-only bytes, or 55,928 bits per second;
-- one `AURN` run containing 51 Opus packets and 48,000 kept samples;
-- 8,119 final audiovisual bytes, or 64,952 bits per second;
-- 27 chunks and independent verification success.
-
-The shell report explicitly states `sourceAudioEncoding: true` and
-`audioBitrateFrozen: false`.
+The native fixture reported `strategy: disk-spooled-two-pass`,
+`wholeFilePcmBuffered: false`, and a 5,760,000-byte source-PCM buffer bound. It
+produced a verified 8,314-byte audiovisual `.v64` with one `AURN` run, 51 Opus
+packets, 48,000 kept samples, and 27 chunks.
 
 Checked identities:
 
 - native release binary SHA-256:
   `8c032d6e214c973cc5532f0864f734c08cbc368428b9a3407de43149c28eedd9`;
 - source fixture SHA-256:
-  `600eac1e20e979edb3b920d93896a258ea62edd5ccefe9c04b39190fbab22208`;
+  `0d6f12104377d87549b857fc7f94ddf2e722d4b250e6be743cd1a7566dc60cfe`;
 - output `.v64` SHA-256:
-  `7497662d2084807ae6a0c1377f7eec02ba76382229208174235aadbbf8519f5b`;
+  `f64d13751f96a243e59411822e958c00301218649d314a728087d3c0f92831ab`;
 - deterministic shell report SHA-256:
   `db325db5dc9b86ca5b8cb58b5508c352b54334a911c060365d612cf2d11b8ac1`;
 - encode report SHA-256:
-  `cbe3918118206eec62833c8d8e24d025b42c6ea74e93d6ba319fc467010aeb1b`;
+  `07db04d786f9d0d811f550c7204ab85d686ccbe2f104206a357fdf1b22cc8319`;
 - independent verification report SHA-256:
   `46ce0efda7a46db9f6e182ab910a589e2275e7990fa5470f5af0640be72013a1`;
-- evidence artifact: `8843929544`;
+- evidence artifact: `8844569353`;
 - artifact digest:
-  `1f2a08fa905b1962a6728f9039a16ae50b859ae775517c3fbd4abb1436ea6400`.
+  `18a903e8869a8f52d25a9f8c911f45f501791a2da8f818acc6fa44afe3a9395b`.
 
 ## Boundaries not yet claimed
 
 - Genuine blinded AM1 speech listening remains mandatory before the normative
   audio bitrate profile can freeze.
-- Streaming long-form AM1 encoding beyond the 256 MiB whole-file PCM ceiling is
-  not implemented.
+- Disk-spooled long-form encoding is not a one-pass live-capture encoder and
+  requires temporary storage proportional to source duration.
 - The native shell does not yet include decoded source/V64 preview, sampled size
   estimation, Particle Lighting controls, active-job cancellation, a bundled
   Node runtime, desktop file picker, or installable Linux package.
@@ -238,13 +257,12 @@ Checked identities:
 
 1. Complete genuine blinded AM1 speech listening and decide whether the current
    8 kbps speech candidate can freeze.
-2. Add streaming/bounded-memory long-form AM1 encoding beyond the current 256 MiB
-   whole-file PCM ceiling.
-3. Add the sampled size estimator and decoded source/V64 preview without
+2. Add the sampled size estimator and decoded source/V64 preview without
    replacing exact post-encode verification.
-4. Add a Linux package with bundled runtime dependencies, desktop file selection,
+3. Add a Linux package with bundled runtime dependencies, desktop file selection,
    application icon handling, and install/uninstall evidence.
-5. Add Particle Lighting controls after its normative event and recovery policy
+4. Add Particle Lighting controls after its normative event and recovery policy
    is ready for application integration.
-6. Continue broader browser/WebAssembly decoding, physical-device qualification,
-   Windows/macOS packaging, and VLC integration in the planned product order.
+5. Continue broader browser/WebAssembly decoding, physical-device qualification,
+   Windows/macOS packaging, one-pass live capture research, and VLC integration
+   in the planned product order.

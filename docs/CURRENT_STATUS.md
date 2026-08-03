@@ -1,6 +1,6 @@
 # Video 64 current development status
 
-Updated: 2026-08-01
+Updated: 2026-08-02
 
 This is the compact current-state companion to `IMPLEMENTATION_LEDGER.md`. The
 ledger retains the complete historical evidence chain; this document records the
@@ -32,14 +32,14 @@ contains the corrected portrait test video and Linux x86_64 base-video player.
 The user successfully played that release on SteamOS and confirmed its
 orientation and proportions.
 
-That prerelease is intentionally silent and predates native player profile 2.
-Its release manifest and checksums remain authoritative for those assets; newer
-subtitle, audio, synchronization, and encoder-application evidence does not
-retroactively alter it.
+That prerelease is intentionally silent and predates native player profile 2 and
+Video64 Drop source-audio encoding. Its release manifest and checksums remain
+authoritative for those assets; newer subtitle, audio, synchronization, and
+encoder-application evidence does not retroactively alter it.
 
 ## Permanently gated codec and decoder state
 
-The repository now includes and continuously checks:
+The repository continuously checks:
 
 - bounded header, chunk, index, CRC, and raw-DEFLATE parsing;
 - complete Phase-1 and direct Grammar B frame-command decoding;
@@ -102,80 +102,128 @@ This proves deterministic decoded video, PCM timeline, and player-clock
 alignment. It does not measure operating-system mixer latency, audio-device
 oscillator error, or physical hardware scheduler drift.
 
-## Video64 Drop application core
+## Video64 Drop application and Linux shell
 
-PR #12 merged the first executable Video64 Drop application foundation as
-`728059d3bce9ea619a610bd583b94b3e24b9139b`.
+PR #12 merged the deterministic Video64 Drop application foundation as
+`728059d3bce9ea619a610bd583b94b3e24b9139b`. PR #13 merged the first
+Linux/SteamOS Rust/SDL2 window as
+`ceaed4dd0c47a2a62c115adf2b3ea0e56a69fec9`.
 
-The application core owns normative defaults and validation, FFprobe source
-analysis, aspect-aware grid derivation, deterministic collision-safe queue
-planning, stable job documents, analysis/video/audio/mux/verify stages,
-machine-readable progress, actionable failure state, isolated proof-encoder
-execution, and independent output verification.
+The application and shell provide:
 
-Permanent workflow `30712779947` passed at immutable head
-`f5eed760bced9b2a0234abe1f3fd8d542fa3ff59`. Its one-second 320×180 H.264/AAC
-source encoded 24 frames to a verified 7,282-byte `.v64` file. Source audio was
-detected and explicitly disclosed; the audio stage was skipped rather than
-silently ignored. Evidence artifact `8822412544` has digest
-`25af6009ce9ded104af5b790215fa5570351bd43eaebbdd4aeed930db7a02cbc`.
-
-## Linux native Video64 Drop shell
-
-PR #13 implements the first Linux/SteamOS native Video64 Drop window on top of
-the checked application core. The optional Rust/SDL2 host does not duplicate the
-codec or queue logic.
-
-The shell now provides:
-
+- normative defaults and validation;
+- FFprobe source analysis and aspect-aware grid derivation;
+- deterministic collision-safe queue planning;
 - startup file arguments and SDL file-drop events;
-- the complete eleven-position cadence control;
-- discrete columns, palette, 32/64-glyph, and profile controls;
-- deterministic multi-file queue planning and collision-safe output paths;
-- keyboard control for focus, settings, queue selection, encoding, retry,
-  removal, output-folder access, and quit behavior;
-- visible source-audio warnings;
-- analysis, video, audio, mux, verify, completion, and failure presentation;
-- sequential background encoding through the application core;
-- independent final `.v64` verification;
-- deterministic headless shell and encode reports;
-- a real SDL2 window smoke test under Xvfb.
+- discrete cadence, columns, palette, 32/64-glyph, and profile controls;
+- keyboard queue selection, encoding, retry, removal, output-folder access, and
+  quit behavior;
+- explicit analysis, video encode, audio encode, mux, verify, completion, and
+  failure states;
+- sequential background execution and independent final `.v64` verification;
+- deterministic headless reports and a real SDL2 window gate under Xvfb.
 
-Permanent read-only workflow `30721506431` passed at immutable head
-`80bc00b5c2a4374a0f4ce6838a9ae0a7be2da2f0`. Twelve Node application tests and
-six Rust shell tests passed; strict formatting and clippy checks passed; and the
-release binary opened the real SDL2 window under Xvfb.
+## Video64 Drop AM1 source-audio encoding
 
-The gate generated a one-second 320×180 H.264/AAC source, analyzed it as an
-80×23-cell output, emitted 11 machine-readable progress events, encoded 24 video
-frames, and independently verified a 7,186-byte `.v64` container with one
-keyframe and 26 chunks. The audio stage was explicitly skipped and the result
-remained silent.
+PR #14 connects ordinary source audio to Video64 Drop using the existing AM1
+container and decoder semantics. The implementation:
+
+- extracts the first source-audio stream as mono 48 kHz PCM16;
+- aligns PCM exactly to the encoded V64 video duration, trimming or zero-padding
+  when necessary;
+- detects qualifying long silence with the checked hysteretic detector;
+- maps silence to exact `SILN` spans;
+- maps audible regions to standard constrained-VBR libopus `AURN` runs;
+- bounds each audible run to 60 seconds;
+- remuxes the verified video and metadata timeline with the complete AM1 audio
+  timeline;
+- independently verifies the finished audiovisual `.v64`;
+- retains an explicit skipped audio stage for sources without audio.
+
+The active profile is `AM1-PROVISIONAL-8K`: mono 48 kHz, constrained VBR,
+8 kbps, and 20 ms packets. It is explicitly marked `normative: false`. Genuine
+blinded speech listening remains mandatory before this bitrate can freeze.
+
+The current encoder performs whole-file PCM analysis under a hard 256 MiB
+ceiling, roughly 46 minutes of mono 48 kHz PCM16. Oversized inputs fail before
+FFmpeg extraction starts. Streaming long-form AM1 encoding is not yet claimed.
+
+### Checked application-core evidence
+
+All six workflows triggered on immutable code head
+`7e929bb40ec9c1cc45c4df503a6cd83c245dfa40` passed. Permanent application
+workflow `30781816136` ran the focused tests, encoded the same real H.264/AAC
+source twice, required byte-identical audiovisual outputs, independently decoded
+the AM1 timeline, and independently verified the container.
+
+The one-second source produced:
+
+- 40×11 cells and 24 video frames;
+- 7,282 video-only bytes, or 58,256 bits per second;
+- one `AURN` run containing 51 Opus packets;
+- 48,000 kept mono samples and zero `SILN` spans;
+- 8,417 final audiovisual bytes, or 67,336 bits per second and 505,020 bytes per
+  minute;
+- 27 total chunks and independent verification success;
+- 48,000 decoded samples / 96,000 PCM bytes with nonzero signal.
+
+Checked identities:
+
+- source SHA-256:
+  `07a51b99fd75141590293cfa24094d770fe66d3dff60c78cc164e056a8df702c`;
+- byte-identical output SHA-256:
+  `d594404c64dc739b5ac5019989a74e4756bd4b8bc1b9446263c5011198d84a66`;
+- decoded PCM SHA-256:
+  `2e9b8818c3e9272c8ad1aec9fcccb47776708cafbc5351b6ffeefd551ed38edc`;
+- completed job SHA-256:
+  `78c1c55ed06a8104a4546b9d9f094247951bed80d274f53dad6588fad5bb842d`;
+- evidence artifact: `8843920073`;
+- artifact digest:
+  `75cf2720c6d7e2946839dc472ba334d07c654f49928f45f82522e97c515c6d96`.
+
+### Checked native-shell evidence
+
+Permanent native-shell workflow `30781816155` passed on the same immutable code
+head. It passed twelve-plus focused Node tests, six Rust shell tests, formatting,
+strict clippy, release compilation, deterministic duplicate shell reports,
+actual SDL2 window presentation under Xvfb, audiovisual encoding, and
+independent verification.
+
+The native default 80-column fixture produced:
+
+- 80×23 cells and 24 video frames;
+- 6,991 video-only bytes, or 55,928 bits per second;
+- one `AURN` run containing 51 Opus packets and 48,000 kept samples;
+- 8,119 final audiovisual bytes, or 64,952 bits per second;
+- 27 chunks and independent verification success.
+
+The shell report explicitly states `sourceAudioEncoding: true` and
+`audioBitrateFrozen: false`.
 
 Checked identities:
 
 - native release binary SHA-256:
-  `468ee00c2e22e68eab1fd65b47ffd65ecea6bf0ac292b0902eb38c1f25a64617`;
+  `8c032d6e214c973cc5532f0864f734c08cbc368428b9a3407de43149c28eedd9`;
 - source fixture SHA-256:
-  `0d6f12104377d87549b857fc7f94ddf2e722d4b250e6be743cd1a7566dc60cfe`;
+  `600eac1e20e979edb3b920d93896a258ea62edd5ccefe9c04b39190fbab22208`;
 - output `.v64` SHA-256:
-  `eadd4be993177b8559bea1bb15f76ea7c076ed4f7a64bb31c8b0f6436886342d`;
+  `7497662d2084807ae6a0c1377f7eec02ba76382229208174235aadbbf8519f5b`;
 - deterministic shell report SHA-256:
-  `0483071ce60baed1b727458cb637db02204c98c0e236c50c75dc7f0f8562d82d`;
+  `db325db5dc9b86ca5b8cb58b5508c352b54334a911c060365d612cf2d11b8ac1`;
 - encode report SHA-256:
-  `d40f0f795a46b35898dbcc49d2aad2d0048391c61f8f58b85778f21829ec3994`;
+  `cbe3918118206eec62833c8d8e24d025b42c6ea74e93d6ba319fc467010aeb1b`;
 - independent verification report SHA-256:
-  `20e5fb0b66a6509d2521271a002c7be025761b28d0073735b5550945a30cd62b`;
-- evidence artifact: `8825009901`;
+  `46ce0efda7a46db9f6e182ab910a589e2275e7990fa5470f5af0640be72013a1`;
+- evidence artifact: `8843929544`;
 - artifact digest:
-  `3c26b076ea1a03850ea9e7fe71a55ddbd03dd164a4c09f317f76da75741f2e49`.
+  `1f2a08fa905b1962a6728f9039a16ae50b859ae775517c3fbd4abb1436ea6400`.
 
 ## Boundaries not yet claimed
 
 - Genuine blinded AM1 speech listening remains mandatory before the normative
   audio bitrate profile can freeze.
-- Video64 Drop does not yet encode source audio. The native shell detects and
-  visibly discloses source audio, but current output remains silent.
+- Streaming long-form AM1 encoding beyond the 256 MiB whole-file PCM ceiling is
+  not implemented.
 - The native shell does not yet include decoded source/V64 preview, sampled size
   estimation, Particle Lighting controls, active-job cancellation, a bundled
   Node runtime, desktop file picker, or installable Linux package.
@@ -188,10 +236,10 @@ Checked identities:
 
 ## Next mandatory gates
 
-1. Connect AM1 source-audio encoding and muxing to Video64 Drop so ordinary
-   audiovisual inputs no longer produce silent outputs.
-2. Complete genuine blinded AM1 speech listening and decide whether the current
-   speech bitrate profile can freeze.
+1. Complete genuine blinded AM1 speech listening and decide whether the current
+   8 kbps speech candidate can freeze.
+2. Add streaming/bounded-memory long-form AM1 encoding beyond the current 256 MiB
+   whole-file PCM ceiling.
 3. Add the sampled size estimator and decoded source/V64 preview without
    replacing exact post-encode verification.
 4. Add a Linux package with bundled runtime dependencies, desktop file selection,

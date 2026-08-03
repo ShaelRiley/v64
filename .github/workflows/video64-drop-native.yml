@@ -103,6 +103,9 @@ jobs:
           assert shell["format"] == "VIDEO64-DROP-NATIVE-SHELL-1"
           assert shell["capabilities"]["desktopShell"] is True
           assert shell["capabilities"]["dragAndDrop"] is True
+          assert shell["capabilities"]["audioEncoding"] is True
+          assert shell["transitionalBoundary"]["sourceAudioEncoding"] is True
+          assert shell["transitionalBoundary"]["audioBitrateFrozen"] is False
           assert shell["settings"] == {
               "fps": "24",
               "columns": 80,
@@ -121,14 +124,23 @@ jobs:
           assert encoded["coreExitSuccess"] is True
           final = encoded["finalJob"]
           assert final["status"] == "completed"
-          assert final["stages"]["audio_encode"]["state"] == "skipped"
+          assert final["stages"]["audio_encode"]["state"] == "completed"
+          assert final["result"]["encoded"]["audio"]["sourcePresent"] is True
+          assert final["result"]["encoded"]["audio"]["normative"] is False
+          assert final["result"]["encoded"]["audio"]["audibleRuns"] > 0
+          assert final["result"]["encoded"]["audio"]["opusPackets"] > 0
           assert final["result"]["verification"]["valid"] is True
+          assert final["result"]["verification"]["audioRuns"] > 0
+          assert final["result"]["verification"]["audioKeptSamples"] > 0
           assert final["result"]["verification"]["outputBytes"] > 0
+          assert any(event.get("stage") == "audio_encode" for event in encoded["events"])
           assert any(event.get("stage") == "verify" for event in encoded["events"])
           assert Path("evidence/output.v64").stat().st_size == final["result"]["verification"]["outputBytes"]
 
           verified = json.loads(Path("evidence/verify.json").read_text())
           assert verified["valid"] is True
+          assert verified["audioRuns"] > 0
+          assert verified["audioKeptSamples"] > 0
           PY
 
       - name: Record checksums

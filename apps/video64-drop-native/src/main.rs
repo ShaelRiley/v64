@@ -390,7 +390,8 @@ fn write_headless_shell_report(
         },
         "coreCli": core.cli,
         "transitionalBoundary": {
-            "sourceAudioEncoding": false,
+            "sourceAudioEncoding": true,
+            "audioBitrateFrozen": false,
             "decodedPreview": false,
             "sampledSizeEstimator": false,
             "particleLighting": false,
@@ -926,7 +927,7 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
         canvas,
         42,
         118,
-        "SOURCE AUDIO IS DETECTED AND DISCLOSED; CURRENT OUTPUT REMAINS SILENT",
+        "SOURCE AUDIO USES PROVISIONAL AM1; BITRATE AWAITS BLINDED LISTENING",
         1,
         Color::RGB(238, 183, 93),
     )?;

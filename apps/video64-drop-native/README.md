@@ -2,8 +2,9 @@
 
 This crate is the Linux-first SDL2 desktop host for Video64 Drop. It deliberately
 uses the tested JavaScript application core in `../video64-drop` for queue
-planning, source analysis, encoding, progress events, and final verification.
-The native shell does not duplicate the codec.
+planning, source analysis, video and AM1 audio encoding, progress events,
+audiovisual remuxing, and final verification. The native shell does not
+duplicate the codec.
 
 ## Current interaction
 
@@ -18,9 +19,15 @@ The native shell does not duplicate the codec.
   and `O` to open the completed output folder.
 - Completed outputs are independently verified by the application core.
 
-Source audio is detected and visibly disclosed. AM1 source-audio encoding is not
-yet connected, so current shell output remains silent and the audio stage is
-explicitly skipped.
+Source audio is detected and encoded as provisional AM1 mono 48 kHz Opus.
+Qualifying long silence is represented by exact `SILN` spans and audible regions
+by bounded `AURN` runs. Sources without audio retain an explicit skipped audio
+stage.
+
+The current `AM1-PROVISIONAL-8K` setting is not frozen. Genuine blinded speech
+listening remains required before the 8 kbps candidate can become normative.
+Source PCM currently has a hard 256 MiB whole-file buffer ceiling, roughly 46
+minutes at mono 48 kHz PCM16. Streaming longer inputs is not yet implemented.
 
 ## Build and run
 
@@ -44,11 +51,13 @@ override the core CLI location.
   --headless-report encode-report.json
 ```
 
-The permanent native-shell workflow also opens the real SDL2 window under Xvfb
-and requires a deterministic shell report plus a real FFmpeg-to-V64 encode.
+The permanent native-shell workflow opens the real SDL2 window under Xvfb,
+requires a deterministic shell report, encodes a real H.264/AAC source, and
+independently verifies that the resulting `.v64` carries AM1 audio.
 
 ## Transitional boundary
 
-This tranche does not yet claim AM1 source-audio encoding, decoded source/V64
-preview, sampled size estimation, Particle Lighting controls, cancellation of an
-active encode, a bundled Node runtime, or an installable Linux package.
+This tranche does not yet claim a frozen AM1 bitrate, streaming long-form audio,
+decoded source/V64 preview, sampled size estimation, Particle Lighting controls,
+cancellation of an active encode, a bundled Node runtime, desktop file
+selection, or an installable Linux package.

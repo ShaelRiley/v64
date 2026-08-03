@@ -158,9 +158,13 @@ jobs:
             "disk-spooled-two-pass"
           );
           assert.equal(job.result.encoded.audio.wholeFilePcmBuffered, false);
+          assert.equal(
+            job.result.encoded.audio.maximumSourcePcmWorkingSetBytes,
+            5760000
+          );
           assert.ok(
             job.result.encoded.audio.maximumSourcePcmWorkingSetBytes <
-              job.result.encoded.audio.spoolBytes
+              6 * 1024 * 1024
           );
           assert.ok(job.result.encoded.audio.audibleRuns > 0);
           assert.ok(job.result.encoded.audio.opusPackets > 0);

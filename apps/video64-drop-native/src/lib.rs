@@ -168,7 +168,7 @@ pub fn shell_capabilities() -> Value {
         "queue": true,
         "sourceAnalysis": true,
         "videoEncoding": true,
-        "audioEncoding": false,
+        "audioEncoding": true,
         "outputVerification": true,
         "decodedPreview": false,
         "sampledSizeEstimator": false,

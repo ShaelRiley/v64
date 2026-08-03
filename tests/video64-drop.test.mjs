@@ -4,6 +4,10 @@ import { resolve } from "node:path";
 import process from "node:process";
 
 import {
+  encodeDropAudioTimeline,
+  extractDropAudioPcm
+} from "../apps/video64-drop/audio.mjs";
+import {
   DEFAULT_DROP_SETTINGS,
   createDropJob,
   createDropQueue,
@@ -17,6 +21,7 @@ import {
   runDropJob,
   runDropQueue
 } from "../apps/video64-drop/runner.mjs";
+import { synthesizeAm1Fixture } from "../prototype/js/audio-am1.mjs";
 
 test("Video64 Drop keeps the normative encoder defaults", () => {
   assert.deepEqual(normalizeDropSettings(), DEFAULT_DROP_SETTINGS);
@@ -69,7 +74,7 @@ test("queue output names cannot collide inside a batch", () => {
   ]);
 });
 
-test("source analysis derives the cell grid and discloses silent output", () => {
+test("source analysis derives the cell grid and discloses provisional AM1", () => {
   const job = createDropJob({ id: "drop-0001", inputPath: "speech.mp4" });
   const analysis = analyzeDropJob(job, {
     probe: () => ({
@@ -89,8 +94,50 @@ test("source analysis derives the cell grid and discloses silent output", () => 
     rasterWidth: 640,
     rasterHeight: 368
   });
-  assert.equal(analysis.capabilities.audioEncoding, false);
-  assert.match(analysis.warnings[0], /silent proof encoder/);
+  assert.equal(analysis.capabilities.audioEncoding, true);
+  assert.match(analysis.warnings[0], /blinded listening/);
+});
+
+test("audio extraction pads or trims to the exact V64 duration", () => {
+  const source = Buffer.alloc(8);
+  source.writeInt16LE(100, 0);
+  source.writeInt16LE(-100, 2);
+  source.writeInt16LE(200, 4);
+  source.writeInt16LE(-200, 6);
+  let invocation = null;
+  const extracted = extractDropAudioPcm("source.mp4", 10, {
+    spawnSyncImpl(program, args, options) {
+      invocation = { program, args, options };
+      return { status: 0, stdout: source, stderr: Buffer.alloc(0), error: null };
+    }
+  });
+  assert.equal(invocation.program, "ffmpeg");
+  assert.equal(invocation.args.includes("aresample=48000:async=1:first_pts=0"), true);
+  assert.equal(extracted.sourceSamples, 4);
+  assert.equal(extracted.targetSamples, 8);
+  assert.equal(extracted.paddedSamples, 4);
+  assert.deepEqual([...extracted.samples], [100, -100, 200, -200, 0, 0, 0, 0]);
+});
+
+test("provisional AM1 encoding covers the full timeline with bounded runs", () => {
+  const fixture = synthesizeAm1Fixture(48000);
+  const encoded = encodeDropAudioTimeline(fixture.samples, 120000, {
+    maximumRunSamples: 24000
+  });
+  assert.equal(encoded.summary.normative, false);
+  assert.equal(encoded.summary.targetSamples, 96000);
+  assert.equal(encoded.summary.audibleRuns, 3);
+  assert.equal(encoded.summary.silenceSpans, 2);
+  assert.equal(encoded.summary.keptSamples + encoded.summary.silenceSamples, 96000);
+  assert.deepEqual(encoded.chunks.map((chunk) => chunk.type), [
+    "AURN", "SILN", "AURN", "AURN", "SILN"
+  ]);
+  let expectedTimestamp = 0;
+  for (const chunk of encoded.chunks) {
+    assert.equal(chunk.timestamp, expectedTimestamp);
+    expectedTimestamp += chunk.duration;
+  }
+  assert.equal(expectedTimestamp, 120000);
 });
 
 test("the proof encoder is invoked as an isolated child process", () => {
@@ -129,7 +176,7 @@ test("the proof encoder is invoked as an isolated child process", () => {
   assert.deepEqual(result, { frames: 24, bytes: 4096 });
 });
 
-test("a Drop job drives the real stage contract and verifies its output", async () => {
+test("a Drop job encodes AM1, muxes, and verifies the output", async () => {
   const updates = [];
   const job = createDropJob({ id: "drop-0001", inputPath: "movie.mp4" });
   const result = await runDropJob(job, {
@@ -148,20 +195,38 @@ test("a Drop job drives the real stage contract and verifies its output", async 
       output,
       options,
       frames: 288,
-      bytes: 4096
+      bytes: 4096,
+      durationTicks: 720000
     }),
-    verify: () => ({ valid: true, outputBytes: 4096 }),
+    encodeAudio: () => ({
+      chunks: [{ type: "AURN" }],
+      summary: {
+        format: "VIDEO64-DROP-AM1-SOURCE-1",
+        profile: "AM1-PROVISIONAL-8K",
+        normative: false,
+        sourcePresent: true,
+        durationTicks: 720000,
+        audibleRuns: 1,
+        opusPackets: 600,
+        silenceSpans: 0,
+        timelineChunks: 1
+      }
+    }),
+    mux: () => ({ bytes: 5000, audioChunks: 1, audioRuns: 1 }),
+    verify: () => ({ valid: true, outputBytes: 5000, audioRuns: 1 }),
     onUpdate: (snapshot) => updates.push(snapshot)
   });
   assert.equal(result.status, "completed");
   assert.equal(result.stages.analysis.state, "completed");
   assert.equal(result.stages.video_encode.state, "completed");
-  assert.equal(result.stages.audio_encode.state, "skipped");
+  assert.equal(result.stages.audio_encode.state, "completed");
   assert.equal(result.stages.mux.state, "completed");
   assert.equal(result.stages.verify.state, "completed");
   assert.equal(result.result.encoded.options.glyphs, "32");
-  assert.equal(result.result.verification.valid, true);
-  assert.match(result.warnings[0], /audio is not written/);
+  assert.equal(result.result.encoded.audio.audibleRuns, 1);
+  assert.equal(result.result.verification.audioRuns, 1);
+  assert.match(result.warnings[0], /blinded listening/);
+  assert.equal(updates.some((snapshot) => snapshot.stages.audio_encode.state === "running"), true);
   assert.equal(updates.some((snapshot) => snapshot.stages.verify.state === "running"), true);
 });
 
@@ -192,9 +257,11 @@ test("the queue runner preserves completed items and processes queued items in o
         audioStreams: []
       };
     },
-    encode: () => ({ frames: 24, bytes: 100 }),
-    verify: () => ({ valid: true, outputBytes: 100 })
+    encode: () => ({ frames: 24, bytes: 100, durationTicks: 60000 }),
+    mux: () => ({ bytes: 100, audioChunks: 0, audioRuns: 0 }),
+    verify: () => ({ valid: true, outputBytes: 100, audioRuns: 0 })
   });
   assert.deepEqual(order, [resolve("first.mp4"), resolve("second.mp4")]);
   assert.deepEqual(queue.jobs.map((job) => job.status), ["completed", "completed"]);
+  assert.deepEqual(queue.jobs.map((job) => job.stages.audio_encode.state), ["skipped", "skipped"]);
 });

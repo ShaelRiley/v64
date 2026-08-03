@@ -99,7 +99,7 @@ test("source analysis derives the cell grid and discloses provisional AM1", () =
   assert.match(analysis.warnings[0], /blinded listening/);
 });
 
-test("audio extraction pads or trims to the exact V64 duration", () => {
+test("legacy in-memory audio extraction pads or trims to exact duration", () => {
   const source = Buffer.alloc(8);
   source.writeInt16LE(100, 0);
   source.writeInt16LE(-100, 2);
@@ -117,12 +117,12 @@ test("audio extraction pads or trims to the exact V64 duration", () => {
   assert.equal(extracted.sourceSamples, 4);
   assert.equal(extracted.targetSamples, 8);
   assert.equal(extracted.targetPcmBytes, 16);
-  assert.equal(extracted.maximumPcmBytes, DROP_AM1_PROFILE.maximumPcmBytes);
+  assert.equal(extracted.maximumPcmBytes, DROP_AM1_PROFILE.legacyMaximumPcmBytes);
   assert.equal(extracted.paddedSamples, 4);
   assert.deepEqual([...extracted.samples], [100, -100, 200, -200, 0, 0, 0, 0]);
 });
 
-test("audio extraction rejects unbounded whole-file PCM", () => {
+test("legacy in-memory helper remains explicitly bounded", () => {
   let invoked = false;
   assert.throws(() => extractDropAudioPcm("long.mp4", 10, {
     maximumPcmBytes: 14,
@@ -130,7 +130,7 @@ test("audio extraction rejects unbounded whole-file PCM", () => {
       invoked = true;
       throw new Error("must not run");
     }
-  }), /streaming long-form audio encoding is not yet implemented/);
+  }), /in-memory helper ceiling/);
   assert.equal(invoked, false);
 });
 
@@ -142,8 +142,12 @@ test("provisional AM1 encoding covers the full timeline with bounded runs", () =
   assert.equal(encoded.summary.normative, false);
   assert.equal(encoded.summary.targetSamples, 96000);
   assert.equal(encoded.summary.pcmBytes, 192000);
-  assert.equal(encoded.summary.maximumPcmBytes, DROP_AM1_PROFILE.maximumPcmBytes);
+  assert.equal(
+    encoded.summary.maximumPcmBytes,
+    DROP_AM1_PROFILE.legacyMaximumPcmBytes
+  );
   assert.equal(encoded.summary.maximumRunSeconds, 60);
+  assert.equal(encoded.summary.streaming, false);
   assert.equal(encoded.summary.audibleRuns, 3);
   assert.equal(encoded.summary.silenceSpans, 2);
   assert.equal(encoded.summary.keptSamples + encoded.summary.silenceSamples, 96000);
@@ -225,6 +229,8 @@ test("a Drop job encodes AM1, muxes, verifies, and reports final rates", async (
         profile: "AM1-PROVISIONAL-8K",
         normative: false,
         sourcePresent: true,
+        streaming: true,
+        strategy: "disk-spooled-two-pass",
         durationTicks: 720000,
         audibleRuns: 1,
         opusPackets: 600,
@@ -244,6 +250,7 @@ test("a Drop job encodes AM1, muxes, verifies, and reports final rates", async (
   assert.equal(result.stages.verify.state, "completed");
   assert.equal(result.result.encoded.options.glyphs, "32");
   assert.equal(result.result.encoded.audio.audibleRuns, 1);
+  assert.equal(result.result.encoded.audio.streaming, true);
   assert.equal(result.result.encoded.videoOnlyBytes, 4096);
   assert.equal(result.result.encoded.videoOnlyBitsPerSecond, 2731);
   assert.equal(result.result.encoded.videoOnlyBytesPerMinute, 20480);

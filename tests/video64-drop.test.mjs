@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import process from "node:process";
 
 import {
+  DROP_AM1_PROFILE,
   encodeDropAudioTimeline,
   extractDropAudioPcm
 } from "../apps/video64-drop/audio.mjs";
@@ -115,8 +116,22 @@ test("audio extraction pads or trims to the exact V64 duration", () => {
   assert.equal(invocation.args.includes("aresample=48000:async=1:first_pts=0"), true);
   assert.equal(extracted.sourceSamples, 4);
   assert.equal(extracted.targetSamples, 8);
+  assert.equal(extracted.targetPcmBytes, 16);
+  assert.equal(extracted.maximumPcmBytes, DROP_AM1_PROFILE.maximumPcmBytes);
   assert.equal(extracted.paddedSamples, 4);
   assert.deepEqual([...extracted.samples], [100, -100, 200, -200, 0, 0, 0, 0]);
+});
+
+test("audio extraction rejects unbounded whole-file PCM", () => {
+  let invoked = false;
+  assert.throws(() => extractDropAudioPcm("long.mp4", 10, {
+    maximumPcmBytes: 14,
+    spawnSyncImpl() {
+      invoked = true;
+      throw new Error("must not run");
+    }
+  }), /streaming long-form audio encoding is not yet implemented/);
+  assert.equal(invoked, false);
 });
 
 test("provisional AM1 encoding covers the full timeline with bounded runs", () => {
@@ -126,6 +141,9 @@ test("provisional AM1 encoding covers the full timeline with bounded runs", () =
   });
   assert.equal(encoded.summary.normative, false);
   assert.equal(encoded.summary.targetSamples, 96000);
+  assert.equal(encoded.summary.pcmBytes, 192000);
+  assert.equal(encoded.summary.maximumPcmBytes, DROP_AM1_PROFILE.maximumPcmBytes);
+  assert.equal(encoded.summary.maximumRunSeconds, 60);
   assert.equal(encoded.summary.audibleRuns, 3);
   assert.equal(encoded.summary.silenceSpans, 2);
   assert.equal(encoded.summary.keptSamples + encoded.summary.silenceSamples, 96000);

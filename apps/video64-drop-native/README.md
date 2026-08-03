@@ -26,6 +26,8 @@ stage.
 
 The current `AM1-PROVISIONAL-8K` setting is not frozen. Genuine blinded speech
 listening remains required before the 8 kbps candidate can become normative.
+Source PCM currently has a hard 256 MiB whole-file buffer ceiling, roughly 46
+minutes at mono 48 kHz PCM16. Streaming longer inputs is not yet implemented.
 
 ## Build and run
 
@@ -55,7 +57,7 @@ independently verifies that the resulting `.v64` carries AM1 audio.
 
 ## Transitional boundary
 
-This tranche does not yet claim a frozen AM1 bitrate, decoded source/V64 preview,
-sampled size estimation, Particle Lighting controls, cancellation of an active
-encode, a bundled Node runtime, desktop file selection, or an installable Linux
-package.
+This tranche does not yet claim a frozen AM1 bitrate, streaming long-form audio,
+decoded source/V64 preview, sampled size estimation, Particle Lighting controls,
+cancellation of an active encode, a bundled Node runtime, desktop file
+selection, or an installable Linux package.

@@ -26,8 +26,13 @@ stage.
 
 The current `AM1-PROVISIONAL-8K` setting is not frozen. Genuine blinded speech
 listening remains required before the 8 kbps candidate can become normative.
-Source PCM currently has a hard 256 MiB whole-file buffer ceiling, roughly 46
-minutes at mono 48 kHz PCM16. Streaming longer inputs is not yet implemented.
+
+The application core now handles long recordings with a bounded two-pass disk
+spool rather than a whole-file PCM memory buffer. It scans source PCM in fixed
+reads and loads at most one 60-second audible run at a time. The default
+source-PCM buffer bound is 5,760,000 bytes, while temporary disk use grows with
+recording duration. A permanent gate processes a 47-minute, 270,720,000-byte
+spool beyond the former 256 MiB ceiling.
 
 ## Build and run
 
@@ -53,11 +58,12 @@ override the core CLI location.
 
 The permanent native-shell workflow opens the real SDL2 window under Xvfb,
 requires a deterministic shell report, encodes a real H.264/AAC source, and
-independently verifies that the resulting `.v64` carries AM1 audio.
+independently verifies that the resulting `.v64` carries AM1 audio through the
+bounded disk-spooled application core.
 
 ## Transitional boundary
 
-This tranche does not yet claim a frozen AM1 bitrate, streaming long-form audio,
+This tranche does not claim a frozen AM1 bitrate, one-pass live-capture audio,
 decoded source/V64 preview, sampled size estimation, Particle Lighting controls,
 cancellation of an active encode, a bundled Node runtime, desktop file
 selection, or an installable Linux package.

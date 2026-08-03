@@ -22,7 +22,7 @@ export const DROP_CAPABILITIES = Object.freeze({
   sourceAnalysis: true,
   queue: true,
   videoEncoding: true,
-  audioEncoding: false,
+  audioEncoding: true,
   particleLighting: false,
   sampledSizeEstimator: false,
   decodedPreview: false,

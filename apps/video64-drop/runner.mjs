@@ -1,11 +1,25 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { deriveRows } from "../../prototype/js/constants.mjs";
-import { verifyV64 } from "../../prototype/js/container.mjs";
+import {
+  demuxV64,
+  makeChunk,
+  muxV64,
+  verifyV64
+} from "../../prototype/js/container.mjs";
 import { displayGeometryFromProbe } from "../../prototype/js/source-geometry.mjs";
+import { encodeDropSourceAudio } from "./audio.mjs";
 import {
   DROP_CAPABILITIES,
   DROP_QUEUE_FORMAT,
@@ -70,7 +84,7 @@ export function analyzeDropJob(job, { probe = probeDropSource } = {}) {
   const warnings = [];
   if (source.audioPresent) {
     warnings.push(
-      "Source audio was detected. This first Video64 Drop tranche still uses the silent proof encoder; audio is not written to the output file."
+      "Source audio will be encoded as provisional AM1 mono 48 kHz constrained-VBR Opus. The 8 kbps speech setting remains subject to genuine blinded listening before it can freeze."
     );
   }
   return {
@@ -98,6 +112,44 @@ export function encodeDropVideo(inputPath, outputPath, options, {
   return JSON.parse(runProgram(process.execPath, args, spawnSyncImpl));
 }
 
+export function readDropVideoDuration(inputPath) {
+  return demuxV64(readFileSync(inputPath)).header.duration;
+}
+
+function remuxableChunk(chunk) {
+  return makeChunk(
+    chunk.type,
+    chunk.timestamp,
+    chunk.duration,
+    chunk.payload,
+    {
+      compress: Boolean(chunk.flags & 2),
+      keyframe: chunk.type === "VFRM" && chunk.payload[0] === 0
+    }
+  );
+}
+
+export function muxDropOutput(videoOnlyPath, outputPath, audioChunks = []) {
+  const demuxed = demuxV64(readFileSync(videoOnlyPath));
+  const videoAndMetadata = demuxed.chunks
+    .filter((chunk) => chunk.type !== "INDX")
+    .map(remuxableChunk);
+  const file = muxV64({
+    columns: demuxed.header.columns,
+    rows: demuxed.header.rows,
+    cadenceId: demuxed.header.cadence.id,
+    paletteDepthId: demuxed.header.paletteDepthId
+  }, [...videoAndMetadata, ...audioChunks]);
+  writeFileSync(outputPath, file);
+  return {
+    bytes: file.length,
+    videoAndMetadataChunks: videoAndMetadata.length,
+    audioChunks: audioChunks.length,
+    audioRuns: audioChunks.filter((chunk) => chunk.type === "AURN").length,
+    audioSilenceSpans: audioChunks.filter((chunk) => chunk.type === "SILN").length
+  };
+}
+
 export function verifyDropOutput(outputPath) {
   const bytes = readFileSync(outputPath);
   return {
@@ -109,11 +161,15 @@ export function verifyDropOutput(outputPath) {
 export async function runDropJob(job, {
   probe = probeDropSource,
   encode = encodeDropVideo,
+  encodeAudio = encodeDropSourceAudio,
+  readVideoDuration = readDropVideoDuration,
+  mux = muxDropOutput,
   verify = verifyDropOutput,
   onUpdate = () => {}
 } = {}) {
   let snapshot = beginDropJob(job);
   let activeStage = null;
+  let temporaryDirectory = null;
   const emit = () => onUpdate(snapshot);
   const stage = (id, state, options) => {
     activeStage = state === "running" ? id : activeStage === id ? null : activeStage;
@@ -128,32 +184,73 @@ export async function runDropJob(job, {
     for (const warning of analysis.warnings) snapshot = addDropWarning(snapshot, warning);
     stage("analysis", "completed", { detail: `${analysis.grid.columns}×${analysis.grid.rows} cells` });
 
-    stage("video_encode", "running", { detail: "Encoding with the verified V64 proof pipeline" });
-    const encoded = await Promise.resolve(encode(
+    temporaryDirectory = mkdtempSync(join(tmpdir(), "video64-drop-"));
+    const videoOnlyPath = join(temporaryDirectory, "video-only.v64");
+    stage("video_encode", "running", { detail: "Encoding the verified V64 video timeline" });
+    const videoEncoded = await Promise.resolve(encode(
       snapshot.inputPath,
-      snapshot.outputPath,
+      videoOnlyPath,
       encoderOptionsFromDropSettings(snapshot.settings)
     ));
+    const durationTicks = Number(
+      videoEncoded.durationTicks ?? readVideoDuration(videoOnlyPath)
+    );
+    if (!Number.isSafeInteger(durationTicks) || durationTicks <= 0) {
+      throw new Error("Encoded video did not provide a valid V64 duration");
+    }
     stage("video_encode", "completed", {
-      detail: `${encoded.frames ?? "unknown"} frames encoded`
+      detail: `${videoEncoded.frames ?? "unknown"} frames encoded`
     });
 
-    stage("audio_encode", "skipped", {
-      detail: analysis.source.audioPresent
-        ? "Source audio detected; AM1 encoding is not connected to Video64 Drop yet"
-        : "No source audio stream"
-    });
+    let audio = {
+      chunks: [],
+      summary: {
+        format: "VIDEO64-DROP-AM1-SOURCE-1",
+        profile: null,
+        normative: false,
+        sourcePresent: false,
+        durationTicks,
+        timelineChunks: 0,
+        audibleRuns: 0,
+        opusPackets: 0,
+        silenceSpans: 0
+      }
+    };
+    if (analysis.source.audioPresent) {
+      stage("audio_encode", "running", {
+        detail: "Encoding provisional AM1 mono 48 kHz audio"
+      });
+      audio = await Promise.resolve(encodeAudio(snapshot.inputPath, durationTicks));
+      const detail = audio.summary.audibleRuns
+        ? `${audio.summary.audibleRuns} AM1 runs, ${audio.summary.opusPackets} Opus packets`
+        : `${audio.summary.silenceSpans} explicit silence spans`;
+      stage("audio_encode", "completed", { detail });
+    } else {
+      stage("audio_encode", "skipped", { detail: "No source audio stream" });
+    }
 
-    stage("mux", "running", { detail: "Finalizing the V64 container" });
-    stage("mux", "completed", { detail: `${encoded.bytes ?? "unknown"} bytes written` });
+    stage("mux", "running", { detail: "Muxing video, metadata, and AM1 audio" });
+    const muxed = await Promise.resolve(mux(
+      videoOnlyPath,
+      snapshot.outputPath,
+      audio.chunks
+    ));
+    stage("mux", "completed", { detail: `${muxed.bytes ?? "unknown"} bytes written` });
 
-    stage("verify", "running", { detail: "Verifying the completed V64 file" });
+    stage("verify", "running", { detail: "Verifying the completed audiovisual V64 file" });
     const verification = await Promise.resolve(verify(snapshot.outputPath));
     stage("verify", "completed", { detail: "V64 verification passed" });
 
     snapshot = completeDropJob(snapshot, {
       analysis,
-      encoded,
+      encoded: {
+        ...videoEncoded,
+        durationTicks,
+        videoOnlyBytes: videoEncoded.bytes ?? null,
+        bytes: muxed.bytes ?? verification.outputBytes,
+        audio: audio.summary,
+        mux: muxed
+      },
       verification
     });
     emit();
@@ -167,6 +264,10 @@ export async function runDropJob(job, {
     snapshot = failDropJob(snapshot, error);
     emit();
     return snapshot;
+  } finally {
+    if (temporaryDirectory) {
+      rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
   }
 }
 

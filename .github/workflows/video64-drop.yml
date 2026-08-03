@@ -14,6 +14,7 @@ on:
       - "prototype/js/container.mjs"
       - "prototype/js/source-geometry.mjs"
       - "tests/video64-drop.test.mjs"
+      - "tests/video64-drop-streaming-audio.test.mjs"
       - "docs/CURRENT_STATUS.md"
       - "README.md"
   workflow_dispatch:
@@ -49,13 +50,57 @@ jobs:
           node --check apps/video64-drop/audio.mjs
           node --check apps/video64-drop/runner.mjs
           node --check apps/video64-drop/cli.mjs
+          node --check prototype/js/audio-am1.mjs
 
       - name: Run focused application-core tests
         run: npm --prefix apps/video64-drop test
 
-      - name: Build a deterministic audiovisual source clip
+      - name: Prove bounded streaming beyond the former PCM ceiling
         run: |
           mkdir -p target/video64-drop
+          truncate -s 270720000 target/video64-drop/long-form-silence.pcm
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { writeFileSync } from "node:fs";
+          import { encodeDropAudioFileTimeline } from "./apps/video64-drop/audio.mjs";
+
+          const durationSeconds = 47 * 60;
+          const durationTicks = durationSeconds * 60000;
+          const encoded = encodeDropAudioFileTimeline(
+            "target/video64-drop/long-form-silence.pcm",
+            durationTicks,
+            { scanReadBytes: 1024 * 1024 }
+          );
+          const summary = encoded.summary;
+          assert.equal(summary.streaming, true);
+          assert.equal(summary.strategy, "disk-spooled-two-pass");
+          assert.equal(summary.wholeFilePcmBuffered, false);
+          assert.equal(summary.spoolBytes, 270720000);
+          assert.ok(summary.spoolBytes > 256 * 1024 * 1024);
+          assert.equal(summary.maximumSourcePcmWorkingSetBytes, 5760000);
+          assert.ok(summary.maximumSourcePcmWorkingSetBytes < 6 * 1024 * 1024);
+          assert.equal(summary.targetSamples, 135360000);
+          assert.equal(summary.audibleRuns, 0);
+          assert.equal(summary.silenceSpans, 1);
+          assert.equal(summary.silenceSamples, summary.targetSamples);
+          assert.equal(encoded.chunks.length, 1);
+          assert.equal(encoded.chunks[0].type, "SILN");
+          assert.equal(encoded.chunks[0].timestamp, 0);
+          assert.equal(encoded.chunks[0].duration, durationTicks);
+          writeFileSync(
+            "target/video64-drop/long-form-streaming.json",
+            `${JSON.stringify({
+              durationSeconds,
+              durationTicks,
+              formerCeilingBytes: 256 * 1024 * 1024,
+              ...summary
+            }, null, 2)}\n`
+          );
+          NODE
+          rm target/video64-drop/long-form-silence.pcm
+
+      - name: Build a deterministic audiovisual source clip
+        run: |
           ffmpeg -y -v error \
             -f lavfi -i testsrc2=size=320x180:rate=24:duration=1 \
             -f lavfi -i sine=frequency=440:sample_rate=48000:duration=1 \
@@ -107,6 +152,16 @@ jobs:
           assert.equal(job.stages.verify.state, "completed");
           assert.equal(job.result.encoded.audio.sourcePresent, true);
           assert.equal(job.result.encoded.audio.normative, false);
+          assert.equal(job.result.encoded.audio.streaming, true);
+          assert.equal(
+            job.result.encoded.audio.strategy,
+            "disk-spooled-two-pass"
+          );
+          assert.equal(job.result.encoded.audio.wholeFilePcmBuffered, false);
+          assert.ok(
+            job.result.encoded.audio.maximumSourcePcmWorkingSetBytes <
+              job.result.encoded.audio.spoolBytes
+          );
           assert.ok(job.result.encoded.audio.audibleRuns > 0);
           assert.ok(job.result.encoded.audio.opusPackets > 0);
           assert.deepEqual(job.result.encoded.audio, repeat.result.encoded.audio);

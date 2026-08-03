@@ -176,7 +176,7 @@ test("the proof encoder is invoked as an isolated child process", () => {
   assert.deepEqual(result, { frames: 24, bytes: 4096 });
 });
 
-test("a Drop job encodes AM1, muxes, and verifies the output", async () => {
+test("a Drop job encodes AM1, muxes, verifies, and reports final rates", async () => {
   const updates = [];
   const job = createDropJob({ id: "drop-0001", inputPath: "movie.mp4" });
   const result = await runDropJob(job, {
@@ -196,6 +196,8 @@ test("a Drop job encodes AM1, muxes, and verifies the output", async () => {
       options,
       frames: 288,
       bytes: 4096,
+      bitsPerSecond: 2731,
+      bytesPerMinute: 20480,
       durationTicks: 720000
     }),
     encodeAudio: () => ({
@@ -224,6 +226,12 @@ test("a Drop job encodes AM1, muxes, and verifies the output", async () => {
   assert.equal(result.stages.verify.state, "completed");
   assert.equal(result.result.encoded.options.glyphs, "32");
   assert.equal(result.result.encoded.audio.audibleRuns, 1);
+  assert.equal(result.result.encoded.videoOnlyBytes, 4096);
+  assert.equal(result.result.encoded.videoOnlyBitsPerSecond, 2731);
+  assert.equal(result.result.encoded.videoOnlyBytesPerMinute, 20480);
+  assert.equal(result.result.encoded.bytes, 5000);
+  assert.equal(result.result.encoded.bitsPerSecond, 3333);
+  assert.equal(result.result.encoded.bytesPerMinute, 25000);
   assert.equal(result.result.verification.audioRuns, 1);
   assert.match(result.warnings[0], /blinded listening/);
   assert.equal(updates.some((snapshot) => snapshot.stages.audio_encode.state === "running"), true);
@@ -264,4 +272,5 @@ test("the queue runner preserves completed items and processes queued items in o
   assert.deepEqual(order, [resolve("first.mp4"), resolve("second.mp4")]);
   assert.deepEqual(queue.jobs.map((job) => job.status), ["completed", "completed"]);
   assert.deepEqual(queue.jobs.map((job) => job.stages.audio_encode.state), ["skipped", "skipped"]);
+  assert.deepEqual(queue.jobs.map((job) => job.result.encoded.bitsPerSecond), [800, 800]);
 });

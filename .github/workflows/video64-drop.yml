@@ -5,6 +5,10 @@ on:
     paths:
       - ".github/workflows/video64-drop.yml"
       - "apps/video64-drop/**"
+      - "prototype/js/audio-am1.mjs"
+      - "prototype/js/audio-decode.mjs"
+      - "prototype/js/audio-opus.mjs"
+      - "prototype/js/audio-run.mjs"
       - "prototype/js/cli.mjs"
       - "prototype/js/constants.mjs"
       - "prototype/js/container.mjs"
@@ -42,13 +46,14 @@ jobs:
       - name: Check application-core syntax
         run: |
           node --check apps/video64-drop/model.mjs
+          node --check apps/video64-drop/audio.mjs
           node --check apps/video64-drop/runner.mjs
           node --check apps/video64-drop/cli.mjs
 
       - name: Run focused application-core tests
         run: npm --prefix apps/video64-drop test
 
-      - name: Build a deterministic source clip
+      - name: Build a deterministic audiovisual source clip
         run: |
           mkdir -p target/video64-drop
           ffmpeg -y -v error \
@@ -70,27 +75,56 @@ jobs:
             > target/video64-drop/job.json \
             2> target/video64-drop/events.ndjson
 
-      - name: Require honest stage and output evidence
+      - name: Require audiovisual stage and output evidence
         run: |
           node --input-type=module <<'NODE'
           import assert from "node:assert/strict";
-          import { readFileSync } from "node:fs";
+          import { readFileSync, writeFileSync } from "node:fs";
+          import { decodeAudioTimelineToPcm } from "./prototype/js/audio-decode.mjs";
+          import { demuxV64 } from "./prototype/js/container.mjs";
+
           const analysis = JSON.parse(readFileSync("target/video64-drop/analysis.json"));
           const job = JSON.parse(readFileSync("target/video64-drop/job.json"));
           const events = readFileSync("target/video64-drop/events.ndjson", "utf8")
             .trim().split("\n").map(JSON.parse);
           assert.equal(analysis.source.audioPresent, true);
           assert.equal(analysis.grid.columns, 40);
-          assert.equal(analysis.capabilities.audioEncoding, false);
+          assert.equal(analysis.capabilities.audioEncoding, true);
           assert.equal(job.status, "completed");
           assert.equal(job.settings.fps, "24");
           assert.equal(job.settings.glyphs, 32);
-          assert.equal(job.stages.audio_encode.state, "skipped");
+          assert.equal(job.stages.audio_encode.state, "completed");
+          assert.equal(job.stages.mux.state, "completed");
           assert.equal(job.stages.verify.state, "completed");
+          assert.equal(job.result.encoded.audio.sourcePresent, true);
+          assert.equal(job.result.encoded.audio.normative, false);
+          assert.ok(job.result.encoded.audio.audibleRuns > 0);
+          assert.ok(job.result.encoded.audio.opusPackets > 0);
           assert.equal(job.result.verification.valid, true);
+          assert.ok(job.result.verification.audioRuns > 0);
+          assert.ok(job.result.verification.audioKeptSamples > 0);
           assert.equal(job.warnings.length, 1);
           assert.equal(events.some((event) => event.stage === "video_encode"), true);
+          assert.equal(events.some((event) => event.stage === "audio_encode"), true);
           assert.equal(events.some((event) => event.stage === "verify"), true);
+
+          const demuxed = demuxV64(readFileSync("target/video64-drop/output.v64"));
+          const decoded = decodeAudioTimelineToPcm(demuxed);
+          assert.ok(decoded);
+          assert.equal(decoded.samples, 48000);
+          assert.equal(decoded.pcm.length, 96000);
+          assert.equal(decoded.pcm.some((byte) => byte !== 0), true);
+          writeFileSync("target/video64-drop/decoded-audio.pcm", decoded.pcm);
+          writeFileSync(
+            "target/video64-drop/audio-decode.json",
+            `${JSON.stringify({
+              samples: decoded.samples,
+              bytes: decoded.pcm.length,
+              sha256: decoded.sha256,
+              runs: decoded.runs,
+              silenceSpans: decoded.silenceSpans
+            }, null, 2)}\n`
+          );
           NODE
           node prototype/js/cli.mjs verify target/video64-drop/output.v64 \
             > target/video64-drop/proof-verification.json

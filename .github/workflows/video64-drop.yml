@@ -100,7 +100,21 @@ jobs:
           assert.equal(job.result.encoded.audio.normative, false);
           assert.ok(job.result.encoded.audio.audibleRuns > 0);
           assert.ok(job.result.encoded.audio.opusPackets > 0);
+          assert.ok(job.result.encoded.bytes > job.result.encoded.videoOnlyBytes);
+          assert.equal(
+            job.result.encoded.videoOnlyBitsPerSecond,
+            job.result.encoded.videoOnlyBytes * 8
+          );
+          assert.equal(
+            job.result.encoded.bitsPerSecond,
+            job.result.encoded.bytes * 8
+          );
+          assert.equal(
+            job.result.encoded.bytesPerMinute,
+            job.result.encoded.bytes * 60
+          );
           assert.equal(job.result.verification.valid, true);
+          assert.equal(job.result.verification.outputBytes, job.result.encoded.bytes);
           assert.ok(job.result.verification.audioRuns > 0);
           assert.ok(job.result.verification.audioKeptSamples > 0);
           assert.equal(job.warnings.length, 1);

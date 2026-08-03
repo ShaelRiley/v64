@@ -125,10 +125,7 @@ function windowRms(samples, start, end) {
   return Math.sqrt(sum / Math.max(1, end - start));
 }
 
-export function detectSilenceSpans(samplesInput, options = {}) {
-  const samples = samplesInput instanceof Int16Array
-    ? samplesInput
-    : Int16Array.from(samplesInput || []);
+function silenceDetectorConfig(options = {}) {
   const sampleRate = Number(options.sampleRate);
   assertInteger(sampleRate, "Silence sample rate", 1, 384000);
   const windowMs = Number(options.windowMs ?? 10);
@@ -142,32 +139,47 @@ export function detectSilenceSpans(samplesInput, options = {}) {
       !Number.isFinite(hangoverMs) || hangoverMs < 0) {
     throw new RangeError("Invalid silence detector options");
   }
-  const windowSamples = Math.max(1, Math.round(sampleRate * windowMs / 1000));
-  const minimumSamples = Math.round(sampleRate * minimumSilenceMs / 1000);
-  const hangoverSamples = Math.round(sampleRate * hangoverMs / 1000);
-  const enterAmplitude = dbToAmplitude(enterDb);
-  const exitAmplitude = dbToAmplitude(exitDb);
+  return {
+    sampleRate,
+    windowSamples: Math.max(1, Math.round(sampleRate * windowMs / 1000)),
+    enterDb,
+    exitDb,
+    minimumSamples: Math.round(sampleRate * minimumSilenceMs / 1000),
+    hangoverSamples: Math.round(sampleRate * hangoverMs / 1000),
+    enterAmplitude: dbToAmplitude(enterDb),
+    exitAmplitude: dbToAmplitude(exitDb)
+  };
+}
+
+export function createSilenceSpanDetector(options = {}) {
+  const config = silenceDetectorConfig(options);
   const spans = [];
+  let pending = new Int16Array(0);
+  let processedSamples = 0;
+  let totalSamples = 0;
   let candidateStart = null;
   let silenceStart = null;
   let exitCandidate = null;
+  let result = null;
 
-  for (let start = 0; start < samples.length; start += windowSamples) {
-    const end = Math.min(samples.length, start + windowSamples);
-    const rms = windowRms(samples, start, end);
+  const processWindow = (samples, localStart, localEnd, absoluteStart) => {
+    const absoluteEnd = absoluteStart + localEnd - localStart;
+    const rms = windowRms(samples, localStart, localEnd);
     if (silenceStart === null) {
-      if (rms <= enterAmplitude) {
-        if (candidateStart === null) candidateStart = start;
-        if (end - candidateStart >= minimumSamples) silenceStart = candidateStart;
+      if (rms <= config.enterAmplitude) {
+        if (candidateStart === null) candidateStart = absoluteStart;
+        if (absoluteEnd - candidateStart >= config.minimumSamples) {
+          silenceStart = candidateStart;
+        }
       } else {
         candidateStart = null;
       }
-      continue;
+      return;
     }
 
-    if (rms >= exitAmplitude) {
-      if (exitCandidate === null) exitCandidate = start;
-      if (end - exitCandidate >= hangoverSamples) {
+    if (rms >= config.exitAmplitude) {
+      if (exitCandidate === null) exitCandidate = absoluteStart;
+      if (absoluteEnd - exitCandidate >= config.hangoverSamples) {
         spans.push({ startSample: silenceStart, endSample: exitCandidate });
         silenceStart = null;
         candidateStart = null;
@@ -176,26 +188,72 @@ export function detectSilenceSpans(samplesInput, options = {}) {
     } else {
       exitCandidate = null;
     }
-  }
-
-  if (silenceStart !== null) {
-    spans.push({ startSample: silenceStart, endSample: samples.length });
-  } else if (candidateStart !== null && samples.length - candidateStart >= minimumSamples) {
-    spans.push({ startSample: candidateStart, endSample: samples.length });
-  }
-
-  return {
-    spans,
-    diagnostics: {
-      sampleRate,
-      samples: samples.length,
-      windowSamples,
-      enterDb,
-      exitDb,
-      minimumSamples,
-      hangoverSamples
-    }
   };
+
+  const push = (samplesInput) => {
+    if (result) throw new Error("Silence detector is already finished");
+    const input = samplesInput instanceof Int16Array
+      ? samplesInput
+      : Int16Array.from(samplesInput || []);
+    if (!input.length) return;
+    totalSamples += input.length;
+    const combined = new Int16Array(pending.length + input.length);
+    combined.set(pending, 0);
+    combined.set(input, pending.length);
+    let localStart = 0;
+    while (combined.length - localStart >= config.windowSamples) {
+      const localEnd = localStart + config.windowSamples;
+      processWindow(combined, localStart, localEnd, processedSamples);
+      processedSamples += config.windowSamples;
+      localStart = localEnd;
+    }
+    pending = combined.slice(localStart);
+  };
+
+  const finish = () => {
+    if (result) return result;
+    if (pending.length) {
+      processWindow(pending, 0, pending.length, processedSamples);
+      processedSamples += pending.length;
+      pending = new Int16Array(0);
+    }
+    if (processedSamples !== totalSamples) {
+      throw new Error("Silence detector sample accounting is inconsistent");
+    }
+    if (silenceStart !== null) {
+      spans.push({ startSample: silenceStart, endSample: totalSamples });
+    } else if (candidateStart !== null &&
+        totalSamples - candidateStart >= config.minimumSamples) {
+      spans.push({ startSample: candidateStart, endSample: totalSamples });
+    }
+    result = {
+      spans: spans.map((span) => ({ ...span })),
+      diagnostics: {
+        sampleRate: config.sampleRate,
+        samples: totalSamples,
+        windowSamples: config.windowSamples,
+        enterDb: config.enterDb,
+        exitDb: config.exitDb,
+        minimumSamples: config.minimumSamples,
+        hangoverSamples: config.hangoverSamples
+      }
+    };
+    return result;
+  };
+
+  return Object.freeze({
+    push,
+    finish,
+    get windowSamples() {
+      return config.windowSamples;
+    }
+  });
+}
+
+export function detectSilenceSpans(samplesInput, options = {}) {
+  const detector = createSilenceSpanDetector(options);
+  detector.push(samplesInput);
+  return detector.finish();
 }
 
 export function sampleIndexToTicks(sampleIndex, sampleRate) {

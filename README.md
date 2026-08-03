@@ -46,7 +46,8 @@ real binary `.v64` implementation, not a mock UI:
 - a bounded, checksummed, indexed binary container;
 - keyframes, delta frames, skip runs, repeated-token runs, rectangle fills,
   local token dictionaries, and repeat-frame spans;
-- sparse particle-event and exact-silence chunk definitions;
+- sparse particle-event, subtitle, AM1 Opus-audio, and exact-silence chunk
+  definitions;
 - FFmpeg-backed source ingest and decoded MP4/MKV output;
 - encoder, decoder, inspector, verifier, atlas generator, and sample generator;
 - an experimental backend-neutral Grammar B trace with packed palette indices,
@@ -69,13 +70,16 @@ real binary `.v64` implementation, not a mock UI:
 - a deterministic Rust hostile-input and process-resource gate;
 - a stable bounded Rust decoder API and `v64` command-line surface;
 - a pointer-free, generation-checked C ABI with a real C11 conformance caller;
-- a Linux-first native SDL2 video player with bounded seeking, fixed-rate
-  playback, persistent viewport-anchored CRT scanlines, and headless evidence;
+- a Linux-first native SDL2 player with bounded seeking, fixed-rate playback,
+  subtitle/audio presentation, persistent viewport-anchored CRT scanlines, and
+  headless evidence;
+- the Linux-first SDL2 Video64 Drop shell with drag-and-drop, queue controls,
+  staged progress, audiovisual encoding, and independent output verification;
 - Node conformance tests and golden hashes.
 
-Video64 Drop's desktop shell, native-player subtitle/audio presentation,
-WebAssembly delivery, the complete WebAssembly decoder, and VLC modules remain
-staged in the ledger rather than represented as finished.
+The broader browser/WebAssembly decoder, decoded Video64 Drop preview and size
+estimator, installable desktop packaging, physical-device timing qualification,
+Windows/macOS delivery, and VLC modules remain active development work.
 
 ## Requirements
 
@@ -115,12 +119,25 @@ cargo run --locked --package v64-player --features native-ui -- \
   tests/golden/procedural.v64
 ```
 
-Encode any FFmpeg-readable video with the primary 32-glyph profile:
+Encode any FFmpeg-readable video with the primary 32-glyph proof profile:
 
 ```bash
 node prototype/js/cli.mjs encode input.mp4 output.v64 \
   --fps 24 --columns 80 --palette 32 --glyphs 32 --target balanced
 ```
+
+Use Video64 Drop when source audio should be carried into the resulting file:
+
+```bash
+node apps/video64-drop/cli.mjs encode input.mp4 output-av.v64 \
+  --fps 24 --columns 80 --palette 32 --glyphs 32 --profile balanced
+```
+
+Video64 Drop converts the first audio stream to mono 48 kHz and encodes audible
+regions as AM1 `AURN` Opus runs while representing qualifying long silence as
+exact `SILN` spans. The current `AM1-PROVISIONAL-8K` speech setting is not
+normative; genuine blinded listening remains required before its bitrate can
+freeze.
 
 Source ingest honors FFmpeg display-rotation and pixel-aspect metadata before
 deriving the glyph grid. When integer grid rounding cannot exactly represent
@@ -198,8 +215,7 @@ Rust boundary. The corresponding Rust ownership and CLI contract is
 [`docs/RUST_API.md`](docs/RUST_API.md).
 
 Native player build requirements, controls, resource ceilings, deterministic
-headless checks, and the explicit first-tranche subtitle/audio presentation
-limitation are documented in
+headless checks, and subtitle/audio presentation are documented in
 [`docs/NATIVE_PLAYER.md`](docs/NATIVE_PLAYER.md).
 
 ## Contributing and forks

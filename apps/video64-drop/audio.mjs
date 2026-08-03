@@ -21,6 +21,7 @@ export const DROP_AM1_PROFILE = Object.freeze({
   bitrateKbps: 8,
   frameDurationMs: 20,
   maximumRunSeconds: 60,
+  maximumPcmBytes: 256 * 1024 * 1024,
   silenceDetector: Object.freeze({
     windowMs: 10,
     enterDb: -48,
@@ -65,13 +66,23 @@ export function fitDropAudioSamples(samplesInput, targetSamples) {
 
 export function extractDropAudioPcm(inputPath, durationTicks, {
   ffmpegPath = "ffmpeg",
+  maximumPcmBytes = DROP_AM1_PROFILE.maximumPcmBytes,
   spawnSyncImpl = spawnSync
 } = {}) {
+  assertInteger(maximumPcmBytes, "Maximum source PCM bytes", 2);
   const targetSamples = ticksToAudioSamples(durationTicks);
+  const targetPcmBytes = targetSamples * 2;
+  if (!Number.isSafeInteger(targetPcmBytes) || targetPcmBytes > maximumPcmBytes) {
+    throw new RangeError(
+      `Source audio requires ${targetPcmBytes} PCM bytes, exceeding the ` +
+      `${maximumPcmBytes}-byte Video64 Drop ceiling; streaming long-form ` +
+      "audio encoding is not yet implemented"
+    );
+  }
   const durationSeconds = targetSamples / DROP_AM1_PROFILE.sampleRate;
   const maxBuffer = Math.max(
     64 * 1024 * 1024,
-    targetSamples * 2 + 8 * 1024 * 1024
+    targetPcmBytes + 8 * 1024 * 1024
   );
   const result = spawnSyncImpl(ffmpegPath, [
     "-v", "error",
@@ -95,7 +106,11 @@ export function extractDropAudioPcm(inputPath, durationTicks, {
       `ffmpeg audio extraction failed (${result.status}): ${Buffer.from(result.stderr || []).toString("utf8").trim()}`
     );
   }
-  return fitDropAudioSamples(pcm16FromLittleEndian(result.stdout), targetSamples);
+  return {
+    ...fitDropAudioSamples(pcm16FromLittleEndian(result.stdout), targetSamples),
+    targetPcmBytes,
+    maximumPcmBytes
+  };
 }
 
 function boundedAudibleSpans(totalSamples, silenceSpans, maximumRunSamples) {
@@ -208,8 +223,11 @@ export function encodeDropAudioTimeline(samplesInput, durationTicks, options = {
       channels: DROP_AM1_PROFILE.channels,
       bitrateKbps,
       frameDurationMs,
+      maximumRunSeconds: DROP_AM1_PROFILE.maximumRunSeconds,
+      maximumPcmBytes: DROP_AM1_PROFILE.maximumPcmBytes,
       durationTicks,
       targetSamples,
+      pcmBytes: targetSamples * 2,
       sourceSamples: fitted.sourceSamples,
       paddedSamples: fitted.paddedSamples,
       trimmedSamples: fitted.trimmedSamples,
@@ -232,6 +250,8 @@ export function encodeDropSourceAudio(inputPath, durationTicks, options = {}) {
     chunks: encoded.chunks,
     summary: {
       ...encoded.summary,
+      maximumPcmBytes: extraction.maximumPcmBytes,
+      pcmBytes: extraction.targetPcmBytes,
       sourceSamples: extraction.sourceSamples,
       paddedSamples: extraction.paddedSamples,
       trimmedSamples: extraction.trimmedSamples

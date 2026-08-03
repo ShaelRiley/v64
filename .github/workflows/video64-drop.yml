@@ -62,7 +62,7 @@ jobs:
             -shortest -c:v libx264 -pix_fmt yuv420p -c:a aac \
             target/video64-drop/source.mp4
 
-      - name: Inspect and encode through Video64 Drop
+      - name: Inspect and encode through Video64 Drop twice
         run: |
           node apps/video64-drop/cli.mjs inspect \
             target/video64-drop/source.mp4 \
@@ -74,6 +74,13 @@ jobs:
             --columns 40 --palette 16 --glyphs 32 --profile balanced \
             > target/video64-drop/job.json \
             2> target/video64-drop/events.ndjson
+          node apps/video64-drop/cli.mjs encode \
+            target/video64-drop/source.mp4 \
+            target/video64-drop/output-repeat.v64 \
+            --columns 40 --palette 16 --glyphs 32 --profile balanced \
+            > target/video64-drop/job-repeat.json \
+            2> target/video64-drop/events-repeat.ndjson
+          cmp target/video64-drop/output.v64 target/video64-drop/output-repeat.v64
 
       - name: Require audiovisual stage and output evidence
         run: |
@@ -85,12 +92,14 @@ jobs:
 
           const analysis = JSON.parse(readFileSync("target/video64-drop/analysis.json"));
           const job = JSON.parse(readFileSync("target/video64-drop/job.json"));
+          const repeat = JSON.parse(readFileSync("target/video64-drop/job-repeat.json"));
           const events = readFileSync("target/video64-drop/events.ndjson", "utf8")
             .trim().split("\n").map(JSON.parse);
           assert.equal(analysis.source.audioPresent, true);
           assert.equal(analysis.grid.columns, 40);
           assert.equal(analysis.capabilities.audioEncoding, true);
           assert.equal(job.status, "completed");
+          assert.equal(repeat.status, "completed");
           assert.equal(job.settings.fps, "24");
           assert.equal(job.settings.glyphs, 32);
           assert.equal(job.stages.audio_encode.state, "completed");
@@ -100,6 +109,7 @@ jobs:
           assert.equal(job.result.encoded.audio.normative, false);
           assert.ok(job.result.encoded.audio.audibleRuns > 0);
           assert.ok(job.result.encoded.audio.opusPackets > 0);
+          assert.deepEqual(job.result.encoded.audio, repeat.result.encoded.audio);
           assert.ok(job.result.encoded.bytes > job.result.encoded.videoOnlyBytes);
           assert.equal(
             job.result.encoded.videoOnlyBitsPerSecond,
@@ -115,6 +125,7 @@ jobs:
           );
           assert.equal(job.result.verification.valid, true);
           assert.equal(job.result.verification.outputBytes, job.result.encoded.bytes);
+          assert.deepEqual(job.result.verification, repeat.result.verification);
           assert.ok(job.result.verification.audioRuns > 0);
           assert.ok(job.result.verification.audioKeptSamples > 0);
           assert.equal(job.warnings.length, 1);

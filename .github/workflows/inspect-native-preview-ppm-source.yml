@@ -1,0 +1,32 @@
+name: Inspect native preview PPM source
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/inspect-native-preview-ppm-source.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/native-preview-estimator
+      - name: Print generated PPM parser
+        run: |
+          set -euo pipefail
+          base64 -d .github/preview-builder/main.rs.gz.b64 | gzip -d > /tmp/main.rs
+          start="$(grep -n '^fn read_ppm' /tmp/main.rs | head -1 | cut -d: -f1)"
+          test -n "$start"
+          end=$((start + 120))
+          sed -n "${start},${end}p" /tmp/main.rs
+          snippet="$(sed -n "${start},${end}p" /tmp/main.rs | sed -n '1,80p')"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Generated PPM parser source:\n\n\`\`\`rust\n$snippet\n\`\`\`"

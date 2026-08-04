@@ -51,6 +51,7 @@ struct Options {
     headless_report: Option<PathBuf>,
     headless_encode: Option<(PathBuf, PathBuf)>,
     smoke_presents: Option<u32>,
+    smoke_drop: Option<PathBuf>,
     inputs: Vec<PathBuf>,
 }
 
@@ -196,11 +197,17 @@ fn run() -> Result<(), Box<dyn Error>> {
             .map_err(Into::into);
     }
 
-    run_windowed(&core, options.inputs, options.smoke_presents).map_err(Into::into)
+    run_windowed(
+        &core,
+        options.inputs,
+        options.smoke_presents,
+        options.smoke_drop,
+    )
+    .map_err(Into::into)
 }
 
 fn usage() -> &'static str {
-    "usage: video64-drop [--core-cli PATH] [--smoke-presents N] [INPUT ...]\n       video64-drop --headless-report REPORT.json [INPUT ...]\n       video64-drop --headless-encode INPUT OUTPUT.v64 --headless-report REPORT.json"
+    "usage: video64-drop [--core-cli PATH] [--smoke-presents N] [--smoke-drop PATH] [INPUT ...]\n       video64-drop --headless-report REPORT.json [INPUT ...]\n       video64-drop --headless-encode INPUT OUTPUT.v64 --headless-report REPORT.json"
 }
 
 fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
@@ -208,6 +215,7 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
     let mut headless_report = None;
     let mut headless_encode = None;
     let mut smoke_presents = None;
+    let mut smoke_drop = None;
     let mut inputs = Vec::new();
     let mut index = 0usize;
     while index < arguments.len() {
@@ -242,6 +250,12 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
                 }
                 smoke_presents = Some(count);
             }
+            Some("--smoke-drop") => {
+                index += 1;
+                smoke_drop = Some(PathBuf::from(
+                    arguments.get(index).ok_or_else(|| usage().to_owned())?,
+                ));
+            }
             Some(value) if value.starts_with('-') => return Err(usage().to_owned()),
             _ => inputs.push(PathBuf::from(&arguments[index])),
         }
@@ -252,11 +266,31 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
         headless_report,
         headless_encode,
         smoke_presents,
+        smoke_drop,
         inputs,
     })
 }
 
+fn core_cli_candidates(executable: &Path) -> Vec<PathBuf> {
+    let Some(directory) = executable.parent() else {
+        return Vec::new();
+    };
+    vec![
+        directory.join("apps/video64-drop/cli.mjs"),
+        directory.join("../apps/video64-drop/cli.mjs"),
+        directory.join("video64-drop/cli.mjs"),
+    ]
+}
+
 fn default_core_cli_path() -> PathBuf {
+    if let Ok(executable) = env::current_exe() {
+        if let Some(candidate) = core_cli_candidates(&executable)
+            .into_iter()
+            .find(|candidate| candidate.is_file())
+        {
+            return candidate;
+        }
+    }
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../video64-drop/cli.mjs")
 }
 
@@ -453,6 +487,7 @@ fn run_windowed(
     core: &CoreConfig,
     inputs: Vec<PathBuf>,
     smoke_presents: Option<u32>,
+    smoke_drop: Option<PathBuf>,
 ) -> Result<(), String> {
     let mut state = ShellState::default();
     add_inputs(core, &mut state, inputs)?;
@@ -471,6 +506,9 @@ fn run_windowed(
         .build()
         .map_err(|error| error.to_string())?;
     let mut event_pump = sdl.event_pump().map_err(|error| error.to_string())?;
+    if let Some(input) = smoke_drop {
+        handle_dropped_file(core, &mut state, input);
+    }
     let mut worker: Option<ActiveWorker> = None;
     let mut presented = 0u32;
 
@@ -494,7 +532,7 @@ fn run_windowed(
                         .clone_into(&mut state.notice);
                 }
                 Event::DropFile { filename, .. } => {
-                    add_inputs(core, &mut state, vec![PathBuf::from(filename)])?;
+                    handle_dropped_file(core, &mut state, PathBuf::from(filename));
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Tab),
@@ -604,6 +642,13 @@ fn add_inputs(
     }
     state.notice = format!("{} file(s) in queue", state.jobs.len());
     Ok(())
+}
+
+fn handle_dropped_file(core: &CoreConfig, state: &mut ShellState, input: PathBuf) {
+    let label = file_label(&input);
+    if let Err(error) = add_inputs(core, state, vec![input]) {
+        state.notice = format!("Could not add {label}: {error}");
+    }
 }
 
 fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {
@@ -1246,12 +1291,15 @@ mod tests {
             "core.mjs".into(),
             "--smoke-presents".into(),
             "3".into(),
+            "--smoke-drop".into(),
+            "dropped.mp4".into(),
             "one.mp4".into(),
             "two.mkv".into(),
         ])
         .unwrap();
         assert_eq!(parsed.core_cli, PathBuf::from("core.mjs"));
         assert_eq!(parsed.smoke_presents, Some(3));
+        assert_eq!(parsed.smoke_drop, Some(PathBuf::from("dropped.mp4")));
         assert_eq!(parsed.inputs.len(), 2);
         assert!(parse_options(&["--smoke-presents".into(), "0".into()]).is_err());
     }

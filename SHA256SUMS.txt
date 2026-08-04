@@ -1,0 +1,5 @@
+9d6b7039249b765acb2da947b75d2f323096186ab4c786d65d18a0a7eae9eb9b  video64-player-linux-x86_64.tar.gz
+4225da9e1fa8f17b34130d773ceccd359d599e3ec33d374e3813134415f1fde5  video64-drop-linux-x86_64.tar.gz
+553bf26035664d4fd55297fc95de780dc9e3133fa07d109e1753b14f413bef79  video64-alpha3-sample-bundle.tar.gz
+1b9e06965eba36130997f4d6f5e28e8b9073ba3529a5d7c5b4f1b6d4ed42cdf3  video64-alpha3-sample.v64
+343a9445cec16b1cd0ad96da5b75a4bc4abc6d86b1ea6bc2069b6d0e204997d6  video64-alpha3-release-manifest.json

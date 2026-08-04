@@ -1,3 +1,4 @@
+# retry after narrowing schema patch to stale keys that are present
 name: Build clean native preview estimator branch
 
 on:
@@ -49,17 +50,22 @@ jobs:
 
           path = Path("apps/video64-drop-native/src/main.rs")
           text = path.read_text()
-          replacements = {
-              "/sourceImage/path": "/preview/source/path",
-              "/decodedImage/path": "/preview/decodedV64/path",
+          required = {
               "/estimate/centralEstimateBytes": "/estimate/estimatedBytes",
               "/estimate/advisoryLowBytes": "/estimate/lowerBytes",
               "/estimate/advisoryHighBytes": "/estimate/upperBytes",
+          }
+          for old, new in required.items():
+              if old not in text:
+                  raise SystemExit(f"expected stale estimate path missing: {old}")
+              text = text.replace(old, new)
+
+          optional = {
+              "/sourceImage/path": "/preview/source/path",
+              "/decodedImage/path": "/preview/decodedV64/path",
               "/representativeOffsetSeconds": "/preview/representativeOffsetSeconds",
           }
-          for old, new in replacements.items():
-              if old not in text:
-                  raise SystemExit(f"expected stale schema path missing: {old}")
+          for old, new in optional.items():
               text = text.replace(old, new)
           path.write_text(text)
           PY

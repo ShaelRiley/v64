@@ -74,3 +74,5 @@ jobs:
           set -euo pipefail
           cleanup="$(sed 's/^/- /' /tmp/branch-cleanup.txt)"
           gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Alpha.2 tested tag and stale-branch cleanup completed.\n\n- tag: \`$TAG\`\n- tested commit: \`$TESTED_SHA\`\n\n$cleanup\n\nRelease assets remain preserved in Actions artifact \`8894978715\` while the repository integration's Release API restriction is handled separately."
+
+# Retriggered after installing the completion reporter.

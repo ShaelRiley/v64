@@ -1,0 +1,26 @@
+name: Inspect clean native preview builder
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/inspect-native-preview-v2.yml"
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Report clean builder runs
+        run: |
+          set -euo pipefail
+          sleep 15
+          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-native-preview-estimator-v2.yml/runs?per_page=5" \
+            --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Clean native preview builder state:\n\n$report"

@@ -1,4 +1,4 @@
-# inspect narrowed-schema rerun after build scheduling
+# inspect PPM-corrected rerun
 name: Inspect clean native preview builder
 
 on:

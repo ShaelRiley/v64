@@ -1,3 +1,4 @@
+# retry with exact unique PPM separator block removal
 name: Build exact PPM-corrected native preview branch
 
 on:
@@ -52,11 +53,10 @@ jobs:
               text = text.replace(old, new)
 
           lines = text.splitlines(keepends=True)
-          load_ppm = next(i for i, line in enumerate(lines) if line.startswith('fn load_ppm('))
-          start = next(
-              i for i in range(load_ppm, min(load_ppm + 120, len(lines)))
-              if lines[i].strip() == 'let separator = *bytes'
-          )
+          starts = [i for i, line in enumerate(lines) if line.strip() == 'let separator = *bytes']
+          if len(starts) != 1:
+              raise SystemExit(f'expected one redundant PPM separator block, found {len(starts)}')
+          start = starts[0]
           end = next(
               i for i in range(start, min(start + 40, len(lines)))
               if lines[i].strip() == 'cursor += 1;'

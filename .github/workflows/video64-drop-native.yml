@@ -93,6 +93,28 @@ jobs:
             --smoke-presents 4 \
             evidence/source.mp4
 
+      - name: Prove release-layout core discovery without a wrapper script
+        run: |
+          mkdir -p evidence/bundle/apps
+          install -m 0755 target/release/video64-drop evidence/bundle/video64-drop
+          cp -R apps/video64-drop evidence/bundle/apps/
+          cp -R prototype assets tools package.json evidence/bundle/
+          evidence/bundle/video64-drop \
+            --headless-report evidence/bundled-report.json \
+            evidence/source.mp4
+          xvfb-run -a env SDL_AUDIODRIVER=dummy \
+            evidence/bundle/video64-drop \
+            --smoke-presents 4 \
+            evidence/source.mp4
+
+      - name: Prove a failed dropped file does not terminate the GUI
+        run: |
+          xvfb-run -a env SDL_AUDIODRIVER=dummy \
+            ./target/release/video64-drop \
+            --core-cli evidence/does-not-exist.mjs \
+            --smoke-drop evidence/source.mp4 \
+            --smoke-presents 4
+
       - name: Assert native-shell evidence
         run: |
           python3 - <<'PY'
@@ -118,6 +140,9 @@ jobs:
           assert queued["grid"] == {"columns": 80, "rows": 23}
           assert queued["audioPresent"] is True
           assert any("audio" in warning.lower() for warning in queued["warnings"])
+
+          bundled = json.loads(Path("evidence/bundled-report.json").read_text())
+          assert bundled == shell
 
           encoded = json.loads(Path("evidence/encode-report.json").read_text())
           assert encoded["format"] == "VIDEO64-DROP-NATIVE-ENCODE-1"
@@ -150,6 +175,7 @@ jobs:
             evidence/source.mp4 \
             evidence/output.v64 \
             evidence/shell-report-a.json \
+            evidence/bundled-report.json \
             evidence/encode-report.json \
             evidence/verify.json \
             > evidence/SHA256SUMS

@@ -24,7 +24,7 @@ export const DROP_SIZE_ESTIMATE_FORMAT = "VIDEO64-DROP-SAMPLED-SIZE-1";
 export const DROP_PREVIEW_FORMAT = "VIDEO64-DROP-PREVIEW-1";
 export const DROP_SAMPLE_SECONDS = 2;
 export const DROP_SAMPLE_COUNT = 3;
-export const DROP_ESTIMATE_FIXED_OVERHEAD_BYTES = 4096;
+export const DROP_ESTIMATE_FIXED_OVERHEAD_BYTES = 1024;
 export const DROP_PREVIEW_GAP_PIXELS = 8;
 
 function runTextProgram(program, args, spawn = spawnSync) {
@@ -166,7 +166,7 @@ function extractDropSampleClip(inputPath, outputPath, offsetSeconds, durationSec
     "-map", "0:v:0",
     "-an",
     "-c:v", "ffv1",
-    "-pix_fmt", "yuv420p",
+    "-pix_fmt", "yuv444p",
     outputPath
   ], spawnSyncImpl);
   return statSync(outputPath).size;
@@ -291,7 +291,14 @@ function sampledAssessment(inputPath, settings = {}, {
       );
       const demuxed = demuxV64(readFileSync(v64Path));
       const durationTicks = demuxed.header.duration;
-      const bitsPerSecond = Math.round(encoded.bytes * 8 * TICK_RATE / durationTicks);
+      const storedBitsPerSecond = Math.round(encoded.bytes * 8 * TICK_RATE / durationTicks);
+      const estimatedVariableBytes = Math.max(
+        1,
+        encoded.bytes - DROP_ESTIMATE_FIXED_OVERHEAD_BYTES
+      );
+      const bitsPerSecond = Math.round(
+        estimatedVariableBytes * 8 * TICK_RATE / durationTicks
+      );
       samples.push(Object.freeze({
         index,
         offsetSeconds,
@@ -300,6 +307,8 @@ function sampledAssessment(inputPath, settings = {}, {
         encodedDurationSeconds: roundedSeconds(durationTicks / TICK_RATE),
         frames: encoded.frames,
         bytes: encoded.bytes,
+        storedBitsPerSecond,
+        estimatedVariableBytes,
         bitsPerSecond,
         sha256: sha256File(v64Path)
       }));

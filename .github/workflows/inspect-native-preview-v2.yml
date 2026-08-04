@@ -1,4 +1,4 @@
-# inspect narrowed-schema rerun
+# inspect narrowed-schema rerun after build scheduling
 name: Inspect clean native preview builder
 
 on:
@@ -21,7 +21,7 @@ jobs:
       - name: Report clean builder runs
         run: |
           set -euo pipefail
-          sleep 15
+          sleep 20
           report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-native-preview-estimator-v2.yml/runs?per_page=5" \
             --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
           gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Clean native preview builder state:\n\n$report"

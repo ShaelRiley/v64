@@ -1,0 +1,26 @@
+name: Inspect alpha.2 publication runs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/inspect-alpha2-publication-runs.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Report recent publication runs
+        run: |
+          set -euo pipefail
+          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish-alpha2-and-clean-branches.yml/runs?per_page=10" \
+            --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, event `\(.event)`, head `\(.head_sha)`"')"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Recent alpha.2 publication runs:\n\n$report"

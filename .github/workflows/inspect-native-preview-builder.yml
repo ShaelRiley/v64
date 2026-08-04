@@ -1,4 +1,4 @@
-# inspect current schema-corrected run
+# inspect fresh current-head builder
 name: Inspect native preview builder
 
 on:
@@ -22,6 +22,6 @@ jobs:
         run: |
           set -euo pipefail
           sleep 15
-          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-native-preview-estimator-main.yml/runs?per_page=5" \
+          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-native-preview-estimator-current.yml/runs?per_page=5" \
             --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview builder state:\n\n$report"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Current native preview builder state:\n\n$report"

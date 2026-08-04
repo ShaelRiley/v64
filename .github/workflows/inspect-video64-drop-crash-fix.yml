@@ -21,6 +21,6 @@ jobs:
         run: |
           set -euo pipefail
           sleep 20
-          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/apply-video64-drop-dropfile-fix.yml/runs?branch=fix/video64-drop-dropfile-crash&per_page=5" \
+          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/apply-video64-drop-dropfile-fix-v3.yml/runs?branch=fix/video64-drop-dropfile-crash&per_page=5" \
             --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Video64 Drop crash-fix builder state:\n\n$report"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Video64 Drop crash-fix v3 state:\n\n$report"

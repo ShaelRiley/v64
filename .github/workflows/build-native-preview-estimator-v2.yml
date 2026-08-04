@@ -1,4 +1,4 @@
-# retry after narrowing schema patch to stale keys that are present
+# retry after fixing P6 PPM raster boundary handling
 name: Build clean native preview estimator branch
 
 on:
@@ -67,7 +67,37 @@ jobs:
           }
           for old, new in optional.items():
               text = text.replace(old, new)
-          path.write_text(text)
+
+          lines = text.splitlines(keepends=True)
+          error_index = next(
+              (index for index, line in enumerate(lines)
+               if "expected whitespace after PPM maximum value" in line),
+              None,
+          )
+          if error_index is None:
+              raise SystemExit("expected stale PPM whitespace error block missing")
+
+          start = error_index
+          while start >= 0 and not lines[start].lstrip().startswith("if "):
+              start -= 1
+          if start < 0:
+              raise SystemExit("could not locate PPM whitespace if block")
+
+          depth = 0
+          end = None
+          for index in range(start, len(lines)):
+              depth += lines[index].count("{")
+              depth -= lines[index].count("}")
+              if index > start and depth == 0:
+                  end = index + 1
+                  break
+          if end is None:
+              raise SystemExit("could not locate end of PPM whitespace block")
+          if end < len(lines) and lines[end].strip() == "cursor += 1;":
+              end += 1
+
+          del lines[start:end]
+          path.write_text("".join(lines))
           PY
 
           rustfmt --edition 2024 apps/video64-drop-native/src/main.rs apps/video64-drop-native/src/lib.rs
@@ -145,7 +175,7 @@ jobs:
             apps/video64-drop-native/src/lib.rs \
             .github/workflows/video64-drop-native.yml
           git commit -m "Integrate native preview and size estimation"
-          git push --set-upstream origin "$OUTPUT_BRANCH"
+          git push --force-with-lease --set-upstream origin "$OUTPUT_BRANCH"
 
       - name: Report builder result
         if: always()

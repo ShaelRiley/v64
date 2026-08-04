@@ -1,0 +1,26 @@
+name: Inspect Video64 Drop crash-fix run
+
+on:
+  push:
+    branches:
+      - fix/video64-drop-dropfile-crash
+    paths:
+      - ".github/workflows/inspect-video64-drop-crash-fix.yml"
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Report exact crash-fix run state
+        run: |
+          set -euo pipefail
+          sleep 20
+          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/apply-video64-drop-dropfile-fix.yml/runs?branch=fix/video64-drop-dropfile-crash&per_page=5" \
+            --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Video64 Drop crash-fix builder state:\n\n$report"

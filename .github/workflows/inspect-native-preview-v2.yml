@@ -1,11 +1,9 @@
-name: Inspect generated PPM parser workflow
+name: Inspect native preview v3 builder
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/inspect-native-preview-v2.yml"
+    branches: [main]
+    paths: [".github/workflows/inspect-native-preview-v2.yml"]
 
 permissions:
   actions: read
@@ -17,10 +15,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Report parser-inspection runs
-        run: |
+      - run: |
           set -euo pipefail
-          sleep 15
-          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/inspect-native-preview-ppm-source.yml/runs?per_page=5" \
-            --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Generated PPM parser workflow state:\n\n$report"
+          sleep 20
+          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-native-preview-estimator-v3.yml/runs?per_page=5" --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v3 state:\n\n$report"

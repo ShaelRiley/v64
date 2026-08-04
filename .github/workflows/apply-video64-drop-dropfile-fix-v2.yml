@@ -1,0 +1,186 @@
+name: Apply Video64 Drop drop-file crash fix v2
+
+on:
+  push:
+    branches:
+      - fix/video64-drop-dropfile-crash
+    paths:
+      - ".github/workflows/apply-video64-drop-dropfile-fix-v2.yml"
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/video64-drop-dropfile-crash
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          components: rustfmt,clippy
+
+      - name: Install native and media dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsdl2-dev xvfb
+
+      - name: Patch native core discovery and drop failure handling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("apps/video64-drop-native/src/main.rs")
+          text = path.read_text()
+
+          replacements = [
+              (
+                  "    smoke_presents: Option<u32>,\n    inputs: Vec<PathBuf>,\n",
+                  "    smoke_presents: Option<u32>,\n    smoke_drop: Option<PathBuf>,\n    inputs: Vec<PathBuf>,\n",
+              ),
+              (
+                  "    run_windowed(&core, options.inputs, options.smoke_presents).map_err(Into::into)\n",
+                  "    run_windowed(\n        &core,\n        options.inputs,\n        options.smoke_presents,\n        options.smoke_drop,\n    )\n    .map_err(Into::into)\n",
+              ),
+              (
+                  "    \"usage: video64-drop [--core-cli PATH] [--smoke-presents N] [INPUT ...]\\n       video64-drop --headless-report REPORT.json [INPUT ...]\\n       video64-drop --headless-encode INPUT OUTPUT.v64 --headless-report REPORT.json\"\n",
+                  "    \"usage: video64-drop [--core-cli PATH] [--smoke-presents N] [--smoke-drop PATH] [INPUT ...]\\n       video64-drop --headless-report REPORT.json [INPUT ...]\\n       video64-drop --headless-encode INPUT OUTPUT.v64 --headless-report REPORT.json\"\n",
+              ),
+              (
+                  "    let mut smoke_presents = None;\n    let mut inputs = Vec::new();\n",
+                  "    let mut smoke_presents = None;\n    let mut smoke_drop = None;\n    let mut inputs = Vec::new();\n",
+              ),
+              (
+                  "            Some(\"--smoke-presents\") => {\n                index += 1;\n                let count = arguments\n                    .get(index)\n                    .and_then(|value| value.to_str())\n                    .ok_or_else(|| usage().to_owned())?\n                    .parse::<u32>()\n                    .map_err(|_| \"--smoke-presents requires an unsigned integer\".to_owned())?;\n                if count == 0 || count > 10_000 {\n                    return Err(\"--smoke-presents must be between 1 and 10000\".to_owned());\n                }\n                smoke_presents = Some(count);\n            }\n",
+                  "            Some(\"--smoke-presents\") => {\n                index += 1;\n                let count = arguments\n                    .get(index)\n                    .and_then(|value| value.to_str())\n                    .ok_or_else(|| usage().to_owned())?\n                    .parse::<u32>()\n                    .map_err(|_| \"--smoke-presents requires an unsigned integer\".to_owned())?;\n                if count == 0 || count > 10_000 {\n                    return Err(\"--smoke-presents must be between 1 and 10000\".to_owned());\n                }\n                smoke_presents = Some(count);\n            }\n            Some(\"--smoke-drop\") => {\n                index += 1;\n                smoke_drop = Some(PathBuf::from(\n                    arguments.get(index).ok_or_else(|| usage().to_owned())?,\n                ));\n            }\n",
+              ),
+              (
+                  "        smoke_presents,\n        inputs,\n",
+                  "        smoke_presents,\n        smoke_drop,\n        inputs,\n",
+              ),
+              (
+                  "fn default_core_cli_path() -> PathBuf {\n    PathBuf::from(env!(\"CARGO_MANIFEST_DIR\")).join(\"../video64-drop/cli.mjs\")\n}\n",
+                  "fn core_cli_candidates(executable: &Path) -> Vec<PathBuf> {\n    let Some(directory) = executable.parent() else {\n        return Vec::new();\n    };\n    vec![\n        directory.join(\"apps/video64-drop/cli.mjs\"),\n        directory.join(\"../apps/video64-drop/cli.mjs\"),\n        directory.join(\"video64-drop/cli.mjs\"),\n    ]\n}\n\nfn default_core_cli_path() -> PathBuf {\n    if let Ok(executable) = env::current_exe() {\n        if let Some(candidate) = core_cli_candidates(&executable)\n            .into_iter()\n            .find(|candidate| candidate.is_file())\n        {\n            return candidate;\n        }\n    }\n    PathBuf::from(env!(\"CARGO_MANIFEST_DIR\")).join(\"../video64-drop/cli.mjs\")\n}\n",
+              ),
+              (
+                  "    smoke_presents: Option<u32>,\n) -> Result<(), String> {\n",
+                  "    smoke_presents: Option<u32>,\n    smoke_drop: Option<PathBuf>,\n) -> Result<(), String> {\n",
+              ),
+              (
+                  "    let mut event_pump = sdl.event_pump().map_err(|error| error.to_string())?;\n    let mut worker: Option<ActiveWorker> = None;\n",
+                  "    let mut event_pump = sdl.event_pump().map_err(|error| error.to_string())?;\n    if let Some(input) = smoke_drop {\n        handle_dropped_file(core, &mut state, input);\n    }\n    let mut worker: Option<ActiveWorker> = None;\n",
+              ),
+              (
+                  "                Event::DropFile { filename, .. } => {\n                    add_inputs(core, &mut state, vec![PathBuf::from(filename)])?;\n                }\n",
+                  "                Event::DropFile { filename, .. } => {\n                    handle_dropped_file(core, &mut state, PathBuf::from(filename));\n                }\n",
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f"expected source fragment not found:\n{old}")
+              text = text.replace(old, new, 1)
+
+          marker = "fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {\n"
+          helper = "fn handle_dropped_file(core: &CoreConfig, state: &mut ShellState, input: PathBuf) {\n    let label = file_label(&input);\n    if let Err(error) = add_inputs(core, state, vec![input]) {\n        state.notice = format!(\"Could not add {label}: {error}\");\n    }\n}\n\n"
+          if marker not in text:
+              raise SystemExit("adjust_settings marker not found")
+          text = text.replace(marker, helper + marker, 1)
+
+          tests = "\n".join([
+              "",
+              "",
+              "#[cfg(test)]",
+              "mod tests {",
+              "    use super::*;",
+              "",
+              "    #[test]",
+              "    fn bundled_core_cli_is_the_primary_runtime_candidate() {",
+              "        let candidates = core_cli_candidates(Path::new(\"/opt/video64-drop/video64-drop\"));",
+              "        assert_eq!(",
+              "            candidates.first(),",
+              "            Some(&PathBuf::from(",
+              "                \"/opt/video64-drop/apps/video64-drop/cli.mjs\"",
+              "            ))",
+              "        );",
+              "    }",
+              "",
+              "    #[test]",
+              "    fn adjacent_app_directory_is_supported_for_packaged_launchers() {",
+              "        let candidates = core_cli_candidates(Path::new(\"/opt/video64-drop/bin/video64-drop\"));",
+              "        assert!(candidates.contains(&PathBuf::from(",
+              "            \"/opt/video64-drop/bin/../apps/video64-drop/cli.mjs\"",
+              "        )));",
+              "    }",
+              "}",
+              "",
+          ])
+          if "bundled_core_cli_is_the_primary_runtime_candidate" not in text:
+              text += tests
+
+          path.write_text(text)
+          PY
+
+          rustfmt --edition 2024 apps/video64-drop-native/src/main.rs
+
+      - name: Test, lint, and build the corrected shell
+        run: |
+          cargo test --locked -p video64-drop-native --features native-ui
+          cargo clippy --locked -p video64-drop-native --all-targets --features native-ui -- -D warnings
+          cargo build --locked --release -p video64-drop-native --features native-ui
+
+      - name: Generate a real audiovisual source
+        run: |
+          mkdir -p evidence/bundle/apps
+          ffmpeg -hide_banner -loglevel error \
+            -f lavfi -i testsrc=size=320x180:rate=24 \
+            -f lavfi -i sine=frequency=660:sample_rate=48000 \
+            -t 1 -shortest \
+            -c:v libx264 -pix_fmt yuv420p \
+            -c:a aac -ac 1 -ar 48000 \
+            evidence/source.mp4
+
+      - name: Prove bundled core discovery without the launcher script
+        run: |
+          install -m 0755 target/release/video64-drop evidence/bundle/video64-drop
+          cp -R apps/video64-drop evidence/bundle/apps/
+          cp -R prototype assets tools package.json evidence/bundle/
+          evidence/bundle/video64-drop \
+            --headless-report evidence/bundled-report.json \
+            evidence/source.mp4
+          xvfb-run -a env SDL_AUDIODRIVER=dummy \
+            evidence/bundle/video64-drop \
+            --smoke-presents 4 evidence/source.mp4
+
+      - name: Prove a drop-time core failure does not close the window
+        run: |
+          xvfb-run -a env SDL_AUDIODRIVER=dummy \
+            ./target/release/video64-drop \
+            --core-cli evidence/does-not-exist.mjs \
+            --smoke-drop evidence/source.mp4 \
+            --smoke-presents 4
+
+      - name: Commit corrected source
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/video64-drop-native/src/main.rs
+          git commit -m "Prevent Video64 Drop from closing on file drop"
+          git push origin HEAD:fix/video64-drop-dropfile-crash
+
+      - name: Report builder result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Video64 Drop crash-fix v2 builder completed.\n\n- run: \`$GITHUB_RUN_ID\`\n- job status: \`${{ job.status }}\`\n- head: \`$GITHUB_SHA\`"

@@ -1,3 +1,4 @@
+# reinspect v4
 name: Inspect native preview v4 builder
 
 on:
@@ -17,6 +18,5 @@ jobs:
     steps:
       - run: |
           set -euo pipefail
-          sleep 20
           report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-native-preview-estimator-v4.yml/runs?per_page=5" --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
           gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v4 state:\n\n$report"

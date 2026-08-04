@@ -1,5 +1,4 @@
-# inspect formatted-expression v4 rerun
-name: Inspect native preview v4 builder
+name: Inspect generated PPM parser text
 
 on:
   push:
@@ -7,7 +6,7 @@ on:
     paths: [".github/workflows/inspect-native-preview-v2.yml"]
 
 permissions:
-  actions: read
+  contents: read
   issues: write
 
 jobs:
@@ -16,8 +15,12 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/native-preview-estimator
       - run: |
           set -euo pipefail
-          sleep 20
-          report="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-native-preview-estimator-v4.yml/runs?per_page=5" --jq '.workflow_runs[] | "- run `\(.id)`: status `\(.status)`, conclusion `\(.conclusion // "pending")`, head `\(.head_sha)`"')"
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v4 formatted-match state:\n\n$report"
+          base64 -d .github/preview-builder/main.rs.gz.b64 | gzip -d > /tmp/main.rs
+          grep -n -C 18 -E 'PPM|ppm_token|separator|maximum value|cursor \+=' /tmp/main.rs > /tmp/parser.txt || true
+          body="$(tail -n 220 /tmp/parser.txt)"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Generated native PPM parser text:\n\n\`\`\`rust\n$body\n\`\`\`"

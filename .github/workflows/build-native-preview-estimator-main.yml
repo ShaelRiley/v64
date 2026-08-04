@@ -1,4 +1,4 @@
-# retry after strict-lint corrections
+# retry after authoritative schema alignment
 name: Build native preview estimator
 
 on:

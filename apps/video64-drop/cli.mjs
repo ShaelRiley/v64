@@ -8,6 +8,10 @@ import {
   suggestDropOutputPath
 } from "./model.mjs";
 import {
+  createDropPreview,
+  estimateDropOutputSize
+} from "./preview.mjs";
+import {
   analyzeDropJob,
   runDropJob
 } from "./runner.mjs";
@@ -37,12 +41,17 @@ Usage:
   video64-drop plan INPUT... [--output-directory DIR] [encoder options]
   video64-drop inspect INPUT [--fps 24] [--columns 80] [--palette 32]
                               [--glyphs 32|64] [--profile balanced]
+  video64-drop estimate INPUT [same options]
+                              [--sample-seconds 2] [--sample-count 3]
+  video64-drop preview INPUT OUTPUT_DIRECTORY [same options]
+                              [--sample-seconds 2] [--sample-count 3]
   video64-drop encode INPUT [OUTPUT.v64] [same options]
 
-The plan command exposes the deterministic queue and collision-safe output
-allocation used by the native shell. Progress events from encode are written as
-newline-delimited JSON to standard error. The completed job document is written
-to standard output.`;
+The estimate command performs short proof encodes at deterministic points across
+the source. Its result is advisory and never replaces exact post-encode
+verification. Preview writes source, decoded-V64, and side-by-side PPM images
+plus a JSON manifest. Progress events from encode are written as newline-delimited
+JSON to standard error. The completed job document is written to standard output.`;
 }
 
 function settingsFromOptions(options) {
@@ -53,6 +62,17 @@ function settingsFromOptions(options) {
     glyphs: options.glyphs,
     profile: options.profile
   };
+}
+
+function sampleOptionsFromOptions(options) {
+  const result = {};
+  if (options["sample-seconds"] !== undefined) {
+    result.sampleSeconds = Number(options["sample-seconds"]);
+  }
+  if (options["sample-count"] !== undefined) {
+    result.sampleCount = Number(options["sample-count"]);
+  }
+  return result;
 }
 
 function eventSummary(job) {
@@ -91,6 +111,29 @@ async function main() {
       settings: settingsFromOptions(options)
     });
     console.log(JSON.stringify(analyzeDropJob(job), null, 2));
+    return;
+  }
+  if (command === "estimate") {
+    if (positional.length !== 1) throw new Error("estimate requires one input file");
+    const result = estimateDropOutputSize(
+      positional[0],
+      settingsFromOptions(options),
+      sampleOptionsFromOptions(options)
+    );
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (command === "preview") {
+    if (positional.length !== 2) {
+      throw new Error("preview requires INPUT and OUTPUT_DIRECTORY");
+    }
+    const result = createDropPreview(
+      positional[0],
+      positional[1],
+      settingsFromOptions(options),
+      sampleOptionsFromOptions(options)
+    );
+    console.log(JSON.stringify(result, null, 2));
     return;
   }
   if (command === "encode") {

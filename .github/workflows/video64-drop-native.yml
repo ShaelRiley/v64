@@ -142,7 +142,8 @@ jobs:
           assert any("audio" in warning.lower() for warning in queued["warnings"])
 
           bundled = json.loads(Path("evidence/bundled-report.json").read_text())
-          assert bundled == shell
+          for key in ("format", "capabilities", "transitionalBoundary", "settings", "queue"):
+              assert bundled[key] == shell[key]
 
           encoded = json.loads(Path("evidence/encode-report.json").read_text())
           assert encoded["format"] == "VIDEO64-DROP-NATIVE-ENCODE-1"

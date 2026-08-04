@@ -1,4 +1,4 @@
-# retry after authoritative schema alignment
+# retry current feature head after schema-payload update
 name: Build native preview estimator
 
 on:

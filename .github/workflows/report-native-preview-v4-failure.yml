@@ -1,0 +1,24 @@
+name: Report native preview v4 failure
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/report-native-preview-v4-failure.yml"]
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Extract failed log tail
+        run: |
+          set -euo pipefail
+          gh run view 30938684817 --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/failure.log
+          tail -n 120 /tmp/failure.log > /tmp/tail.log
+          body="$(cat /tmp/tail.log)"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v4 failed-log tail:\n\n\`\`\`text\n$body\n\`\`\`"

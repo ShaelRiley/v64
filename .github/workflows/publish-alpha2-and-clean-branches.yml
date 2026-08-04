@@ -94,11 +94,11 @@ jobs:
             > dist/video64-alpha2-verification.json
           cmp dist/video64-alpha2-preview.json dist/sample-preview/preview.json
 
-      - name: Assemble Linux developer bundles
+      - name: Assemble and smoke-test Linux developer bundles
         run: |
           set -euo pipefail
           mkdir -p release/video64-player-linux-x86_64 \
-            release/video64-drop-linux-x86_64 \
+            release/video64-drop-linux-x86_64/apps \
             release/video64-alpha2-sample
 
           install -m 0755 target/release/v64-player \
@@ -108,7 +108,9 @@ jobs:
 
           install -m 0755 target/release/video64-drop \
             release/video64-drop-linux-x86_64/video64-drop
-          cp -R apps/video64-drop prototype assets \
+          cp -R apps/video64-drop \
+            release/video64-drop-linux-x86_64/apps/
+          cp -R prototype assets \
             release/video64-drop-linux-x86_64/
           cp package.json LICENSE README.md \
             release/video64-drop-linux-x86_64/
@@ -128,12 +130,17 @@ jobs:
           Use ./run-video64-drop.sh so the shell finds the bundled application core.
           TXT
 
+          release/video64-drop-linux-x86_64/run-video64-drop.sh \
+            --headless-report dist/video64-alpha2-bundle-smoke.json \
+            dist/video64-alpha2-source.mp4
+
           cp dist/video64-alpha2-source.mp4 \
             dist/video64-alpha2-sample.v64 \
             dist/video64-alpha2-estimate.json \
             dist/video64-alpha2-preview.json \
             dist/video64-alpha2-encode-report.json \
             dist/video64-alpha2-verification.json \
+            dist/video64-alpha2-bundle-smoke.json \
             dist/sample-preview/source.ppm \
             dist/sample-preview/decoded-v64.ppm \
             dist/sample-preview/comparison.ppm \
@@ -172,6 +179,7 @@ jobs:
             "platform": "Linux x86_64",
             "assets": assets,
             "verification": json.loads(Path("dist/video64-alpha2-verification.json").read_text()),
+            "bundleSmoke": json.loads(Path("dist/video64-alpha2-bundle-smoke.json").read_text()),
             "boundaries": {
               "am1BitrateFrozen": False,
               "nativePreviewPresentation": False,
@@ -196,7 +204,7 @@ jobs:
 
           This advances beyond the intentionally silent first playable release with native subtitle and AM1 audio playback, feature-length A/V synchronization evidence, stable Rust API/CLI/C ABI, the Linux Video64 Drop shell, bounded long-form source-audio encoding, sampled size estimation, decoded preview generation, and a deterministic audiovisual sample.
 
-          Assets include the current native player, a Video64 Drop developer bundle, a complete sample/evidence bundle, the directly playable sample, a manifest, and SHA-256 checksums.
+          Assets include the current native player, a smoke-tested Video64 Drop developer bundle, a complete sample/evidence bundle, the directly playable sample, a manifest, and SHA-256 checksums.
 
           This remains a prerelease. AM1 8 kbps is provisional pending genuine blinded listening. Preview and estimation are not yet presented in the SDL2 window. Video64 Drop still requires system Node.js, FFmpeg/FFprobe, and SDL2. Windows and macOS packages are not included.
           EOF

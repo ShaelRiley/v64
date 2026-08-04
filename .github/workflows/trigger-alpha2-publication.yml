@@ -24,3 +24,5 @@ jobs:
           gh workflow run publish-alpha2-and-clean-branches.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main
+
+# Retriggered after installing dispatcher and publication completion reporters.

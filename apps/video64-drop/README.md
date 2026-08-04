@@ -2,7 +2,8 @@
 
 This directory contains the deterministic Video64 Drop application core and
 headless Linux entry point used by the native desktop shell. It orchestrates the
-existing verified V64 proof encoder rather than duplicating codec logic.
+existing verified V64 proof encoder and decoder rather than duplicating codec
+logic.
 
 The application core provides:
 
@@ -17,8 +18,44 @@ The application core provides:
 - exact `SILN` spans for qualifying long silence;
 - bounded `AURN` runs for audible source regions;
 - bounded disk-spooled long-form source-audio processing;
+- deterministic sampled output-size estimation;
+- source-versus-decoded-V64 preview images rendered through the actual decoder;
 - deterministic audiovisual remuxing and final V64 verification;
 - actionable failure state and machine-readable progress events.
+
+## Sampled size estimation
+
+The `estimate` command creates short video-only proof encodes at deterministic
+positions across the source. The default plan uses three two-second samples at
+the start, middle, and end. Short sources automatically collapse duplicate
+sample offsets.
+
+Each sample is encoded with the selected real Video 64 settings. A fixed
+container-overhead allowance is removed from each short sample before its video
+rate is extrapolated, then added once to the final estimate. Sources with audio
+also include the current provisional AM1 nominal rate.
+
+The result contains the sampled minimum, median, and maximum video rates, a
+central byte estimate, and an observed-rate envelope with a conservative upper
+margin. It is explicitly advisory. The range is not a statistical confidence
+interval, and exact post-encode verification remains authoritative.
+
+## Decoded preview
+
+The `preview` command uses the same deterministic sample plan. It extracts the
+representative middle source frame with the encoder's contain-and-pad geometry,
+decodes the corresponding sampled `.v64` through the real container decoder and
+canonical renderer, and writes:
+
+- `source.ppm`;
+- `decoded-v64.ppm`;
+- `comparison.ppm`, with source on the left and decoded V64 on the right;
+- `preview.json`, containing settings, sample hashes, estimate data, dimensions,
+  paths, and preview hashes.
+
+PPM is used for the evidence surface because it is simple, lossless, and
+deterministic. Desktop presentation can convert or upload these images without
+changing the checked preview pixels.
 
 ## AM1 status
 
@@ -52,17 +89,23 @@ video-only output.
 
 ```bash
 node apps/video64-drop/cli.mjs inspect input.mp4
+node apps/video64-drop/cli.mjs estimate input.mp4 \
+  --fps 24 --columns 80 --palette 32 --glyphs 32 --profile balanced
+node apps/video64-drop/cli.mjs preview input.mp4 preview-output \
+  --fps 24 --columns 80 --palette 32 --glyphs 32 --profile balanced
 node apps/video64-drop/cli.mjs encode input.mp4 output.v64 \
   --fps 24 --columns 80 --palette 32 --glyphs 32 --profile balanced
 ```
 
-Progress events are written as newline-delimited JSON to standard error. The
-completed job document is written to standard output.
+Use `--sample-seconds` and `--sample-count` to change the advisory sampling
+budget. Progress events from `encode` are written as newline-delimited JSON to
+standard error. Completed command documents are written to standard output.
 
 ## Remaining product boundary
 
-The AM1 bitrate is not frozen. Decoded source/V64 preview, sampled size
-estimation, Particle Lighting controls, active-job cancellation, a bundled
+The application core and CLI now provide sampled estimation and decoded preview,
+but the SDL2 shell does not yet present them interactively. The AM1 bitrate is
+not frozen. Particle Lighting controls, active-job cancellation, a bundled
 runtime, desktop file selection, and an installable Linux package remain later
 tranches. The disk-spooled implementation is not a one-pass live-capture
 encoder.

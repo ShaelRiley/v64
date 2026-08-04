@@ -1,0 +1,75 @@
+{
+  "format": "VIDEO64-ALPHA3-RELEASE-MANIFEST-1",
+  "project": "Video 64",
+  "tag": "v0.1.0-alpha.3",
+  "testedSourceCommit": "0bffc10adaa75e0ab0615f1fc85f3ac00e991c9b",
+  "prerelease": true,
+  "platform": "Linux x86_64",
+  "assets": [
+    {
+      "name": "video64-player-linux-x86_64.tar.gz",
+      "bytes": 358154,
+      "sha256": "9d6b7039249b765acb2da947b75d2f323096186ab4c786d65d18a0a7eae9eb9b"
+    },
+    {
+      "name": "video64-drop-linux-x86_64.tar.gz",
+      "bytes": 553578,
+      "sha256": "4225da9e1fa8f17b34130d773ceccd359d599e3ec33d374e3813134415f1fde5"
+    },
+    {
+      "name": "video64-alpha3-sample-bundle.tar.gz",
+      "bytes": 293831,
+      "sha256": "553bf26035664d4fd55297fc95de780dc9e3133fa07d109e1753b14f413bef79"
+    },
+    {
+      "name": "video64-alpha3-sample.v64",
+      "bytes": 75194,
+      "sha256": "1b9e06965eba36130997f4d6f5e28e8b9073ba3529a5d7c5b4f1b6d4ed42cdf3"
+    }
+  ],
+  "verification": {
+    "valid": true,
+    "frames": 96,
+    "keyframes": 2,
+    "repeatSpans": 0,
+    "audioRuns": 1,
+    "audioSilenceSpans": 0,
+    "audioKeptSamples": 192000,
+    "subtitleChunks": 0,
+    "subtitleFrames": 0,
+    "chunks": 99,
+    "durationTicks": 240000,
+    "encoderProfile": {
+      "format": "V64-ENCODER-PROFILE-1",
+      "project": "Video 64",
+      "extension": ".v64",
+      "sourceAlphabetGlyphs": 64,
+      "glyphCount": 32,
+      "targetMode": "balanced",
+      "cadence": "24",
+      "cadenceId": 7,
+      "groupPolicy": {
+        "sceneCutAware": true,
+        "maximumTicks": 120000,
+        "maximumFrames": 48
+      },
+      "dictionary": true
+    }
+  },
+  "fixed": {
+    "bundledCoreDiscovery": true,
+    "dropPlanningErrorKeepsWindowOpen": true
+  },
+  "boundaries": {
+    "am1BitrateFrozen": false,
+    "nativePreviewPresentation": false,
+    "bundledNodeRuntime": false,
+    "windowsPackage": false,
+    "macosPackage": false
+  },
+  "build": {
+    "workflowRun": 30920797507,
+    "artifact": 8897043703,
+    "artifactDigest": "sha256:37df78c5399eb171ed76face22fa7684a3498d808ee5bd3194b1455d65e1c042"
+  }
+}

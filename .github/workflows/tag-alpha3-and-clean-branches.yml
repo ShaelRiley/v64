@@ -1,0 +1,71 @@
+name: Tag alpha.3 release record and clean crash-fix branches
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/tag-alpha3-and-clean-branches.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  tag-and-clean:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v0.1.0-alpha.3
+      RELEASE_RECORD_SHA: f8f30fab2d22e057ebd50a2fb7ab408f4a32bef5
+      TESTED_SOURCE_SHA: 0bffc10adaa75e0ab0615f1fc85f3ac00e991c9b
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create immutable release-record tag
+        run: |
+          set -euo pipefail
+          git fetch origin "$RELEASE_RECORD_SHA"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            remote_sha="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')"
+            test "$remote_sha" = "$RELEASE_RECORD_SHA"
+          else
+            git tag "$TAG" "$RELEASE_RECORD_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+
+      - name: Delete temporary and duplicate crash-fix branches
+        run: |
+          set -euo pipefail
+          branches=(
+            agent/drop-crash-fix
+            agent/video64-drop-crash-fix
+            agent/video64-drop-crash-pr
+            agent/video64-drop-dropfile-crash
+            agent/video64-drop-dropfile-crash-final
+            agent/video64-drop-dropfile-crash-pr
+            agent/video64-drop-dropfile-crash-pr-final
+            agent/video64-drop-dropfile-crash-ready
+            agent/video64-drop-dropfile-crash-v2
+            agent/video64-drop-dropfile-crash-v3
+            fix/video64-drop-dropfile-crash
+            release-record/v0.1.0-alpha.3
+          )
+          : > /tmp/alpha3-branch-cleanup.txt
+          for branch in "${branches[@]}"; do
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+              printf 'deleted %s\n' "$branch" | tee -a /tmp/alpha3-branch-cleanup.txt
+            else
+              printf 'absent %s\n' "$branch" | tee -a /tmp/alpha3-branch-cleanup.txt
+            fi
+          done
+
+      - name: Report tag and cleanup result
+        run: |
+          set -euo pipefail
+          cleanup="$(sed 's/^/- /' /tmp/alpha3-branch-cleanup.txt)"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Alpha.3 release-record tag and crash-fix branch cleanup completed.\n\n- tag: \`$TAG\`\n- release record: \`$RELEASE_RECORD_SHA\`\n- tested source: \`$TESTED_SOURCE_SHA\`\n\n$cleanup"

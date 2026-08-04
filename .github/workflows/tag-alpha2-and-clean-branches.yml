@@ -18,22 +18,23 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: v0.1.0-alpha.2
-      TESTED_SHA: fbd8fbbe1b385ca8cef2eb4fd789c06090004f12
+      TAG_RECORD_SHA: c8c46f49154cf6997c83f6d299af50df8f09a481
+      TESTED_SOURCE_SHA: fbd8fbbe1b385ca8cef2eb4fd789c06090004f12
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Create immutable tested tag
+      - name: Create immutable release-record tag
         run: |
           set -euo pipefail
-          git fetch origin "$TESTED_SHA"
+          git fetch origin "$TAG_RECORD_SHA"
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
             remote_sha="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')"
-            test "$remote_sha" = "$TESTED_SHA"
-            echo "Tag $TAG already points to tested commit $TESTED_SHA."
+            test "$remote_sha" = "$TAG_RECORD_SHA"
+            echo "Tag $TAG already points to release record $TAG_RECORD_SHA."
           else
-            git tag "$TAG" "$TESTED_SHA"
+            git tag "$TAG" "$TAG_RECORD_SHA"
             git push origin "refs/tags/$TAG"
           fi
 
@@ -58,6 +59,7 @@ jobs:
             agent/video64-drop-streaming-am1
             docs/profile-v2-current-status
             agent/publish-alpha2-and-clean-branches
+            release-record/v0.1.0-alpha.2
           )
           : > /tmp/branch-cleanup.txt
           for branch in "${branches[@]}"; do
@@ -73,6 +75,4 @@ jobs:
         run: |
           set -euo pipefail
           cleanup="$(sed 's/^/- /' /tmp/branch-cleanup.txt)"
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Alpha.2 tested tag and stale-branch cleanup completed.\n\n- tag: \`$TAG\`\n- tested commit: \`$TESTED_SHA\`\n\n$cleanup\n\nRelease assets remain preserved in Actions artifact \`8894978715\` while the repository integration's Release API restriction is handled separately."
-
-# Retriggered after installing the completion reporter.
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Alpha.2 release-record tag and stale-branch cleanup completed.\n\n- tag: \`$TAG\`\n- release-record commit: \`$TAG_RECORD_SHA\`\n- tested source commit: \`$TESTED_SOURCE_SHA\`\n\n$cleanup\n\nRelease assets are preserved in Actions artifact \`8894978715\`."

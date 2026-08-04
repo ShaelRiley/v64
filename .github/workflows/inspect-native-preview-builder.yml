@@ -1,3 +1,4 @@
+# inspect current schema-corrected run
 name: Inspect native preview builder
 
 on:

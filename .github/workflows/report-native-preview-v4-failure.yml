@@ -1,3 +1,4 @@
+# report latest validation failure
 name: Report native preview v4 failure
 
 on:
@@ -19,6 +20,6 @@ jobs:
         run: |
           set -euo pipefail
           gh run view 30938684817 --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/failure.log
-          tail -n 120 /tmp/failure.log > /tmp/tail.log
+          tail -n 160 /tmp/failure.log > /tmp/tail.log
           body="$(cat /tmp/tail.log)"
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v4 failed-log tail:\n\n\`\`\`text\n$body\n\`\`\`"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v4 latest failed-log tail:\n\n\`\`\`text\n$body\n\`\`\`"

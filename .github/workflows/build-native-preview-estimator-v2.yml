@@ -1,0 +1,151 @@
+name: Build clean native preview estimator branch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-native-preview-estimator-v2.yml"
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  implement-test-publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      OUTPUT_BRANCH: agent/native-preview-estimator-v2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/native-preview-estimator
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          components: rustfmt,clippy
+
+      - name: Install native and media dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsdl2-dev xvfb
+
+      - name: Reconstruct production files and align with the authoritative core schema
+        run: |
+          set -euo pipefail
+          echo "source_feature_head=$(git rev-parse HEAD)"
+          base64 -d .github/preview-builder/main.rs.gz.b64 | gzip -d > apps/video64-drop-native/src/main.rs
+          base64 -d .github/preview-builder/lib.rs.gz.b64 | gzip -d > apps/video64-drop-native/src/lib.rs
+          base64 -d .github/preview-builder/video64-drop-native.yml.gz.b64 | gzip -d > .github/workflows/video64-drop-native.yml
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("apps/video64-drop-native/src/main.rs")
+          text = path.read_text()
+          replacements = {
+              "/sourceImage/path": "/preview/source/path",
+              "/decodedImage/path": "/preview/decodedV64/path",
+              "/estimate/centralEstimateBytes": "/estimate/estimatedBytes",
+              "/estimate/advisoryLowBytes": "/estimate/lowerBytes",
+              "/estimate/advisoryHighBytes": "/estimate/upperBytes",
+              "/representativeOffsetSeconds": "/preview/representativeOffsetSeconds",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"expected stale schema path missing: {old}")
+              text = text.replace(old, new)
+          path.write_text(text)
+          PY
+
+          rustfmt --edition 2024 apps/video64-drop-native/src/main.rs apps/video64-drop-native/src/lib.rs
+
+      - name: Test, lint, build, and exercise the native preview path
+        run: |
+          set -euo pipefail
+          npm --prefix apps/video64-drop test
+          rustfmt --edition 2024 --check \
+            apps/video64-drop-native/src/lib.rs \
+            apps/video64-drop-native/src/main.rs
+          cargo test --locked -p video64-drop-native --features native-ui
+          cargo clippy --locked -p video64-drop-native --all-targets --features native-ui -- -D warnings
+          cargo build --locked --release -p video64-drop-native --features native-ui
+
+          mkdir -p evidence
+          ffmpeg -hide_banner -loglevel error \
+            -f lavfi -i testsrc=size=320x180:rate=24 \
+            -f lavfi -i sine=frequency=660:sample_rate=48000 \
+            -t 4 -shortest \
+            -c:v libx264 -pix_fmt yuv420p \
+            -c:a aac -ac 1 -ar 48000 \
+            evidence/source.mp4
+
+          ./target/release/video64-drop \
+            --core-cli apps/video64-drop/cli.mjs \
+            --headless-preview evidence/source.mp4 evidence/native-preview \
+            --headless-report evidence/native-preview-report.json
+
+          xvfb-run -a env SDL_AUDIODRIVER=dummy \
+            ./target/release/video64-drop \
+            --core-cli apps/video64-drop/cli.mjs \
+            --smoke-preview evidence/source.mp4 \
+            --smoke-presents 4 \
+            evidence/source.mp4
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("evidence/native-preview-report.json").read_text())
+          assert report["format"] == "VIDEO64-DROP-NATIVE-PREVIEW-1"
+          assert report["advisory"] is True
+          assert report["exactPostEncodeVerificationAuthoritative"] is True
+          assert report["capabilities"]["decodedPreview"] is True
+          assert report["capabilities"]["sampledSizeEstimator"] is True
+          estimate = report["estimate"]
+          assert 0 < estimate["advisoryLowBytes"] <= estimate["centralEstimateBytes"] <= estimate["advisoryHighBytes"]
+          assert report["sourceImage"]["width"] > 0
+          assert report["sourceImage"]["height"] > 0
+          assert report["decodedImage"]["width"] > 0
+          assert report["decodedImage"]["height"] > 0
+          for name in ("source.ppm", "decoded-v64.ppm", "comparison.ppm"):
+              assert (Path("evidence/native-preview") / name).is_file()
+          PY
+
+      - name: Create a clean feature branch from current main
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/native-preview-files/apps/video64-drop-native/src /tmp/native-preview-files/.github/workflows
+          cp apps/video64-drop-native/src/main.rs /tmp/native-preview-files/apps/video64-drop-native/src/main.rs
+          cp apps/video64-drop-native/src/lib.rs /tmp/native-preview-files/apps/video64-drop-native/src/lib.rs
+          cp .github/workflows/video64-drop-native.yml /tmp/native-preview-files/.github/workflows/video64-drop-native.yml
+
+          git fetch origin main
+          git switch --force-create "$OUTPUT_BRANCH" origin/main
+          cp /tmp/native-preview-files/apps/video64-drop-native/src/main.rs apps/video64-drop-native/src/main.rs
+          cp /tmp/native-preview-files/apps/video64-drop-native/src/lib.rs apps/video64-drop-native/src/lib.rs
+          cp /tmp/native-preview-files/.github/workflows/video64-drop-native.yml .github/workflows/video64-drop-native.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            apps/video64-drop-native/src/main.rs \
+            apps/video64-drop-native/src/lib.rs \
+            .github/workflows/video64-drop-native.yml
+          git commit -m "Integrate native preview and size estimation"
+          git push --set-upstream origin "$OUTPUT_BRANCH"
+
+      - name: Report builder result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          current_head="$(git rev-parse HEAD)"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Clean native preview/estimator builder completed.\n\n- run: \`$GITHUB_RUN_ID\`\n- status: \`${{ job.status }}\`\n- output branch: \`$OUTPUT_BRANCH\`\n- resulting head: \`$current_head\`"

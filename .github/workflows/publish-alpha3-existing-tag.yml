@@ -1,70 +1,13 @@
-name: Publish alpha.3 crash-fix prerelease
+name: Retired alpha.3 publisher
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/publish-alpha3-existing-tag.yml"
   workflow_dispatch:
 
 permissions:
-  actions: read
-  contents: write
-  issues: write
+  contents: read
 
 jobs:
-  publish:
+  retired:
     runs-on: ubuntu-24.04
-    env:
-      GH_TOKEN: ${{ github.token }}
-      TAG: v0.1.0-alpha.3
-      SOURCE_RUN_ID: "30920797507"
     steps:
-      - name: Download checked alpha.3 build
-        uses: actions/download-artifact@v4
-        with:
-          name: video64-alpha3-build
-          path: dist
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: 30920797507
-
-      - name: Verify checked release files
-        run: |
-          set -euo pipefail
-          test -f dist/RELEASE-NOTES.md
-          test -f dist/SHA256SUMS.txt
-          test -f dist/video64-alpha3-release-manifest.json
-          test -f dist/video64-alpha3-sample.v64
-          test -f dist/video64-player-linux-x86_64.tar.gz
-          test -f dist/video64-drop-linux-x86_64.tar.gz
-          test -f dist/video64-alpha3-sample-bundle.tar.gz
-          (cd dist && sha256sum --check SHA256SUMS.txt)
-
-      - name: Publish immutable GitHub prerelease
-        id: release
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $TAG already exists; preserving it unchanged."
-          else
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
-              --title "Video 64 v0.1.0-alpha.3 — Video64 Drop Crash Fix" \
-              --notes-file dist/RELEASE-NOTES.md --prerelease \
-              dist/video64-player-linux-x86_64.tar.gz \
-              dist/video64-drop-linux-x86_64.tar.gz \
-              dist/video64-alpha3-sample-bundle.tar.gz \
-              dist/video64-alpha3-sample.v64 \
-              dist/video64-alpha3-release-manifest.json \
-              dist/SHA256SUMS.txt
-          fi
-
-      - name: Report publication outcome
-        if: always()
-        run: |
-          set -euo pipefail
-          outcome='${{ steps.release.outcome }}'
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Alpha.3 crash-fix publication completed.\n\n- outcome: \`$outcome\`\n- tag: \`$TAG\`\n- checked build run: \`$SOURCE_RUN_ID\`\n- release URL: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
-          test "$outcome" = "success"
+      - run: echo "Video 64 v0.1.0-alpha.3 is already published; this workflow is retired."

@@ -1,4 +1,4 @@
-# report latest validation failure
+# report formatted-match reconstruction failure
 name: Report native preview v4 failure
 
 on:
@@ -19,7 +19,7 @@ jobs:
       - name: Extract failed log tail
         run: |
           set -euo pipefail
-          gh run view 30938684817 --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/failure.log
-          tail -n 160 /tmp/failure.log > /tmp/tail.log
+          gh run view 30939196258 --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/failure.log
+          tail -n 100 /tmp/failure.log > /tmp/tail.log
           body="$(cat /tmp/tail.log)"
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v4 latest failed-log tail:\n\n\`\`\`text\n$body\n\`\`\`"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Native preview v4 formatted-match failed-log tail:\n\n\`\`\`text\n$body\n\`\`\`"

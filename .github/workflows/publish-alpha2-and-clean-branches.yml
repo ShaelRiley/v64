@@ -110,7 +110,7 @@ jobs:
             release/video64-drop-linux-x86_64/video64-drop
           cp -R apps/video64-drop \
             release/video64-drop-linux-x86_64/apps/
-          cp -R prototype assets \
+          cp -R prototype assets tools \
             release/video64-drop-linux-x86_64/
           cp package.json LICENSE README.md \
             release/video64-drop-linux-x86_64/

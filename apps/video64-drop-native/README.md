@@ -27,12 +27,18 @@ stage.
 The current `AM1-PROVISIONAL-8K` setting is not frozen. Genuine blinded speech
 listening remains required before the 8 kbps candidate can become normative.
 
-The application core now handles long recordings with a bounded two-pass disk
-spool rather than a whole-file PCM memory buffer. It scans source PCM in fixed
-reads and loads at most one 60-second audible run at a time. The default
-source-PCM buffer bound is 5,760,000 bytes, while temporary disk use grows with
-recording duration. A permanent gate processes a 47-minute, 270,720,000-byte
-spool beyond the former 256 MiB ceiling.
+The application core handles long recordings with a bounded two-pass disk spool
+rather than a whole-file PCM memory buffer. It scans source PCM in fixed reads
+and loads at most one 60-second audible run at a time. The default source-PCM
+buffer bound is 5,760,000 bytes, while temporary disk use grows with recording
+duration. A permanent gate processes a 47-minute, 270,720,000-byte spool beyond
+the former 256 MiB ceiling.
+
+The adjacent application core and CLI also provide deterministic sampled size
+estimation and source-versus-decoded-V64 PPM previews. Those functions reuse the
+real proof encoder, decoder, palette, and renderer. The current SDL2 window does
+not yet invoke or display them, so the native capability report continues to
+mark both features false until interactive integration is checked.
 
 ## Build and run
 
@@ -64,6 +70,6 @@ bounded disk-spooled application core.
 ## Transitional boundary
 
 This tranche does not claim a frozen AM1 bitrate, one-pass live-capture audio,
-decoded source/V64 preview, sampled size estimation, Particle Lighting controls,
+interactive native preview or estimate presentation, Particle Lighting controls,
 cancellation of an active encode, a bundled Node runtime, desktop file
 selection, or an installable Linux package.

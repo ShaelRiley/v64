@@ -13,114 +13,56 @@ bitstream notes; the linked document governs architectural intent.
 ## First playable prerelease
 
 [Video 64 v0.1.0-alpha.1 — First Playable Test Release](https://github.com/ShaelRiley/v64/releases/tag/v0.1.0-alpha.1)
-publishes the first real `.v64` test video and the Linux x86_64 native player.
-The tag points to merged commit
-`9fac7d80e492fe1a414dce3e236a16042d0dd83f`; all ten permanent workflows
-triggered by pull request [#7](https://github.com/ShaelRiley/v64/pull/7)
-passed before merge.
+publishes the first real `.v64` test video and Linux x86_64 native player. The
+corrected official test video is a silent 80×71-cell, 640×1136 portrait encode at
+24 fps using the normative 32-color palette and primary 32-glyph `balanced`
+profile. That prerelease predates later subtitle, audio, synchronization,
+long-form source processing, and Video64 Drop preview work.
 
-The corrected official test video is a silent 80×71-cell, 640×1136 portrait
-encode at 24 fps, using the normative 32-color palette, the primary 32-glyph
-`balanced` profile, and 22 independent groups capped at 48 frames / two
-seconds. Its SHA-256 is
-`329215856e67d2193a3fea98767fdeba80b461ed63fc72a7eb461417740220f5`.
-The Linux player package SHA-256 is
-`8aac432069b8312662ff14a99f2ff0830a64caae87885a502e4b7475bac1214c`;
-the contained player binary SHA-256 is
-`ea4937a285fabeb297743d91e5ba78a035fb7f1019ebb0cb913be9273989bf88`.
-Exact provenance, sizes, workflow identities, persistent artifact identities,
-and reproduction commands are retained in
-[`bench/results/first-playable-release/`](bench/results/first-playable-release/).
+This repository contains a real binary `.v64` implementation, not a mock UI:
 
-This repository currently contains the executable Phase 1 proof codec. It is a
-real binary `.v64` implementation, not a mock UI:
-
-- exact extracted 64-glyph `8×16` source asset and immutable SHA-256 identity;
-- a **32-glyph primary/default encoding budget**, with the complete 64-glyph
-  alphabet available as an explicit option;
+- exactly 64 original 8×16 source glyphs;
+- a 32-glyph primary/default encoder budget and explicit 64-glyph option;
 - all eleven legal cadences and all fourteen legal palette depths;
-- deterministic source-pixel analysis, glyph matching, palette quantization,
-  cell rendering, and temporal hysteresis;
-- scene-cut-aware independent groups with a frozen two-second maximum;
-- explicit compact, balanced, and quality rate-distortion targets;
-- a bounded, checksummed, indexed binary container;
-- keyframes, delta frames, skip runs, repeated-token runs, rectangle fills,
-  local token dictionaries, and repeat-frame spans;
-- sparse particle-event, subtitle, AM1 Opus-audio, and exact-silence chunk
-  definitions;
-- FFmpeg-backed source ingest and decoded MP4/MKV output;
-- encoder, decoder, inspector, verifier, atlas generator, and sample generator;
-- an experimental backend-neutral Grammar B trace with packed palette indices,
-  separable component updates, transactional decoding, and exact byte accounting;
-- reproducible packed-only, DEFLATE, Zstandard, and canonical-Huffman command
-  shootouts on identical traces and independent-group boundaries;
-- a provenance-validated, deterministic structural seed corpus spanning eleven
-  visual classes and a two-pass static-byte entropy parser with actual-DEFLATE
-  candidate selection;
-- hash-validated FFmpeg raster-corpus paths, including deterministic source-plate
-  treatments that avoid opaque derived-video fixtures;
-- reproducible Hyper Real-derived 256-color palette candidates preserving ANSI
-  Tube's exact saturated anchors;
-- original CC0 human-content tranches with matched palette previews, temporal
-  metrics, independent-group seek/size sweeps, 60/80-column subtitle lanes, and
-  deterministic blinded-review worksheets;
-- a combined structural/human grammar gate that charges decoder time,
-  allocation, opcode surface, and implementation complexity;
-- independent Rust video, subtitle, and audio-timing conformance gates;
-- a deterministic Rust hostile-input and process-resource gate;
-- a stable bounded Rust decoder API and `v64` command-line surface;
-- a pointer-free, generation-checked C ABI with a real C11 conformance caller;
-- a Linux-first native SDL2 player with bounded seeking, fixed-rate playback,
-  subtitle/audio presentation, persistent viewport-anchored CRT scanlines, and
-  headless evidence;
-- the Linux-first SDL2 Video64 Drop shell with drag-and-drop, queue controls,
-  staged progress, bounded disk-spooled long-form AM1 encoding, and independent
-  output verification;
-- Node conformance tests and golden hashes.
+- deterministic source analysis, glyph matching, palette quantization,
+  cell rendering, temporal hysteresis, and scene-cut-aware groups;
+- a bounded, checksummed, indexed container with keyframes, deltas, skip runs,
+  dictionaries, rectangle fills, repeat spans, subtitles, AM1 Opus audio, and
+  exact silence;
+- JavaScript encoder, decoder, inspector, verifier, and research tooling;
+- stable bounded Rust decoder API, CLI, C ABI, WebAssembly renderer, fuzzing,
+  hostile-input, allocation, and cross-language conformance gates;
+- a Linux-first SDL2 player with subtitle/audio presentation and CRT scanlines;
+- Video64 Drop application core and SDL2 shell with queueing, source analysis,
+  audiovisual encoding, long-form bounded audio processing, and exact output
+  verification;
+- advisory sampled output-size estimation and deterministic
+  source-versus-decoded-V64 preview generation.
 
-The broader browser/WebAssembly decoder, decoded Video64 Drop preview and size
-estimator, installable desktop packaging, physical-device timing qualification,
-Windows/macOS delivery, and VLC modules remain active development work.
+Raw DEFLATE remains the current entropy leader. Grammar B remains experimental.
+The current AM1 8 kbps speech profile remains provisional pending genuine
+blinded listening.
 
 ## Requirements
 
 - Node.js 20 or newer
 - FFmpeg and FFprobe
-- Rust 1.85.0 for the Rust conformance gates
+- Rust 1.85.0 for Rust conformance and native builds
 
 No npm dependencies are required.
 
 ## Quick start
 
+Run the main repository gates and create the procedural sample:
+
 ```bash
-npm run extract-assets
 npm test
 npm run sample
 node prototype/js/cli.mjs inspect tests/golden/procedural.v64
 node prototype/js/cli.mjs verify tests/golden/procedural.v64
-npm run bench:commands
-npm run bench:corpus
-npm run bench:raster
-npm run corpus:visual
-npm run corpus:missing-classes
-npm run preview:human
-npm run bench:human
-npm run preview:human2
-npm run review:human2
-npm run bench:human2
-npm run palette:hyperreal
-npm run bench:rd-glyph
-npm run bench:human-rd-glyph
-npm run bench:combined-grammar
-npm run rust:hostile
-npm run fuzz:corpus
-cargo run --locked --package v64-cli -- inspect tests/golden/procedural.v64
-cargo run --locked --package v64-cli -- verify tests/golden/procedural.v64
-cargo run --locked --package v64-player --features native-ui -- \
-  tests/golden/procedural.v64
 ```
 
-Encode any FFmpeg-readable video with the primary 32-glyph proof profile:
+Encode any FFmpeg-readable video with the primary proof profile:
 
 ```bash
 node prototype/js/cli.mjs encode input.mp4 output.v64 \
@@ -136,117 +78,78 @@ node apps/video64-drop/cli.mjs encode input.mp4 output-av.v64 \
 
 Video64 Drop converts the first audio stream to mono 48 kHz and encodes audible
 regions as AM1 `AURN` Opus runs while representing qualifying long silence as
-exact `SILN` spans. Production source audio is processed through a bounded
-two-pass temporary disk spool: fixed-size silence-analysis reads followed by at
-most one 60-second audible run in source-PCM memory. A permanent gate processes
-47 minutes / 270,720,000 PCM bytes with a 5,760,000-byte source-PCM buffer bound.
+exact `SILN` spans. Production source audio uses a bounded two-pass temporary
+disk spool and keeps at most one 60-second audible run in source-PCM memory. A
+permanent gate processes 47 minutes / 270,720,000 PCM bytes with a 5,760,000-byte
+source-PCM buffer bound.
 
-The current `AM1-PROVISIONAL-8K` speech setting is not normative; genuine
-blinded listening remains required before its bitrate can freeze. The spool is
-not a one-pass live-capture encoder and requires temporary disk space
-proportional to source duration.
-
-Source ingest honors FFmpeg display-rotation and pixel-aspect metadata before
-deriving the glyph grid. When integer grid rounding cannot exactly represent
-the source display aspect, the encoder contains and centers the image with
-black padding instead of stretching it.
-
-`--glyphs 32` is the default and may be omitted. Use the complete source
-alphabet as an additional option when its quality gain is worth the extra rate:
+Estimate output size through deterministic short proof encodes:
 
 ```bash
-node prototype/js/cli.mjs encode input.mp4 output-64.v64 \
-  --fps 24 --columns 80 --palette 32 --glyphs 64 --target quality
+node apps/video64-drop/cli.mjs estimate input.mp4 \
+  --fps 24 --columns 80 --palette 32 --glyphs 32 --profile balanced
 ```
 
-The project remains named **Video 64**, and files remain `.v64`; the default
-32-glyph budget is an encoder optimization profile rather than a change to the
-canonical alphabet or file identity.
+Generate lossless source, decoded-V64, and side-by-side preview images:
 
-Decode to a conventional raster video:
+```bash
+node apps/video64-drop/cli.mjs preview input.mp4 preview-output \
+  --fps 24 --columns 80 --palette 32 --glyphs 32 --profile balanced
+```
+
+The default estimate samples three two-second regions at deterministic start,
+middle, and end offsets. It reports an observed sampled-rate envelope and a
+central estimate. It is advisory, not a statistical confidence interval, and
+never replaces exact post-encode verification.
+
+The preview path extracts the representative source frame with the encoder's
+contain-and-pad geometry and renders the sampled `.v64` through the real decoder,
+palette registry, and canonical renderer. It writes `source.ppm`,
+`decoded-v64.ppm`, `comparison.ppm`, and `preview.json`.
+
+Decode a `.v64` to conventional raster video:
 
 ```bash
 node prototype/js/cli.mjs decode output.v64 decoded.mp4
 ```
 
-Generate the canonical glyph atlas:
+Build and run the Linux native player or Video64 Drop shell:
 
 ```bash
-node prototype/js/cli.mjs atlas tests/golden/video64-atlas.ppm
+cargo build --release -p v64-player --features native-ui
+cargo build --release -p video64-drop-native --features native-ui
 ```
 
-Generate the complete backend-neutral command trace used by the entropy
-shootout:
+The SDL2 Video64 Drop window does not yet present the new estimate and preview
+outputs interactively. That integration, installable Linux packaging, bundled
+runtime dependencies, desktop file selection, Particle Lighting controls,
+physical-device qualification, broader browser decoding, Windows/macOS
+packages, and VLC integration remain active development work.
 
-```bash
-node prototype/js/cli.mjs trace-commands \
-  tests/golden/procedural.v64 procedural-command-trace.json
-```
+## Documentation
 
-Grammar B is experimental and does not change the v0.1 container or its golden
-files. See
-[`spec/V64-grammar-b-experiment.md`](spec/V64-grammar-b-experiment.md) and
-[`bench/COMMAND_SHOOTOUT_1.md`](bench/COMMAND_SHOOTOUT_1.md) and
-[`bench/COMMAND_SHOOTOUT_2.md`](bench/COMMAND_SHOOTOUT_2.md) and
-[`bench/ENTROPY_SHOOTOUT_1.md`](bench/ENTROPY_SHOOTOUT_1.md) for its exact
-syntax, validation rules, and measured iterations. The seed-corpus manifest is
-[`bench/corpus/seed-manifest.json`](bench/corpus/seed-manifest.json).
-
-The first file-backed raster-ingest result is
-[`bench/RASTER_TRANCHE_0.md`](bench/RASTER_TRANCHE_0.md). Palette direction,
-provenance, and the experimental Hyper Real-derived candidates are documented
-in [`spec/V64-palette-research.md`](spec/V64-palette-research.md).
-The first original human-content measurement, including the palette and group
-duration decisions it does and does not support, is
-[`bench/HUMAN_RASTER_TRANCHE_1.md`](bench/HUMAN_RASTER_TRANCHE_1.md).
-The missing-class, candidate-3, subtitle-resolution, and blinded-review tranche
-is [`bench/HUMAN_RASTER_TRANCHE_2.md`](bench/HUMAN_RASTER_TRANCHE_2.md).
-The current scene-cut and glyph-budget profile is
-[`docs/RATE_DISTORTION_PROFILE.md`](docs/RATE_DISTORTION_PROFILE.md).
-
-See [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md) for the historical
-evidence chain and [`docs/CURRENT_STATUS.md`](docs/CURRENT_STATUS.md) for the
-active frontier. See [`spec/V64-v0.1-bitstream.md`](spec/V64-v0.1-bitstream.md)
-for the implemented binary layout.
-
-Coverage-guided Rust targets, curated seed-corpus generation, deeper local
-commands, and deterministic allocation ceilings are documented in
-[`docs/FUZZING.md`](docs/FUZZING.md).
-
-The stable C decoder contract, public header, status values, lifecycle, and
-exact export allowlist are documented in
-[`spec/V64-c-api-v1.md`](spec/V64-c-api-v1.md). The ABI intentionally uses
-only fixed-width scalars: callers stream bytes into a bounded handle and read
-decoded state through checked accessors, so no caller-owned pointer crosses the
-Rust boundary. The corresponding Rust ownership and CLI contract is
-[`docs/RUST_API.md`](docs/RUST_API.md).
-
-Native player build requirements, controls, resource ceilings, deterministic
-headless checks, and subtitle/audio presentation are documented in
-[`docs/NATIVE_PLAYER.md`](docs/NATIVE_PLAYER.md).
+- [`docs/CURRENT_STATUS.md`](docs/CURRENT_STATUS.md): latest checked state and
+  active frontier.
+- [`IMPLEMENTATION_LEDGER.md`](IMPLEMENTATION_LEDGER.md): historical evidence
+  chain.
+- [`spec/V64-v0.1-bitstream.md`](spec/V64-v0.1-bitstream.md): implemented binary
+  layout.
+- [`docs/NATIVE_PLAYER.md`](docs/NATIVE_PLAYER.md): native player behavior and
+  evidence.
+- [`docs/FUZZING.md`](docs/FUZZING.md): fuzzing and allocation ceilings.
+- [`spec/V64-c-api-v1.md`](spec/V64-c-api-v1.md): stable C contract.
+- [`docs/RUST_API.md`](docs/RUST_API.md): Rust ownership and CLI contract.
 
 ## Contributing and forks
 
-Human developers, AI-assisted developers, and autonomous AI agents have equal
-standing to choose Video 64 projects and workflows, create forks, open issues,
-submit pull requests, and build independent implementations. Contributions are
-judged by evidence, reproducibility, provenance, security, compatibility, and
-maintainability rather than contributor type.
+Human developers, AI-assisted developers, and autonomous AI agents may choose
+projects, create forks, open issues, submit pull requests, and build independent
+implementations. Contributions are judged by evidence, reproducibility,
+provenance, security, compatibility, and maintainability rather than contributor
+type.
 
-Forks, ports, alternate encoders, players, integrations, artistic variants, and
-incompatible research branches are welcome without advance permission.
-Authorized maintainers retain protected merges, releases, private security
-handling, credentials, and legal representation; those are controlled
-capabilities rather than an authorship hierarchy.
-
-Read:
-
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution workflow and provenance;
-- [`GOVERNANCE.md`](GOVERNANCE.md) for equal participation and authority bounds;
-- [`AGENTS.md`](AGENTS.md) for autonomous coding-agent operating rules;
-- [`SECURITY.md`](SECURITY.md) for vulnerability reporting;
-- [`docs/ECOSYSTEM_OUTREACH.md`](docs/ECOSYSTEM_OUTREACH.md) for participation
-  and outreach strategy.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md), [`GOVERNANCE.md`](GOVERNANCE.md),
+[`AGENTS.md`](AGENTS.md), and [`SECURITY.md`](SECURITY.md) before contributing.
 
 ## License and authorship
 
@@ -255,10 +158,6 @@ SPDX identifier `MIT`, with `Copyright (c) 2026 Shael Riley`.
 
 Anyone may use, copy, modify, merge, publish, distribute, sublicense, sell, fork,
 port, or independently reimplement the project without requesting permission.
-The copyright and permission notice must be included in copies or substantial
-portions. No approval, advertising, share-alike, field-of-use, or noncommercial
-condition is added.
-
-The canonical Video 64 masks originated in ANSI Tube and were created by Shael
-Riley. Contributions are accepted under MIT and must include compatible rights
-for submitted code, media, data, and generated assets.
+The copyright and permission notice must remain in copies or substantial
+portions. The canonical Video 64 masks originated in ANSI Tube and were created
+by Shael Riley.

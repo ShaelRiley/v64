@@ -1,6 +1,6 @@
 # Video 64 current development status
 
-Updated: 2026-08-02
+Updated: 2026-08-03
 
 This is the compact current-state companion to `IMPLEMENTATION_LEDGER.md`. The
 ledger retains the complete historical evidence chain; this document records the
@@ -21,21 +21,21 @@ latest checked implementation and active frontier.
 - Maximum independently decodable group duration: two seconds, with shorter
   groups permitted at scene cuts.
 - Normative palette: `V64-P256-1`.
-- Human developers have primacy in outreach. AI-assisted and autonomous-agent
-  contributors are also explicitly welcome to fork, modify, test, and submit
-  implementations under the same permissive license.
+- Human developers, AI-assisted developers, and autonomous agents may
+  contribute under the same MIT terms; controlled release and security actions
+  remain maintainer responsibilities.
 
 ## Public release state
 
 Tag `v0.1.0-alpha.1` remains the first playable public Video 64 prerelease. It
 contains the corrected portrait test video and Linux x86_64 base-video player.
-The user successfully played that release on SteamOS and confirmed its
-orientation and proportions.
+The user successfully played it on SteamOS and confirmed orientation and
+proportions.
 
-That prerelease is intentionally silent and predates native player profile 2 and
-Video64 Drop source-audio encoding. Its release manifest and checksums remain
-authoritative for those assets; newer subtitle, audio, synchronization, and
-encoder-application evidence does not retroactively alter it.
+That prerelease is intentionally silent and predates native player profile 2,
+source-audio encoding, long-form source processing, and the current Video64 Drop
+preview and estimation work. Its release manifest and checksums remain
+unchanged and authoritative for those assets.
 
 ## Permanently gated codec and decoder state
 
@@ -45,58 +45,35 @@ The repository continuously checks:
 - complete Phase-1 and direct Grammar B frame-command decoding;
 - exact 32-glyph primary and 64-glyph full-alphabet encoder profiles;
 - cadence-derived two-second independent-group enforcement;
-- JavaScript and Rust `SUBT`/SM2 validation and canonicalization;
-- JavaScript and Rust `AURN`/`SILN` validation and canonicalization;
-- stable owning Rust decoder API version 1;
-- stable bounded CLI inspect, verify, and state-stream commands;
-- pointer-free C ABI version 1 with generation-checked sessions;
-- deterministic RGBA rendering from canonical assets;
-- dependency-free `wasm32-unknown-unknown` renderer conformance;
-- hostile-input, rollback, decompression, allocation, fuzz, renderer,
-  WebAssembly, stable API, CLI, and C ABI gates.
+- JavaScript and Rust `SUBT`/SM2 and `AURN`/`SILN` validation;
+- stable owning Rust decoder API version 1, bounded CLI, and pointer-free C ABI;
+- deterministic canonical RGBA rendering and WebAssembly conformance;
+- hostile-input, rollback, decompression, allocation, fuzz, renderer, stable
+  API, CLI, and C ABI gates.
 
 Raw DEFLATE remains the current entropy leader. Grammar B remains provisional
 rather than a frozen V1 grammar decision.
 
 ## Native player profile 2
 
-PR #9 merged native subtitle and audio presentation as
-`0b50c7d5fbaeace10b9dba33dccda63f12302815`.
+PR #9 added native subtitle and audio presentation. The standalone SDL2 player
+composites validated subtitles, decodes `AURN` Opus packets, synthesizes exact
+`SILN` zeros, enforces sample accounting, and supports deterministic seeking,
+pause, EOF recovery, and 0.5×/1×/2× playback. CRT scanlines remain default-on,
+persisted, and presentation-only.
 
-The standalone player composites validated `SUBT`/SM2 subtitles, decodes
-validated `AURN` Opus packets, synthesizes exact `SILN` zeros, enforces trim and
-sample accounting, supports deterministic seeking, pause, EOF recovery, and
-0.5×/1×/2× playback, and presents through bounded SDL video and audio queues.
-CRT scanlines remain default-on, immediately toggleable, persisted, and strictly
-presentation-only.
-
-Permanent workflow `30703860943` passed at immutable head
-`d3ae297ae9c30d99e221c531346848dd3e3e01ce`. Its AM1 fixture decoded 54 Opus
-packets into 96,000 mono 48 kHz samples, and native PCM matched the explicit
-libopus reference decode byte-for-byte with SHA-256
+The checked AM1 fixture decoded 54 Opus packets into 96,000 mono 48 kHz samples.
+Native PCM matched the explicit libopus reference byte-for-byte with SHA-256
 `d34fe310f0a9aa00f128d00ff7a8fa4b50d2e125d20347b83908e20bb25f89c0`.
-Evidence artifact `8819701746` has digest
-`a6218636f1e45968c6acbf92dbf88da6064d244a57d7cda880bbac9a43734c9f`.
 
 ## Feature-length synchronization evidence
 
-PR #11 added the deterministic feature-length player-clock gate. Permanent
-workflow `30709579841` passed at immutable head
-`554456a037e8393b5793326cddc418f6a7ea8b55`.
-
-The 30-minute fixture contains 900 independently seekable groups, 43,200 nominal
-frames, 1,800 `AURN` runs, 1,800 exact `SILN` spans, 48,600 Opus packets, and
-86,400,000 mono samples. Duplicate accelerated runs reported zero accumulated
-tick drift, zero PCM sample-index drift, exact EOF, stable distant seeks, stable
-recovery, and exact pause and rate transitions. Peak resident memory was
-176,464 KiB.
-
-Fixture SHA-256 is
-`6cb462f16e2ebf9e0bf576210f1d8c6177cc9b69ba4f1045beef0252034d1f58`;
-report SHA-256 is
-`4b667cfc198c5a9e9b10846082b4e68be1d2cb07db80e1996e7ca1520b25f2ce`;
-evidence artifact `8821428834` has digest
-`3e422742a81fdb004fa85b3f89b8663a42b2a5353a037be1e37b0f096e49bb56`.
+PR #11 added the deterministic 30-minute player-clock gate. Its fixture contains
+900 independently seekable groups, 43,200 nominal frames, 1,800 `AURN` runs,
+1,800 exact `SILN` spans, 48,600 Opus packets, and 86,400,000 mono samples.
+Duplicate accelerated runs reported zero accumulated tick drift, zero PCM
+sample-index drift, exact EOF, stable distant seeks, stable recovery, and exact
+pause and rate transitions. Peak resident memory was 176,464 KiB.
 
 This proves deterministic decoded video, PCM timeline, and player-clock
 alignment. It does not measure operating-system mixer latency, audio-device
@@ -104,165 +81,144 @@ oscillator error, or physical hardware scheduler drift.
 
 ## Video64 Drop application and Linux shell
 
-PR #12 merged the deterministic Video64 Drop application foundation as
-`728059d3bce9ea619a610bd583b94b3e24b9139b`. PR #13 merged the first
-Linux/SteamOS Rust/SDL2 window as
-`ceaed4dd0c47a2a62c115adf2b3ea0e56a69fec9`.
-
-The application and shell provide:
+PR #12 added the deterministic application core. PR #13 added the first
+Linux/SteamOS Rust/SDL2 host. Together they provide:
 
 - normative defaults and validation;
 - FFprobe source analysis and aspect-aware grid derivation;
 - deterministic collision-safe queue planning;
 - startup file arguments and SDL file-drop events;
-- discrete cadence, columns, palette, 32/64-glyph, and profile controls;
-- keyboard queue selection, encoding, retry, removal, output-folder access, and
-  quit behavior;
-- explicit analysis, video encode, audio encode, mux, verify, completion, and
-  failure states;
+- cadence, columns, palette, 32/64-glyph, and profile controls;
+- queue selection, encoding, retry, removal, and output-folder access;
+- explicit analysis, video, audio, mux, verify, completion, and failure states;
 - sequential background execution and independent final `.v64` verification;
-- deterministic headless reports and a real SDL2 window gate under Xvfb.
+- deterministic headless reports and a real SDL2/Xvfb window gate.
 
-## Video64 Drop AM1 source-audio encoding
+## AM1 source audio and bounded long-form processing
 
-PR #14 connected ordinary source audio to Video64 Drop using the existing AM1
-container and decoder semantics. The implementation:
-
-- extracts the first source-audio stream as mono 48 kHz PCM16;
-- aligns PCM exactly to the encoded V64 video duration, trimming or zero-padding
-  when necessary;
-- detects qualifying long silence with the checked hysteretic detector;
-- maps silence to exact `SILN` spans;
-- maps audible regions to standard constrained-VBR libopus `AURN` runs;
-- bounds each audible run to 60 seconds;
-- remuxes the verified video and metadata timeline with the complete AM1 audio
-  timeline;
-- independently verifies the finished audiovisual `.v64`;
-- retains an explicit skipped audio stage for sources without audio.
+PR #14 connected ordinary source audio to Video64 Drop. The first audio stream
+is converted to mono 48 kHz PCM16, aligned exactly to the V64 video duration,
+segmented with the checked hysteretic silence detector, represented as exact
+`SILN` spans and bounded `AURN` runs, remuxed, and independently verified.
 
 The active profile is `AM1-PROVISIONAL-8K`: mono 48 kHz, constrained VBR,
-8 kbps, and 20 ms packets. It is explicitly marked `normative: false`. Genuine
-blinded speech listening remains mandatory before this bitrate can freeze.
+8 kbps, and 20 ms packets. It remains `normative: false`; genuine blinded speech
+listening is mandatory before the bitrate can freeze.
 
-PR #15 replaces the former duration-limited whole-file PCM production path with
-bounded disk-spooled two-pass processing:
+PR #15 replaced whole-file PCM buffering with bounded disk-spooled two-pass
+processing. FFmpeg writes exact-duration PCM to temporary storage, pass one
+scans it in fixed-size reads, and pass two reads at most one 60-second audible
+run at a time. The default source-PCM buffer bound is 5,760,000 bytes. Temporary
+disk use is approximately 96,000 bytes per source second.
 
-- FFmpeg writes exact-duration PCM directly to a temporary spool file;
-- the checked hysteretic silence detector now has a stateful form that preserves
-  exact decisions across arbitrary input chunk boundaries;
-- pass one scans the spool in fixed-size reads without buffering the recording;
-- pass two reads and encodes at most one bounded 60-second audible run at a time;
-- the default source-PCM buffer bound is 5,760,000 bytes;
-- temporary disk use is 96,000 bytes per second of mono 48 kHz PCM16 duration;
-- the legacy in-memory helper remains available for fixtures only and retains an
-  explicit 256 MiB ceiling.
+The permanent long-form gate processed 47 minutes / 270,720,000 PCM bytes,
+beyond the former 256 MiB ceiling, in 259 scan reads while keeping source-PCM
+buffers under 6 MiB. This is bounded long-form file encoding, not a one-pass
+live-capture encoder.
 
-This is bounded long-form file encoding, not a one-pass live-capture encoder.
+## Sampled size estimation and decoded preview
 
-### Checked streaming application-core evidence
+PR #16 adds the application-core and CLI tranche for advisory sampled size
+estimation and source-versus-decoded-V64 preview.
 
-All eight workflows triggered on immutable code head
-`15a72e9862d682339936595601e7aa20ac589082` passed or were retained as broad
-regressions before documentation finalization. Permanent application workflow
-`30783825634` passed the 18 focused tests, stateful-detector parity, disk-spooled
-versus in-memory AM1 byte equality, the long-form bound, deterministic duplicate
-Video64 Drop output, independent AM1 decoding, and independent container
-verification.
+The estimator:
 
-The long-form sparse-spool gate processed:
+- performs real two-second proof encodes at deterministic start, middle, and end
+  offsets by default;
+- collapses duplicate offsets for short sources;
+- uses the selected cadence, columns, palette, glyph budget, and profile;
+- removes one fixed short-file container allowance from each sample before rate
+  extrapolation, then adds it once to the final estimate;
+- adds the current provisional nominal AM1 rate when source audio is present;
+- reports minimum, median, and maximum sampled video rates, a central estimate,
+  and an observed-rate envelope with a conservative upper margin;
+- marks the result advisory and explicitly requires exact post-encode
+  verification.
 
-- 47 minutes / 2,820 seconds;
-- 169,200,000 V64 ticks;
-- 135,360,000 mono samples;
-- 270,720,000 PCM bytes, beyond the former 268,435,456-byte ceiling;
-- 259 fixed-size scan reads of at most 1,048,576 bytes;
-- one exact full-duration `SILN` span;
-- a 5,760,000-byte maximum configured source-PCM buffer, under 6 MiB;
-- zero whole-file PCM buffering.
+The preview:
 
-The ordinary one-second audiovisual fixture remained byte-identical to the
-pre-streaming output and produced:
+- extracts the representative source frame with the encoder's contain-and-pad
+  geometry;
+- decodes the corresponding sampled `.v64` through the real container decoder,
+  canonical palette registry, and renderer;
+- writes deterministic lossless `source.ppm`, `decoded-v64.ppm`, and a
+  side-by-side `comparison.ppm` with source left and decoded V64 right;
+- records sample and image hashes in `preview.json`.
 
-- 40×11 cells and 24 video frames;
-- one `AURN` run containing 51 Opus packets;
-- 48,000 kept mono samples;
-- 8,417 final audiovisual bytes and 27 chunks;
-- exactly 48,000 decoded samples / 96,000 nonzero PCM bytes;
-- independent verification success.
+### Checked preview and estimator evidence
 
-Checked identities:
+All five workflows triggered on immutable code head
+`fb59610c413d617f774a3c41093d7835952225a4` passed: application core, native
+shell, conformance/visual, human raster, and combined grammar.
 
-- source SHA-256:
-  `07a51b99fd75141590293cfa24094d770fe66d3dff60c78cc164e056a8df702c`;
-- byte-identical output SHA-256:
-  `d594404c64dc739b5ac5019989a74e4756bd4b8bc1b9446263c5011198d84a66`;
-- decoded PCM SHA-256:
-  `2e9b8818c3e9272c8ad1aec9fcccb47776708cafbc5351b6ffeefd551ed38edc`;
-- completed job SHA-256:
-  `2720557f30f108baed9cdb215a80a8334600f15ab5a50722703bcf932513ddb1`;
-- long-form report SHA-256:
-  `8c7112aa1deb12af2fd35a5f33a1d127e9adf839da28bf94929539b9a7787119`;
-- evidence artifact: `8844560891`;
+Permanent application workflow `30875362339` passed syntax checks, the expanded
+focused test suite, the existing 47-minute streaming gate, deterministic repeated
+preview generation, repeated sampled proof encodes, a complete audiovisual
+encode, AM1 decode, and independent final verification.
+
+The deterministic four-second H.264/AAC fixture used 24 fps, 40 columns, 16
+colors, 32 glyphs, and `balanced`, producing a 40×11-cell / 320×176 V64 raster.
+Its three two-second samples began at 0, 1, and 2 seconds and produced:
+
+- 51,280, 52,648, and 56,160 variable video bits per second after the checked
+  fixed-overhead adjustment;
+- sample SHA-256 values
+  `b4ca2e82e58b863398ee3149ab5543447b8d7177ddf18b1710fd8563f04557aa`,
+  `e0399a5f8e40a8d55ec1723cb419710e75aacd127da8d76776fc7bdbc94839c8`,
+  and `552dcda3ff66110beb4963090e1c4e23a56eb5f64c65959c440f72587538b164`;
+- a central estimate of 31,348 bytes;
+- an advisory envelope of 26,664 to 42,124 bytes;
+- a final independently verified audiovisual size of 32,488 bytes;
+- a measured central-estimate difference of approximately 3.51% on this single
+  synthetic fixture. This is evaluation evidence, not a general accuracy claim.
+
+The representative comparison image is 648×176 pixels with an eight-pixel gap.
+Checked preview identities:
+
+- source PPM SHA-256:
+  `38dd1990bd81087004a59646ac0a5dd46ff990cbeb73b8e1447f11f52797b111`;
+- decoded V64 PPM SHA-256:
+  `ee75b165935f9743feb9d59f347524f99479171de4872578d9bd5a41b91d9e0a`;
+- comparison PPM SHA-256:
+  `9e06806b69368089183b787752cbcb2d11cba59170b926de9874b5d9d0a12687`;
+- application evidence artifact: `8879349708`;
 - artifact digest:
-  `2f2146407f578370b095e133ed32fb647a34fcafbd488f8c41f57f63a7067cca`.
+  `4590880a2310b4b2aa60a355606c9eb962603aab9b50dfd34a107d7bda381b2f`.
 
-### Checked streaming native-shell evidence
-
-Permanent native-shell workflow `30783825616` passed on the same immutable code
-head. It passed the expanded Node tests, Rust shell tests, formatting, strict
-clippy, release compilation, deterministic duplicate shell reports, actual SDL2
-window presentation under Xvfb, streaming audiovisual encoding, and independent
-verification.
-
-The native fixture reported `strategy: disk-spooled-two-pass`,
-`wholeFilePcmBuffered: false`, and a 5,760,000-byte source-PCM buffer bound. It
-produced a verified 8,314-byte audiovisual `.v64` with one `AURN` run, 51 Opus
-packets, 48,000 kept samples, and 27 chunks.
-
-Checked identities:
-
-- native release binary SHA-256:
-  `8c032d6e214c973cc5532f0864f734c08cbc368428b9a3407de43149c28eedd9`;
-- source fixture SHA-256:
-  `0d6f12104377d87549b857fc7f94ddf2e722d4b250e6be743cd1a7566dc60cfe`;
-- output `.v64` SHA-256:
-  `f64d13751f96a243e59411822e958c00301218649d314a728087d3c0f92831ab`;
-- deterministic shell report SHA-256:
-  `db325db5dc9b86ca5b8cb58b5508c352b54334a911c060365d612cf2d11b8ac1`;
-- encode report SHA-256:
-  `07db04d786f9d0d811f550c7204ab85d686ccbe2f104206a357fdf1b22cc8319`;
-- independent verification report SHA-256:
-  `46ce0efda7a46db9f6e182ab910a589e2275e7990fa5470f5af0640be72013a1`;
-- evidence artifact: `8844569353`;
-- artifact digest:
-  `18a903e8869a8f52d25a9f8c911f45f501791a2da8f818acc6fa44afe3a9395b`.
+The SDL2 shell still reports interactive preview and estimator capabilities as
+false. It continues to use the same adjacent application core for encoding, but
+native controls and image presentation are a separate checked tranche.
 
 ## Boundaries not yet claimed
 
 - Genuine blinded AM1 speech listening remains mandatory before the normative
   audio bitrate profile can freeze.
-- Disk-spooled long-form encoding is not a one-pass live-capture encoder and
-  requires temporary storage proportional to source duration.
-- The native shell does not yet include decoded source/V64 preview, sampled size
-  estimation, Particle Lighting controls, active-job cancellation, a bundled
-  Node runtime, desktop file picker, or installable Linux package.
+- Sampled estimates are advisory, content-dependent, and not statistical
+  confidence intervals; exact final verification remains authoritative.
+- The native SDL2 shell does not yet invoke or display the core preview and
+  estimate outputs.
+- Disk-spooled long-form encoding is not one-pass live capture and requires
+  temporary storage proportional to source duration.
+- Particle Lighting controls, active-job cancellation, a bundled Node runtime,
+  desktop file selection, and an installable Linux package remain open.
 - Operating-system and physical-device A/V drift remain platform qualification
   work.
 - Fixed 0.5× and 2× player audio changes pitch through deterministic sample
   repetition or decimation; no opaque time-stretching algorithm is claimed.
-- Windows and macOS player and encoder packages are not yet claimed.
+- Windows and macOS packages, VLC integration, and the broader browser decoder
+  remain open.
 - The first public prerelease remains silent.
 
 ## Next mandatory gates
 
 1. Complete genuine blinded AM1 speech listening and decide whether the current
    8 kbps speech candidate can freeze.
-2. Add the sampled size estimator and decoded source/V64 preview without
-   replacing exact post-encode verification.
+2. Present advisory estimates and decoded previews interactively in the native
+   SDL2 shell without weakening exact post-encode verification.
 3. Add a Linux package with bundled runtime dependencies, desktop file selection,
    application icon handling, and install/uninstall evidence.
 4. Add Particle Lighting controls after its normative event and recovery policy
    is ready for application integration.
-5. Continue broader browser/WebAssembly decoding, physical-device qualification,
-   Windows/macOS packaging, one-pass live capture research, and VLC integration
+5. Continue physical-device qualification, browser/WebAssembly decoding,
+   Windows/macOS packaging, one-pass live-capture research, and VLC integration
    in the planned product order.

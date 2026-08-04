@@ -24,8 +24,8 @@ export const DROP_CAPABILITIES = Object.freeze({
   videoEncoding: true,
   audioEncoding: true,
   particleLighting: false,
-  sampledSizeEstimator: false,
-  decodedPreview: false,
+  sampledSizeEstimator: true,
+  decodedPreview: true,
   outputVerification: true
 });
 

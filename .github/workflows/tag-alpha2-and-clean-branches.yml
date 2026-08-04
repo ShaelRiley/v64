@@ -1,0 +1,76 @@
+name: Tag tested alpha.2 and clean stale branches
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/tag-alpha2-and-clean-branches.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  tag-and-clean:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v0.1.0-alpha.2
+      TESTED_SHA: fbd8fbbe1b385ca8cef2eb4fd789c06090004f12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create immutable tested tag
+        run: |
+          set -euo pipefail
+          git fetch origin "$TESTED_SHA"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            remote_sha="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}')"
+            test "$remote_sha" = "$TESTED_SHA"
+            echo "Tag $TAG already points to tested commit $TESTED_SHA."
+          else
+            git tag "$TAG" "$TESTED_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+
+      - name: Delete merged, superseded, and temporary branches
+        run: |
+          set -euo pipefail
+          branches=(
+            agent/feature-length-av-sync
+            agent/first-playable-release-record
+            agent/grammar-b-shootout
+            agent/grammar-b-shootout-v2
+            agent/license-hostile-gate-staging
+            agent/native-player
+            agent/native-subtitle-audio
+            agent/normative-encoder-default
+            agent/phase2-entropy-aware
+            agent/stable-api-c-abi
+            agent/video64-drop-am1-source-audio
+            agent/video64-drop-core
+            agent/video64-drop-native-shell
+            agent/video64-drop-preview-estimator
+            agent/video64-drop-streaming-am1
+            docs/profile-v2-current-status
+            agent/publish-alpha2-and-clean-branches
+          )
+          : > /tmp/branch-cleanup.txt
+          for branch in "${branches[@]}"; do
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+              printf 'deleted %s\n' "$branch" | tee -a /tmp/branch-cleanup.txt
+            else
+              printf 'absent %s\n' "$branch" | tee -a /tmp/branch-cleanup.txt
+            fi
+          done
+
+      - name: Report tag and cleanup result
+        run: |
+          set -euo pipefail
+          cleanup="$(sed 's/^/- /' /tmp/branch-cleanup.txt)"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Alpha.2 tested tag and stale-branch cleanup completed.\n\n- tag: \`$TAG\`\n- tested commit: \`$TESTED_SHA\`\n\n$cleanup\n\nRelease assets remain preserved in Actions artifact \`8894978715\` while the repository integration's Release API restriction is handled separately."

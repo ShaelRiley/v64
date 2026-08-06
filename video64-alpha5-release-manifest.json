@@ -1,0 +1,14 @@
+{
+  "format": "VIDEO64-ALPHA5-RELEASE-MANIFEST-1",
+  "tag": "v0.1.0-alpha.5",
+  "testedSourceCommit": "3e5778004c50af7fcb144b5c582f1800f33dd9f8",
+  "platform": "Linux x86_64",
+  "nodeRuntimeVersion": "20.20.2",
+  "nodeRuntimeBundled": true,
+  "hostNodeAbsentDuringPackageTest": true,
+  "realMp4DropPassed": true,
+  "realMp4PreviewPassed": true,
+  "realMp4EncodeAndVerifyPassed": true,
+  "supersedes": "v0.1.0-alpha.4",
+  "releaseWorkflowRun": "31080767743"
+}

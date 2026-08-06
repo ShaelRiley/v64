@@ -1,0 +1,16 @@
+{
+  "format": "VIDEO64-ALPHA4-RELEASE-MANIFEST-1",
+  "tag": "v0.1.0-alpha.4",
+  "testedSourceCommit": "4f2dac6e4ef6af88a141419fff6f719a6b2d3dfc",
+  "platform": "Linux x86_64",
+  "nativePreview": true,
+  "sampledSizeEstimator": true,
+  "estimateAdvisory": true,
+  "exactPostEncodeVerificationAuthoritative": true,
+  "extractedBundlePreviewPassed": true,
+  "extractedBundleDropSurvivalPassed": true,
+  "audioBitrateFrozen": false,
+  "windowsPackage": false,
+  "macosPackage": false,
+  "releaseWorkflowRun": "31064471149"
+}

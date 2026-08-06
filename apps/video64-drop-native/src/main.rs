@@ -225,7 +225,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
     let options = parse_options(&arguments)?;
     let core = CoreConfig {
-        node: env::var_os("VIDEO64_DROP_NODE").unwrap_or_else(|| OsString::from("node")),
+        node: env::var_os("VIDEO64_DROP_NODE").unwrap_or_else(default_node_path),
         cli: options.core_cli.clone(),
     };
 
@@ -368,12 +368,44 @@ fn default_core_cli_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../video64-drop/cli.mjs")
 }
 
+fn node_candidates(executable: &Path) -> Vec<PathBuf> {
+    let Some(directory) = executable.parent() else {
+        return Vec::new();
+    };
+    vec![
+        directory.join("runtime/node/bin/node"),
+        directory.join("node/bin/node"),
+        directory.join("node"),
+    ]
+}
+
+fn default_node_path() -> OsString {
+    if let Ok(executable) = env::current_exe() {
+        if let Some(candidate) = node_candidates(&executable)
+            .into_iter()
+            .find(|candidate| candidate.is_file())
+        {
+            return candidate.into_os_string();
+        }
+    }
+    OsString::from("node")
+}
+
 fn core_output(core: &CoreConfig, arguments: &[OsString]) -> Result<std::process::Output, String> {
     Command::new(&core.node)
         .arg(&core.cli)
         .args(arguments)
         .output()
-        .map_err(|error| format!("Unable to start Video64 Drop core: {error}"))
+        .map_err(|error| {
+            if error.kind() == std::io::ErrorKind::NotFound {
+                format!(
+                    "Unable to start Video64 Drop core: Node.js runtime not found at {}. Re-extract the complete Video64 Drop release archive.",
+                    Path::new(&core.node).display()
+                )
+            } else {
+                format!("Unable to start Video64 Drop core: {error}")
+            }
+        })
 }
 
 fn plan_jobs(
@@ -498,6 +530,7 @@ fn write_headless_shell_report(
             "quit": "Escape",
         },
         "coreCli": core.cli,
+        "nodeRuntime": Path::new(&core.node).to_string_lossy(),
         "transitionalBoundary": {
             "sourceAudioEncoding": true,
             "audioBitrateFrozen": false,
@@ -1904,6 +1937,19 @@ mod tests {
         assert_eq!(
             preview.headless_preview,
             Some((PathBuf::from("input.mp4"), PathBuf::from("preview-dir")))
+        );
+    }
+
+    #[test]
+    fn packaged_runtime_candidates_are_relative_to_the_executable() {
+        let executable = Path::new("/opt/video64-drop/video64-drop");
+        assert_eq!(
+            node_candidates(executable),
+            vec![
+                PathBuf::from("/opt/video64-drop/runtime/node/bin/node"),
+                PathBuf::from("/opt/video64-drop/node/bin/node"),
+                PathBuf::from("/opt/video64-drop/node"),
+            ]
         );
     }
 

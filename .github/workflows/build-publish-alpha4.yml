@@ -1,4 +1,4 @@
-name: Build and publish Video 64 alpha.4
+name: Clean alpha.4 development branches
 
 on:
   push:
@@ -10,266 +10,23 @@ permissions:
   issues: write
 
 jobs:
-  release:
+  cleanup:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
     env:
-      SOURCE_COMMIT: 4f2dac6e4ef6af88a141419fff6f719a6b2d3dfc
-      TAG: v0.1.0-alpha.4
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out tested source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: 4f2dac6e4ef6af88a141419fff6f719a6b2d3dfc
           fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@1.85.0
-        with:
-          components: rustfmt,clippy
-
-      - name: Install native and media dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg libsdl2-dev libopus-dev xvfb
-
-      - name: Run source validation
+      - name: Verify release and delete obsolete branches
         run: |
           set -euo pipefail
-          npm --prefix apps/video64-drop test
-          rustfmt --edition 2024 --check \
-            apps/video64-drop-native/src/lib.rs \
-            apps/video64-drop-native/src/main.rs
-          cargo test --locked -p video64-drop-native --features native-ui
-          cargo clippy --locked -p video64-drop-native --all-targets --features native-ui -- -D warnings
-          cargo build --locked --release -p video64-drop-native --features native-ui
-          cargo build --locked --release -p v64-player --features native-ui
-
-      - name: Generate real audiovisual sample and preview
-        run: |
-          set -euo pipefail
-          mkdir -p evidence/native-preview
-          ffmpeg -hide_banner -loglevel error \
-            -f lavfi -i testsrc=size=320x180:rate=24 \
-            -f lavfi -i sine=frequency=660:sample_rate=48000 \
-            -t 4 -shortest \
-            -c:v libx264 -pix_fmt yuv420p \
-            -c:a aac -ac 1 -ar 48000 \
-            evidence/source.mp4
-          ./target/release/video64-drop \
-            --core-cli apps/video64-drop/cli.mjs \
-            --headless-preview evidence/source.mp4 evidence/native-preview \
-            --headless-report evidence/native-preview-report.json
-          xvfb-run -a env SDL_AUDIODRIVER=dummy \
-            ./target/release/video64-drop \
-            --core-cli apps/video64-drop/cli.mjs \
-            --smoke-preview evidence/source.mp4 \
-            --smoke-presents 4 \
-            evidence/source.mp4
-          ./target/release/video64-drop \
-            --core-cli apps/video64-drop/cli.mjs \
-            --headless-encode evidence/source.mp4 evidence/video64-alpha4-sample.v64 \
-            --headless-report evidence/encode-report.json
-          node prototype/js/cli.mjs verify evidence/video64-alpha4-sample.v64 > evidence/verify.json
-
-      - name: Assemble Linux bundles
-        run: |
-          set -euo pipefail
-          mkdir -p dist/video64-drop-linux-x86_64/apps
-          install -m 0755 target/release/video64-drop dist/video64-drop-linux-x86_64/video64-drop
-          cp -R apps/video64-drop dist/video64-drop-linux-x86_64/apps/
-          cp -R prototype assets tools package.json dist/video64-drop-linux-x86_64/
-          cat > dist/video64-drop-linux-x86_64/run-video64-drop.sh <<'SH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          exec "$ROOT/video64-drop" "$@"
-          SH
-          chmod +x dist/video64-drop-linux-x86_64/run-video64-drop.sh
-          cat > dist/video64-drop-linux-x86_64/README.txt <<'TXT'
-          Video 64 Drop v0.1.0-alpha.4 for Linux x86_64
-
-          Launch run-video64-drop.sh, then drag an MP4 into the window.
-          Select a queued item and press P or activate Preview to compare the source with decoded Video 64 output and view the advisory size estimate.
-          Exact post-encode verification remains authoritative.
-          TXT
-
-          mkdir -p dist/video64-player-linux-x86_64
-          install -m 0755 target/release/v64-player dist/video64-player-linux-x86_64/v64-player
-          cp evidence/video64-alpha4-sample.v64 dist/video64-player-linux-x86_64/
-          cat > dist/video64-player-linux-x86_64/run-video64-player.sh <<'SH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          exec "$ROOT/v64-player" "$ROOT/video64-alpha4-sample.v64" "$@"
-          SH
-          chmod +x dist/video64-player-linux-x86_64/run-video64-player.sh
-
-          mkdir -p dist/video64-alpha4-sample-bundle/native-preview
-          cp evidence/source.mp4 dist/video64-alpha4-sample-bundle/
-          cp evidence/video64-alpha4-sample.v64 dist/video64-alpha4-sample-bundle/
-          cp evidence/native-preview-report.json evidence/encode-report.json evidence/verify.json dist/video64-alpha4-sample-bundle/
-          cp evidence/native-preview/*.ppm dist/video64-alpha4-sample-bundle/native-preview/
-
-          tar -C dist -czf dist/video64-drop-linux-x86_64.tar.gz video64-drop-linux-x86_64
-          tar -C dist -czf dist/video64-player-linux-x86_64.tar.gz video64-player-linux-x86_64
-          tar -C dist -czf dist/video64-alpha4-sample-bundle.tar.gz video64-alpha4-sample-bundle
-          cp evidence/video64-alpha4-sample.v64 dist/video64-alpha4-sample.v64
-
-      - name: Test extracted release bundle
-        run: |
-          set -euo pipefail
-          mkdir -p evidence/extracted
-          tar -C evidence/extracted -xzf dist/video64-drop-linux-x86_64.tar.gz
-          BUNDLE=evidence/extracted/video64-drop-linux-x86_64
-          "$BUNDLE/video64-drop" \
-            --headless-preview evidence/source.mp4 evidence/extracted-preview \
-            --headless-report evidence/extracted-preview-report.json
-          xvfb-run -a env SDL_AUDIODRIVER=dummy \
-            "$BUNDLE/video64-drop" \
-            --smoke-preview evidence/source.mp4 \
-            --smoke-presents 4 \
-            evidence/source.mp4
-          xvfb-run -a env SDL_AUDIODRIVER=dummy \
-            "$BUNDLE/video64-drop" \
-            --smoke-drop evidence/source.mp4 \
-            --smoke-presents 4
-
-      - name: Verify evidence and write release manifest
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          preview = json.loads(Path('evidence/native-preview-report.json').read_text())
-          extracted = json.loads(Path('evidence/extracted-preview-report.json').read_text())
-          encoded = json.loads(Path('evidence/encode-report.json').read_text())
-          verified = json.loads(Path('evidence/verify.json').read_text())
-          assert preview['format'] == 'VIDEO64-DROP-NATIVE-PREVIEW-1'
-          assert preview['advisory'] is True
-          assert preview['exactPostEncodeVerificationAuthoritative'] is True
-          assert preview['capabilities']['decodedPreview'] is True
-          assert preview['capabilities']['sampledSizeEstimator'] is True
-          estimate = preview['estimate']
-          assert 0 < estimate['advisoryLowBytes'] <= estimate['centralEstimateBytes'] <= estimate['advisoryHighBytes']
-          assert extracted['format'] == preview['format']
-          assert extracted['capabilities'] == preview['capabilities']
-          assert encoded['coreExitSuccess'] is True
-          assert encoded['finalJob']['status'] == 'completed'
-          assert encoded['finalJob']['result']['verification']['valid'] is True
-          assert verified['valid'] is True
-          for path in (
-              Path('evidence/native-preview/source.ppm'),
-              Path('evidence/native-preview/decoded-v64.ppm'),
-              Path('evidence/native-preview/comparison.ppm'),
-              Path('evidence/extracted-preview/source.ppm'),
-              Path('evidence/extracted-preview/decoded-v64.ppm'),
-              Path('evidence/extracted-preview/comparison.ppm'),
-          ):
-              data = path.read_bytes()
-              assert data.startswith(b'P6') and len(data) > 64
-
-          manifest = {
-              'format': 'VIDEO64-ALPHA4-RELEASE-MANIFEST-1',
-              'tag': 'v0.1.0-alpha.4',
-              'testedSourceCommit': '4f2dac6e4ef6af88a141419fff6f719a6b2d3dfc',
-              'platform': 'Linux x86_64',
-              'nativePreview': True,
-              'sampledSizeEstimator': True,
-              'estimateAdvisory': True,
-              'exactPostEncodeVerificationAuthoritative': True,
-              'extractedBundlePreviewPassed': True,
-              'extractedBundleDropSurvivalPassed': True,
-              'audioBitrateFrozen': False,
-              'windowsPackage': False,
-              'macosPackage': False,
-              'releaseWorkflowRun': '${{ github.run_id }}',
-          }
-          Path('dist/video64-alpha4-release-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-          PY
-          cd dist
-          sha256sum \
-            video64-drop-linux-x86_64.tar.gz \
-            video64-player-linux-x86_64.tar.gz \
-            video64-alpha4-sample-bundle.tar.gz \
-            video64-alpha4-sample.v64 \
-            video64-alpha4-release-manifest.json \
-            > SHA256SUMS.txt
-
-      - name: Create immutable release-record tag
-        run: |
-          set -euo pipefail
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "$TAG already exists" >&2
-            exit 1
-          fi
-          mkdir -p /tmp/release-record
-          cp dist/video64-alpha4-release-manifest.json dist/SHA256SUMS.txt /tmp/release-record/
-          git switch --orphan release-record-alpha4
-          git rm -rf . || true
-          cp /tmp/release-record/* .
-          cat > README.md <<EOF
-          # Video 64 $TAG release record
-
-          This immutable metadata-only commit records the checked Linux alpha.4 publication.
-
-          Tested source commit: $SOURCE_COMMIT
-          Release workflow run: $GITHUB_RUN_ID
-          EOF
-          cat > RELEASE-NOTES.md <<'EOF'
-          # Video 64 v0.1.0-alpha.4
-
-          - Native source-versus-decoded Video 64 preview in Video64 Drop.
-          - Preview button and P keyboard shortcut.
-          - Advisory low, central, and high size estimates.
-          - Exact post-encode verification remains authoritative.
-          - Extracted Linux bundle tested with a real H.264/AAC MP4.
-          - Preview errors remain visible without closing the application.
-
-          AM1 audio parameters remain provisional and are not frozen by this release.
-          EOF
-          git add README.md RELEASE-NOTES.md video64-alpha4-release-manifest.json SHA256SUMS.txt
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m "Record Video 64 v0.1.0-alpha.4 release"
-          git tag -a "$TAG" -m "Video 64 v0.1.0-alpha.4"
-          git push origin "refs/tags/$TAG"
-
-      - name: Publish GitHub prerelease
-        run: |
-          set -euo pipefail
-          gh release create "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Video 64 v0.1.0-alpha.4" \
-            --prerelease \
-            --notes-file RELEASE-NOTES.md \
-            dist/video64-drop-linux-x86_64.tar.gz \
-            dist/video64-player-linux-x86_64.tar.gz \
-            dist/video64-alpha4-sample-bundle.tar.gz \
-            dist/video64-alpha4-sample.v64 \
-            dist/video64-alpha4-release-manifest.json \
-            dist/SHA256SUMS.txt
-
-      - name: Upload release evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: video64-alpha4-release-evidence
-          path: |
-            dist/
-            evidence/native-preview-report.json
-            evidence/extracted-preview-report.json
-            evidence/encode-report.json
-            evidence/verify.json
-          if-no-files-found: error
-
-      - name: Report publication
+          gh release view v0.1.0-alpha.4 --repo "$GITHUB_REPOSITORY" >/dev/null
+          git push origin --delete \
+            agent/native-preview-ui \
+            agent/native-preview-estimator \
+            agent/clean-native-preview-scaffolding
+      - name: Report cleanup
         if: always()
         run: |
-          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Video 64 alpha.4 publication completed.\n\n- run: \`$GITHUB_RUN_ID\`\n- status: \`${{ job.status }}\`\n- tested source: \`$SOURCE_COMMIT\`\n- tag: \`$TAG\`"
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Alpha.4 branch cleanup completed.\n\n- run: \`$GITHUB_RUN_ID\`\n- status: \`${{ job.status }}\`\n- retained branch: \`main\`"

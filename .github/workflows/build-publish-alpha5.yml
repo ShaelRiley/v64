@@ -1,0 +1,262 @@
+name: Build and publish Video 64 alpha.5
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/build-publish-alpha5.yml"]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      SOURCE_COMMIT: 3e5778004c50af7fcb144b5c582f1800f33dd9f8
+      TAG: v0.1.0-alpha.5
+      NODE_VERSION: 20.20.2
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@v4
+        with:
+          ref: 3e5778004c50af7fcb144b5c582f1800f33dd9f8
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.20.2"
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          components: rustfmt,clippy
+
+      - name: Install native and media dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsdl2-dev xvfb
+
+      - name: Validate source
+        run: |
+          set -euo pipefail
+          npm --prefix apps/video64-drop test
+          rustfmt --edition 2024 --check apps/video64-drop-native/src/lib.rs apps/video64-drop-native/src/main.rs
+          cargo test --locked -p video64-drop-native --features native-ui
+          cargo clippy --locked -p video64-drop-native --all-targets --features native-ui -- -D warnings
+          cargo build --locked --release -p video64-drop-native --features native-ui
+
+      - name: Generate real audiovisual source
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          ffmpeg -hide_banner -loglevel error \
+            -f lavfi -i testsrc=size=320x180:rate=24 \
+            -f lavfi -i sine=frequency=660:sample_rate=48000 \
+            -t 4 -shortest \
+            -c:v libx264 -pix_fmt yuv420p \
+            -c:a aac -ac 1 -ar 48000 \
+            evidence/source.mp4
+
+      - name: Assemble self-contained Linux package
+        run: |
+          set -euo pipefail
+          BUNDLE=dist/video64-drop-linux-x86_64
+          mkdir -p "$BUNDLE/apps" "$BUNDLE/runtime"
+          install -m 0755 target/release/video64-drop "$BUNDLE/video64-drop"
+          cp -R apps/video64-drop "$BUNDLE/apps/"
+          cp -R prototype assets tools package.json "$BUNDLE/"
+          NODE_ROOT="$(dirname "$(dirname "$(command -v node)")")"
+          cp -a "$NODE_ROOT" "$BUNDLE/runtime/node"
+          test -x "$BUNDLE/runtime/node/bin/node"
+          test -f "$BUNDLE/runtime/node/LICENSE"
+          cat > "$BUNDLE/run-video64-drop.sh" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          exec "$ROOT/video64-drop" "$@"
+          SH
+          chmod +x "$BUNDLE/run-video64-drop.sh"
+          cat > "$BUNDLE/README.txt" <<'TXT'
+          Video64 Drop v0.1.0-alpha.5 for Linux x86_64
+
+          This archive is self-contained and includes its private Node.js runtime.
+          Extract the complete folder, then launch run-video64-drop.sh.
+          Do not copy only the video64-drop executable out of the folder.
+          TXT
+          tar -C dist -czf dist/video64-drop-linux-x86_64.tar.gz video64-drop-linux-x86_64
+
+      - name: Prove extracted package works with no host Node
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/extracted evidence/host-tools
+          tar -C evidence/extracted -xzf dist/video64-drop-linux-x86_64.tar.gz
+          BUNDLE="$PWD/evidence/extracted/video64-drop-linux-x86_64"
+          ln -s "$(command -v ffmpeg)" evidence/host-tools/ffmpeg
+          ln -s "$(command -v ffprobe)" evidence/host-tools/ffprobe
+          TOOLS="$PWD/evidence/host-tools"
+          if PATH="$TOOLS" command -v node >/dev/null 2>&1; then
+            echo "Host Node unexpectedly available in isolated PATH" >&2
+            exit 1
+          fi
+
+          env -u VIDEO64_DROP_NODE PATH="$TOOLS" \
+            "$BUNDLE/video64-drop" \
+            --headless-report evidence/package-plan.json \
+            evidence/source.mp4
+
+          env -u VIDEO64_DROP_NODE PATH="$TOOLS" \
+            "$BUNDLE/video64-drop" \
+            --headless-preview evidence/source.mp4 evidence/package-preview \
+            --headless-report evidence/package-preview.json
+
+          env -u VIDEO64_DROP_NODE PATH="$TOOLS" \
+            "$BUNDLE/video64-drop" \
+            --headless-encode evidence/source.mp4 evidence/package-output.v64 \
+            --headless-report evidence/package-encode.json
+
+          xvfb-run -a env -u VIDEO64_DROP_NODE PATH="$TOOLS" SDL_AUDIODRIVER=dummy \
+            "$BUNDLE/video64-drop" \
+            --smoke-drop evidence/source.mp4 \
+            --smoke-preview evidence/source.mp4 \
+            --smoke-presents 4
+
+      - name: Assert package evidence
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          plan = json.loads(Path('evidence/package-plan.json').read_text())
+          preview = json.loads(Path('evidence/package-preview.json').read_text())
+          encoded = json.loads(Path('evidence/package-encode.json').read_text())
+          runtime = Path(plan['nodeRuntime']).as_posix()
+          assert runtime.endswith('/runtime/node/bin/node'), runtime
+          assert len(plan['queue']) == 1
+          assert plan['queue'][0]['audioPresent'] is True
+          assert preview['format'] == 'VIDEO64-DROP-NATIVE-PREVIEW-1'
+          assert preview['capabilities']['decodedPreview'] is True
+          assert encoded['coreExitSuccess'] is True
+          assert encoded['finalJob']['status'] == 'completed'
+          assert encoded['finalJob']['result']['verification']['valid'] is True
+          assert Path('evidence/package-output.v64').stat().st_size > 0
+          for name in ('source.ppm', 'decoded-v64.ppm', 'comparison.ppm'):
+              data = (Path('evidence/package-preview') / name).read_bytes()
+              assert data.startswith(b'P6') and len(data) > 64
+          PY
+
+      - name: Write release manifest and checksums
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = {
+              'format': 'VIDEO64-ALPHA5-RELEASE-MANIFEST-1',
+              'tag': 'v0.1.0-alpha.5',
+              'testedSourceCommit': '3e5778004c50af7fcb144b5c582f1800f33dd9f8',
+              'platform': 'Linux x86_64',
+              'nodeRuntimeVersion': '20.20.2',
+              'nodeRuntimeBundled': True,
+              'hostNodeAbsentDuringPackageTest': True,
+              'realMp4DropPassed': True,
+              'realMp4PreviewPassed': True,
+              'realMp4EncodeAndVerifyPassed': True,
+              'supersedes': 'v0.1.0-alpha.4',
+              'releaseWorkflowRun': '${{ github.run_id }}',
+          }
+          Path('dist/video64-alpha5-release-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+          PY
+          cd dist
+          sha256sum video64-drop-linux-x86_64.tar.gz video64-alpha5-release-manifest.json > SHA256SUMS.txt
+          cat > RELEASE-NOTES.md <<'EOF'
+          # Video 64 v0.1.0-alpha.5
+
+          This release fixes the Linux packaging defect reported against alpha.4.
+
+          - Bundles a private Node.js runtime required by the Video64 Drop application core.
+          - Discovers that runtime relative to the application executable.
+          - Requires no globally installed Node.js.
+          - Preserves native decoded preview and advisory size estimates.
+          - Keeps the window open and shows an actionable message if a package is incomplete.
+          - Tested after extraction with host Node completely absent from PATH.
+          - Tested with a real H.264/AAC MP4 through drop, planning, preview, encode, and verification.
+
+          Alpha.4 is superseded because its Linux archive omitted this runtime.
+          Extract the complete alpha.5 folder and run `run-video64-drop.sh`.
+          EOF
+
+      - name: Create immutable release-record tag
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists" >&2
+            exit 1
+          fi
+          mkdir -p /tmp/release-record
+          cp dist/video64-alpha5-release-manifest.json dist/SHA256SUMS.txt dist/RELEASE-NOTES.md /tmp/release-record/
+          git switch --orphan release-record-alpha5
+          git rm -rf . || true
+          cp /tmp/release-record/* .
+          cat > README.md <<EOF
+          # Video 64 $TAG release record
+
+          Tested source commit: $SOURCE_COMMIT
+          Release workflow run: $GITHUB_RUN_ID
+          Self-contained Node.js runtime: $NODE_VERSION
+          EOF
+          git add README.md RELEASE-NOTES.md video64-alpha5-release-manifest.json SHA256SUMS.txt
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "Record Video 64 v0.1.0-alpha.5 release"
+          git tag -a "$TAG" -m "Video 64 v0.1.0-alpha.5"
+          git push origin "refs/tags/$TAG"
+
+      - name: Publish alpha.5 prerelease
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Video 64 v0.1.0-alpha.5" \
+            --prerelease \
+            --notes-file RELEASE-NOTES.md \
+            dist/video64-drop-linux-x86_64.tar.gz \
+            dist/video64-alpha5-release-manifest.json \
+            dist/SHA256SUMS.txt
+
+      - name: Mark alpha.4 superseded
+        run: |
+          set -euo pipefail
+          gh release view v0.1.0-alpha.4 --repo "$GITHUB_REPOSITORY" --json body --jq .body > /tmp/alpha4-body.txt
+          if ! grep -q 'SUPERSEDED BY v0.1.0-alpha.5' /tmp/alpha4-body.txt; then
+            {
+              echo '## SUPERSEDED BY v0.1.0-alpha.5'
+              echo
+              echo 'The alpha.4 Linux package omitted the Node.js runtime required by Video64 Drop. Use alpha.5 instead.'
+              echo
+              cat /tmp/alpha4-body.txt
+            } > /tmp/alpha4-updated.txt
+            gh release edit v0.1.0-alpha.4 --repo "$GITHUB_REPOSITORY" --notes-file /tmp/alpha4-updated.txt
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video64-alpha5-release-evidence
+          path: |
+            dist/
+            evidence/package-plan.json
+            evidence/package-preview.json
+            evidence/package-encode.json
+            evidence/package-output.v64
+          if-no-files-found: error
+
+      - name: Delete merged fix branch
+        run: git push origin --delete fix/bundle-node-runtime || true
+
+      - name: Report publication
+        if: always()
+        run: |
+          gh issue comment 4 --repo "$GITHUB_REPOSITORY" --body "Video 64 alpha.5 self-contained Linux publication completed.\n\n- run: \`$GITHUB_RUN_ID\`\n- status: \`${{ job.status }}\`\n- tested source: \`$SOURCE_COMMIT\`\n- tag: \`$TAG\`"

@@ -45,7 +45,7 @@ jobs:
           cargo clippy --locked -p video64-drop-native --all-targets --features native-ui -- -D warnings
           cargo build --locked --release -p video64-drop-native --features native-ui
 
-      - name: Validate private runtime discovery
+      - name: Validate private runtime discovery without system Node
         run: |
           set -euo pipefail
           mkdir -p evidence/bundle/apps evidence/bundle/runtime

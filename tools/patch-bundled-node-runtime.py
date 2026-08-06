@@ -92,7 +92,7 @@ text = text.replace(old, new, 1)
 old = '''        "coreCli": core.cli,
         "transitionalBoundary": {'''
 new = '''        "coreCli": core.cli,
-        "nodeRuntime": core.node,
+        "nodeRuntime": Path::new(&core.node).to_string_lossy(),
         "transitionalBoundary": {'''
 if old not in text:
     raise SystemExit("Headless report contract changed")

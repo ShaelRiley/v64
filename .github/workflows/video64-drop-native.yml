@@ -101,17 +101,28 @@ jobs:
             --smoke-presents 4 \
             evidence/source.mp4
 
-      - name: Prove release-layout core discovery without a wrapper script
+      - name: Prove self-contained release-layout discovery without host Node
         run: |
-          mkdir -p evidence/bundle/apps
+          set -euo pipefail
+          mkdir -p evidence/bundle/apps evidence/bundle/runtime
           install -m 0755 target/release/video64-drop evidence/bundle/video64-drop
           cp -R apps/video64-drop evidence/bundle/apps/
           cp -R prototype assets tools package.json evidence/bundle/
-          evidence/bundle/video64-drop \
+          NODE_ROOT="$(dirname "$(dirname "$(command -v node)")")"
+          cp -a "$NODE_ROOT" evidence/bundle/runtime/node
+          env -u VIDEO64_DROP_NODE PATH=/usr/bin:/bin \
+            evidence/bundle/video64-drop \
             --headless-report evidence/bundled-report.json \
             evidence/source.mp4
-          xvfb-run -a env SDL_AUDIODRIVER=dummy \
+          env -u VIDEO64_DROP_NODE PATH=/usr/bin:/bin \
+            xvfb-run -a env SDL_AUDIODRIVER=dummy \
             evidence/bundle/video64-drop \
+            --smoke-drop evidence/source.mp4 \
+            --smoke-presents 4
+          env -u VIDEO64_DROP_NODE PATH=/usr/bin:/bin \
+            xvfb-run -a env SDL_AUDIODRIVER=dummy \
+            evidence/bundle/video64-drop \
+            --smoke-preview evidence/source.mp4 \
             --smoke-presents 4 \
             evidence/source.mp4
 
@@ -164,6 +175,7 @@ jobs:
           bundled = json.loads(Path("evidence/bundled-report.json").read_text())
           for key in ("format", "capabilities", "transitionalBoundary", "settings", "queue"):
               assert bundled[key] == shell[key]
+          assert Path(bundled["nodeRuntime"]).as_posix().endswith("/runtime/node/bin/node")
 
           encoded = json.loads(Path("evidence/encode-report.json").read_text())
           assert encoded["format"] == "VIDEO64-DROP-NATIVE-ENCODE-1"

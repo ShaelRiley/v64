@@ -60,7 +60,7 @@ jobs:
           ffmpeg -hide_banner -loglevel error \
             -f lavfi -i testsrc=size=320x180:rate=24 \
             -f lavfi -i sine=frequency=660:sample_rate=48000 \
-            -t 1 -shortest \
+            -t 4 -shortest \
             -c:v libx264 -pix_fmt yuv420p \
             -c:a aac -ac 1 -ar 48000 \
             evidence/source.mp4
@@ -77,6 +77,13 @@ jobs:
             evidence/source.mp4
           cmp evidence/shell-report-a.json evidence/shell-report-b.json
 
+      - name: Generate decoded preview and advisory estimate
+        run: |
+          ./target/release/video64-drop \
+            --core-cli apps/video64-drop/cli.mjs \
+            --headless-preview evidence/source.mp4 evidence/native-preview \
+            --headless-report evidence/native-preview-report.json
+
       - name: Encode and verify through the native shell bridge
         run: |
           ./target/release/video64-drop \
@@ -85,11 +92,12 @@ jobs:
             --headless-report evidence/encode-report.json
           node prototype/js/cli.mjs verify evidence/output.v64 > evidence/verify.json
 
-      - name: Exercise the real SDL2 window under Xvfb
+      - name: Exercise preview in the real SDL2 window under Xvfb
         run: |
           xvfb-run -a env SDL_AUDIODRIVER=dummy \
             ./target/release/video64-drop \
             --core-cli apps/video64-drop/cli.mjs \
+            --smoke-preview evidence/source.mp4 \
             --smoke-presents 4 \
             evidence/source.mp4
 
@@ -141,6 +149,18 @@ jobs:
           assert queued["audioPresent"] is True
           assert any("audio" in warning.lower() for warning in queued["warnings"])
 
+          preview = json.loads(Path("evidence/native-preview-report.json").read_text())
+          assert preview["format"] == "VIDEO64-DROP-NATIVE-PREVIEW-1"
+          assert preview["advisory"] is True
+          assert preview["exactPostEncodeVerificationAuthoritative"] is True
+          assert preview["capabilities"]["decodedPreview"] is True
+          assert preview["capabilities"]["sampledSizeEstimator"] is True
+          estimate = preview["estimate"]
+          assert 0 < estimate["advisoryLowBytes"] <= estimate["centralEstimateBytes"] <= estimate["advisoryHighBytes"]
+          for name in ("source.ppm", "decoded-v64.ppm", "comparison.ppm"):
+              data = (Path("evidence/native-preview") / name).read_bytes()
+              assert data.startswith(b"P6") and len(data) > 64
+
           bundled = json.loads(Path("evidence/bundled-report.json").read_text())
           for key in ("format", "capabilities", "transitionalBoundary", "settings", "queue"):
               assert bundled[key] == shell[key]
@@ -176,6 +196,10 @@ jobs:
             evidence/source.mp4 \
             evidence/output.v64 \
             evidence/shell-report-a.json \
+            evidence/native-preview-report.json \
+            evidence/native-preview/source.ppm \
+            evidence/native-preview/decoded-v64.ppm \
+            evidence/native-preview/comparison.ppm \
             evidence/bundled-report.json \
             evidence/encode-report.json \
             evidence/verify.json \

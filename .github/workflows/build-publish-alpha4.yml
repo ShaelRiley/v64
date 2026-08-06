@@ -213,7 +213,7 @@ jobs:
           mkdir -p /tmp/release-record
           cp dist/video64-alpha4-release-manifest.json dist/SHA256SUMS.txt /tmp/release-record/
           git switch --orphan release-record-alpha4
-          git rm -rf .
+          git rm -rf . || true
           cp /tmp/release-record/* .
           cat > README.md <<EOF
           # Video 64 $TAG release record

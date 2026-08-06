@@ -6,6 +6,7 @@ use serde_json::{Value, json};
 
 pub const SHELL_REPORT_FORMAT: &str = "VIDEO64-DROP-NATIVE-SHELL-1";
 pub const SHELL_ENCODE_REPORT_FORMAT: &str = "VIDEO64-DROP-NATIVE-ENCODE-1";
+pub const SHELL_PREVIEW_REPORT_FORMAT: &str = "VIDEO64-DROP-NATIVE-PREVIEW-1";
 
 pub const CADENCES: [&str; 11] = [
     "0.10", "0.5", "1", "3", "6", "12", "15", "24", "30", "48", "60",
@@ -170,8 +171,8 @@ pub fn shell_capabilities() -> Value {
         "videoEncoding": true,
         "audioEncoding": true,
         "outputVerification": true,
-        "decodedPreview": false,
-        "sampledSizeEstimator": false,
+        "decodedPreview": true,
+        "sampledSizeEstimator": true,
         "particleLighting": false,
         "packagedApplication": false,
     })
@@ -260,5 +261,13 @@ mod tests {
             control = control.next();
             assert_eq!(control, expected);
         }
+    }
+
+    #[test]
+    fn preview_and_estimator_are_reported_as_native_capabilities() {
+        let capabilities = shell_capabilities();
+        assert_eq!(capabilities["decodedPreview"], true);
+        assert_eq!(capabilities["sampledSizeEstimator"], true);
+        assert_eq!(SHELL_PREVIEW_REPORT_FORMAT, "VIDEO64-DROP-NATIVE-PREVIEW-1");
     }
 }

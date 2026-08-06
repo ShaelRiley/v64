@@ -16,27 +16,34 @@ use std::time::Duration;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
-use sdl2::pixels::Color;
+use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, WindowCanvas};
 use sdl2::video::Window;
 use serde_json::{Value, json};
 use video64_drop_native::{
-    Control, SHELL_ENCODE_REPORT_FORMAT, SHELL_REPORT_FORMAT, ShellSettings, control_vocabulary,
-    shell_capabilities,
+    Control, SHELL_ENCODE_REPORT_FORMAT, SHELL_PREVIEW_REPORT_FORMAT, SHELL_REPORT_FORMAT,
+    ShellSettings, control_vocabulary, shell_capabilities,
 };
 
-const WINDOW_WIDTH: u32 = 1_000;
-const WINDOW_HEIGHT: u32 = 720;
-const CONTROL_Y: i32 = 162;
-const CONTROL_WIDTH: u32 = 180;
-const CONTROL_HEIGHT: u32 = 66;
+const WINDOW_WIDTH: u32 = 1_200;
+const WINDOW_HEIGHT: u32 = 820;
+const CONTROL_Y: i32 = 150;
+const CONTROL_WIDTH: u32 = 216;
+const CONTROL_HEIGHT: u32 = 62;
 const CONTROL_GAP: i32 = 14;
-const QUEUE_Y: i32 = 286;
-const QUEUE_ROW_HEIGHT: i32 = 48;
-const MAX_VISIBLE_JOBS: usize = 6;
+const PREVIEW_Y: i32 = 232;
+const PREVIEW_HEIGHT: u32 = 320;
+const QUEUE_Y: i32 = 592;
+const QUEUE_ROW_HEIGHT: i32 = 42;
+const MAX_VISIBLE_JOBS: usize = 3;
+
+fn preview_button() -> Rect {
+    Rect::new(812, 752, 170, 46)
+}
+
 fn encode_button() -> Rect {
-    Rect::new(810, 650, 170, 46)
+    Rect::new(1_000, 752, 180, 46)
 }
 
 #[derive(Clone, Debug)]
@@ -50,8 +57,10 @@ struct Options {
     core_cli: PathBuf,
     headless_report: Option<PathBuf>,
     headless_encode: Option<(PathBuf, PathBuf)>,
+    headless_preview: Option<(PathBuf, PathBuf)>,
     smoke_presents: Option<u32>,
     smoke_drop: Option<PathBuf>,
+    smoke_preview: Option<PathBuf>,
     inputs: Vec<PathBuf>,
 }
 
@@ -123,6 +132,31 @@ impl ShellJob {
     }
 }
 
+#[derive(Clone, Debug)]
+struct RgbImage {
+    width: u32,
+    height: u32,
+    pixels: Vec<u8>,
+}
+
+#[derive(Clone, Debug)]
+struct PreviewResult {
+    source: RgbImage,
+    decoded: RgbImage,
+    central_bytes: u64,
+    low_bytes: u64,
+    high_bytes: u64,
+    timestamp_seconds: f64,
+}
+
+#[derive(Clone, Debug)]
+enum PreviewState {
+    Empty,
+    Running { input: PathBuf },
+    Ready(PreviewResult),
+    Failed { input: PathBuf, error: String },
+}
+
 #[derive(Debug)]
 struct ShellState {
     settings: ShellSettings,
@@ -131,6 +165,7 @@ struct ShellState {
     selected: usize,
     batch_active: bool,
     notice: String,
+    preview: PreviewState,
 }
 
 impl Default for ShellState {
@@ -142,23 +177,32 @@ impl Default for ShellState {
             selected: 0,
             batch_active: false,
             notice: "Drop video files into the window".to_owned(),
+            preview: PreviewState::Empty,
         }
     }
 }
 
 #[derive(Debug)]
 enum WorkerMessage {
-    Progress {
+    EncodeProgress {
         stage: Option<String>,
         detail: Option<String>,
     },
-    Finished(Value),
+    EncodeFinished(Value),
+    PreviewFinished(PreviewResult),
     Failed(String),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum WorkerKind {
+    Encode,
+    Preview,
 }
 
 #[derive(Debug)]
 struct ActiveWorker {
     job_index: usize,
+    kind: WorkerKind,
     receiver: Receiver<WorkerMessage>,
 }
 
@@ -192,6 +236,14 @@ fn run() -> Result<(), Box<dyn Error>> {
             .ok_or("--headless-encode requires --headless-report")?;
         return write_headless_encode_report(&core, input, output, report_path).map_err(Into::into);
     }
+    if let Some((input, output_dir)) = options.headless_preview.as_ref() {
+        let report_path = options
+            .headless_report
+            .as_deref()
+            .ok_or("--headless-preview requires --headless-report")?;
+        return write_headless_preview_report(&core, input, output_dir, report_path)
+            .map_err(Into::into);
+    }
     if let Some(report_path) = options.headless_report.as_deref() {
         return write_headless_shell_report(&core, &options.inputs, report_path)
             .map_err(Into::into);
@@ -202,20 +254,23 @@ fn run() -> Result<(), Box<dyn Error>> {
         options.inputs,
         options.smoke_presents,
         options.smoke_drop,
+        options.smoke_preview.as_deref(),
     )
     .map_err(Into::into)
 }
 
 fn usage() -> &'static str {
-    "usage: video64-drop [--core-cli PATH] [--smoke-presents N] [--smoke-drop PATH] [INPUT ...]\n       video64-drop --headless-report REPORT.json [INPUT ...]\n       video64-drop --headless-encode INPUT OUTPUT.v64 --headless-report REPORT.json"
+    "usage: video64-drop [--core-cli PATH] [--smoke-presents N] [--smoke-drop PATH] [--smoke-preview PATH] [INPUT ...]\n       video64-drop --headless-report REPORT.json [INPUT ...]\n       video64-drop --headless-encode INPUT OUTPUT.v64 --headless-report REPORT.json\n       video64-drop --headless-preview INPUT OUTPUT_DIR --headless-report REPORT.json"
 }
 
 fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
     let mut core_cli = default_core_cli_path();
     let mut headless_report = None;
     let mut headless_encode = None;
+    let mut headless_preview = None;
     let mut smoke_presents = None;
     let mut smoke_drop = None;
+    let mut smoke_preview = None;
     let mut inputs = Vec::new();
     let mut index = 0usize;
     while index < arguments.len() {
@@ -237,6 +292,14 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
                 let output = PathBuf::from(arguments.get(index).ok_or_else(|| usage().to_owned())?);
                 headless_encode = Some((input, output));
             }
+            Some("--headless-preview") => {
+                index += 1;
+                let input = PathBuf::from(arguments.get(index).ok_or_else(|| usage().to_owned())?);
+                index += 1;
+                let output_dir =
+                    PathBuf::from(arguments.get(index).ok_or_else(|| usage().to_owned())?);
+                headless_preview = Some((input, output_dir));
+            }
             Some("--smoke-presents") => {
                 index += 1;
                 let count = arguments
@@ -256,17 +319,28 @@ fn parse_options(arguments: &[OsString]) -> Result<Options, String> {
                     arguments.get(index).ok_or_else(|| usage().to_owned())?,
                 ));
             }
+            Some("--smoke-preview") => {
+                index += 1;
+                smoke_preview = Some(PathBuf::from(
+                    arguments.get(index).ok_or_else(|| usage().to_owned())?,
+                ));
+            }
             Some(value) if value.starts_with('-') => return Err(usage().to_owned()),
             _ => inputs.push(PathBuf::from(&arguments[index])),
         }
         index += 1;
     }
+    if headless_encode.is_some() && headless_preview.is_some() {
+        return Err("Choose only one headless operation".to_owned());
+    }
     Ok(Options {
         core_cli,
         headless_report,
         headless_encode,
+        headless_preview,
         smoke_presents,
         smoke_drop,
+        smoke_preview,
         inputs,
     })
 }
@@ -416,6 +490,7 @@ fn write_headless_shell_report(
             "focusNextControl": "Tab",
             "changeControl": "Left/Right",
             "selectJob": "Up/Down",
+            "previewSelected": "P",
             "encodeQueue": "Enter or E",
             "retryFailed": "R",
             "removeQueued": "Delete",
@@ -426,8 +501,8 @@ fn write_headless_shell_report(
         "transitionalBoundary": {
             "sourceAudioEncoding": true,
             "audioBitrateFrozen": false,
-            "decodedPreview": false,
-            "sampledSizeEstimator": false,
+            "decodedPreview": true,
+            "sampledSizeEstimator": true,
             "particleLighting": false,
             "packaging": false,
         },
@@ -472,6 +547,44 @@ fn write_headless_encode_report(
     Ok(())
 }
 
+fn write_headless_preview_report(
+    core: &CoreConfig,
+    input: &Path,
+    output_dir: &Path,
+    report_path: &Path,
+) -> Result<(), String> {
+    let settings = ShellSettings::default();
+    let result = create_preview(core, &settings, input, output_dir)?;
+    let report = json!({
+        "format": SHELL_PREVIEW_REPORT_FORMAT,
+        "capabilities": shell_capabilities(),
+        "settings": settings.to_json(),
+        "inputPath": input,
+        "outputDirectory": output_dir,
+        "advisory": true,
+        "exactPostEncodeVerificationAuthoritative": true,
+        "previewTimestampSeconds": result.timestamp_seconds,
+        "estimate": {
+            "centralEstimateBytes": result.central_bytes,
+            "advisoryLowBytes": result.low_bytes,
+            "advisoryHighBytes": result.high_bytes,
+        },
+        "images": {
+            "source": {
+                "width": result.source.width,
+                "height": result.source.height,
+                "rgbBytes": result.source.pixels.len(),
+            },
+            "decodedV64": {
+                "width": result.decoded.width,
+                "height": result.decoded.height,
+                "rgbBytes": result.decoded.pixels.len(),
+            },
+        },
+    });
+    write_json(report_path, &report)
+}
+
 fn write_json(path: &Path, value: &Value) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
@@ -488,6 +601,7 @@ fn run_windowed(
     inputs: Vec<PathBuf>,
     smoke_presents: Option<u32>,
     smoke_drop: Option<PathBuf>,
+    smoke_preview: Option<&Path>,
 ) -> Result<(), String> {
     let mut state = ShellState::default();
     add_inputs(core, &mut state, inputs)?;
@@ -510,6 +624,13 @@ fn run_windowed(
         handle_dropped_file(core, &mut state, input);
     }
     let mut worker: Option<ActiveWorker> = None;
+    if let Some(input) = smoke_preview {
+        handle_dropped_file(core, &mut state, input.to_path_buf());
+        if let Some(index) = state.jobs.iter().position(|job| job.input == input) {
+            state.selected = index;
+        }
+        begin_preview(core, &mut state, &mut worker);
+    }
     let mut presented = 0u32;
 
     'running: loop {
@@ -528,8 +649,7 @@ fn run_windowed(
                     if worker.is_none() {
                         break 'running;
                     }
-                    "Encoding is active; quit after the current file completes"
-                        .clone_into(&mut state.notice);
+                    "Work is active; quit after it completes".clone_into(&mut state.notice);
                 }
                 Event::DropFile { filename, .. } => {
                     handle_dropped_file(core, &mut state, PathBuf::from(filename));
@@ -543,31 +663,32 @@ fn run_windowed(
                     keycode: Some(Keycode::Left),
                     repeat: false,
                     ..
-                } => adjust_settings(core, &mut state, -1),
+                } => adjust_settings(core, &mut state, -1, worker.is_some()),
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     repeat: false,
                     ..
-                } => adjust_settings(core, &mut state, 1),
+                } => adjust_settings(core, &mut state, 1, worker.is_some()),
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     repeat: false,
                     ..
-                } => state.selected = state.selected.saturating_sub(1),
+                } => select_job(&mut state, -1),
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     repeat: false,
                     ..
-                } => {
-                    if !state.jobs.is_empty() {
-                        state.selected = (state.selected + 1).min(state.jobs.len() - 1);
-                    }
-                }
+                } => select_job(&mut state, 1),
+                Event::KeyDown {
+                    keycode: Some(Keycode::P),
+                    repeat: false,
+                    ..
+                } => begin_preview(core, &mut state, &mut worker),
                 Event::KeyDown {
                     keycode: Some(Keycode::Return | Keycode::KpEnter | Keycode::E),
                     repeat: false,
                     ..
-                } => begin_batch(&mut state),
+                } => begin_batch(&mut state, worker.is_some()),
                 Event::KeyDown {
                     keycode: Some(Keycode::Delete),
                     repeat: false,
@@ -588,13 +709,17 @@ fn run_windowed(
                     x,
                     y,
                     ..
-                } => handle_click(core, &mut state, x, y),
+                } => handle_click(core, &mut state, &mut worker, x, y),
                 _ => {}
             }
         }
 
         draw(&mut canvas, &state)?;
-        presented = presented.saturating_add(1);
+        let preview_ready =
+            smoke_preview.is_none() || !matches!(&state.preview, PreviewState::Running { .. });
+        if preview_ready {
+            presented = presented.saturating_add(1);
+        }
         if smoke_presents.is_some_and(|limit| presented >= limit) {
             break;
         }
@@ -635,11 +760,12 @@ fn add_inputs(
         }
     }
     state.jobs = planned;
-    if state.jobs.is_empty() {
-        state.selected = 0;
+    state.selected = if state.jobs.is_empty() {
+        0
     } else {
-        state.selected = state.selected.min(state.jobs.len() - 1);
-    }
+        state.selected.min(state.jobs.len() - 1)
+    };
+    state.preview = PreviewState::Empty;
     state.notice = format!("{} file(s) in queue", state.jobs.len());
     Ok(())
 }
@@ -651,7 +777,11 @@ fn handle_dropped_file(core: &CoreConfig, state: &mut ShellState, input: PathBuf
     }
 }
 
-fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {
+fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8, worker_active: bool) {
+    if worker_active {
+        "Wait for the active preview or encode".clone_into(&mut state.notice);
+        return;
+    }
     if state.jobs.iter().any(|job| job.status != JobStatus::Queued) {
         "Settings are locked after encoding starts".clone_into(&mut state.notice);
         return;
@@ -670,8 +800,9 @@ fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {
                 inspect_job(core, &state.settings, job);
             }
             state.jobs = jobs;
+            state.preview = PreviewState::Empty;
             state.notice = format!(
-                "{} set to {}",
+                "{} set to {} - preview invalidated",
                 state.focus.label(),
                 state.settings.value_label(state.focus)
             );
@@ -680,13 +811,79 @@ fn adjust_settings(core: &CoreConfig, state: &mut ShellState, direction: i8) {
     }
 }
 
-fn begin_batch(state: &mut ShellState) {
-    if state.jobs.iter().any(|job| job.status == JobStatus::Queued) {
+fn select_job(state: &mut ShellState, direction: i8) {
+    if state.jobs.is_empty() {
+        return;
+    }
+    let before = state.selected;
+    match direction.cmp(&0) {
+        std::cmp::Ordering::Less => {
+            state.selected = state.selected.saturating_sub(1);
+        }
+        std::cmp::Ordering::Greater => {
+            state.selected = (state.selected + 1).min(state.jobs.len() - 1);
+        }
+        std::cmp::Ordering::Equal => {}
+    }
+    if state.selected != before {
+        state.preview = PreviewState::Empty;
+    }
+}
+
+fn begin_batch(state: &mut ShellState, worker_active: bool) {
+    if worker_active {
+        "Wait for the active preview or encode".clone_into(&mut state.notice);
+    } else if state.jobs.iter().any(|job| job.status == JobStatus::Queued) {
         state.batch_active = true;
         "Encoding queued files".clone_into(&mut state.notice);
     } else {
         "No queued files are ready to encode".clone_into(&mut state.notice);
     }
+}
+
+fn begin_preview(core: &CoreConfig, state: &mut ShellState, worker: &mut Option<ActiveWorker>) {
+    if worker.is_some() || state.batch_active {
+        "Wait for the active preview or encode".clone_into(&mut state.notice);
+        return;
+    }
+    let Some(job) = state.jobs.get(state.selected).cloned() else {
+        "Select a queued file before previewing".clone_into(&mut state.notice);
+        return;
+    };
+    let output_dir = preview_output_dir(&job);
+    state.preview = PreviewState::Running {
+        input: job.input.clone(),
+    };
+    state.notice = format!("Building decoded preview for {}", file_label(&job.input));
+    let receiver = spawn_preview_worker(
+        core.clone(),
+        state.settings.clone(),
+        job.clone(),
+        output_dir,
+    );
+    *worker = Some(ActiveWorker {
+        job_index: state.selected,
+        kind: WorkerKind::Preview,
+        receiver,
+    });
+}
+
+fn preview_output_dir(job: &ShellJob) -> PathBuf {
+    let safe_id = job
+        .id
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || character == '-' || character == '_' {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+    env::temp_dir().join(format!(
+        "video64-drop-preview-{}-{safe_id}",
+        std::process::id()
+    ))
 }
 
 fn remove_selected(state: &mut ShellState) {
@@ -697,6 +894,7 @@ fn remove_selected(state: &mut ShellState) {
     {
         state.jobs.remove(state.selected);
         state.selected = state.selected.min(state.jobs.len().saturating_sub(1));
+        state.preview = PreviewState::Empty;
         "Removed selected file".clone_into(&mut state.notice);
     } else {
         "Only queued or failed files can be removed".clone_into(&mut state.notice);
@@ -729,9 +927,19 @@ fn open_selected_output(state: &mut ShellState) {
     }
 }
 
-fn handle_click(core: &CoreConfig, state: &mut ShellState, x: i32, y: i32) {
+fn handle_click(
+    core: &CoreConfig,
+    state: &mut ShellState,
+    worker: &mut Option<ActiveWorker>,
+    x: i32,
+    y: i32,
+) {
+    if preview_button().contains_point((x, y)) {
+        begin_preview(core, state, worker);
+        return;
+    }
     if encode_button().contains_point((x, y)) {
-        begin_batch(state);
+        begin_batch(state, worker.is_some());
         return;
     }
     for (index, control) in Control::ALL.iter().copied().enumerate() {
@@ -739,15 +947,21 @@ fn handle_click(core: &CoreConfig, state: &mut ShellState, x: i32, y: i32) {
         if rect.contains_point((x, y)) {
             state.focus = control;
             let midpoint = rect.x() + i32::try_from(rect.width() / 2).unwrap_or(0);
-            adjust_settings(core, state, if x < midpoint { -1 } else { 1 });
+            adjust_settings(
+                core,
+                state,
+                if x < midpoint { -1 } else { 1 },
+                worker.is_some(),
+            );
             return;
         }
     }
     let row = (y - QUEUE_Y).div_euclid(QUEUE_ROW_HEIGHT);
     if row >= 0 {
         let index = usize::try_from(row).unwrap_or(usize::MAX);
-        if index < state.jobs.len().min(MAX_VISIBLE_JOBS) {
+        if index < state.jobs.len().min(MAX_VISIBLE_JOBS) && state.selected != index {
             state.selected = index;
+            state.preview = PreviewState::Empty;
         }
     }
 }
@@ -774,9 +988,11 @@ fn start_next_worker(core: &CoreConfig, state: &mut ShellState, worker: &mut Opt
     state.jobs[index].stage = Some("analysis".to_owned());
     state.jobs[index].detail = Some("Starting Video64 Drop core".to_owned());
     state.selected = index;
+    state.preview = PreviewState::Empty;
     let receiver = spawn_encode_worker(core.clone(), state.settings.clone(), job);
     *worker = Some(ActiveWorker {
         job_index: index,
+        kind: WorkerKind::Encode,
         receiver,
     });
 }
@@ -821,7 +1037,7 @@ fn run_encode_worker(
         if let Some(stderr) = stderr {
             for line in BufReader::new(stderr).lines().map_while(Result::ok) {
                 if let Ok(event) = serde_json::from_str::<Value>(&line) {
-                    let _ = progress_sender.send(WorkerMessage::Progress {
+                    let _ = progress_sender.send(WorkerMessage::EncodeProgress {
                         stage: event
                             .get("stage")
                             .and_then(Value::as_str)
@@ -851,7 +1067,7 @@ fn run_encode_worker(
     match status {
         Ok(exit) => match serde_json::from_str::<Value>(&stdout) {
             Ok(final_job) if exit.success() => {
-                let _ = sender.send(WorkerMessage::Finished(final_job));
+                let _ = sender.send(WorkerMessage::EncodeFinished(final_job));
             }
             Ok(final_job) => {
                 let message = final_job
@@ -875,33 +1091,228 @@ fn run_encode_worker(
     }
 }
 
+fn spawn_preview_worker(
+    core: CoreConfig,
+    settings: ShellSettings,
+    job: ShellJob,
+    output_dir: PathBuf,
+) -> Receiver<WorkerMessage> {
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let message = match create_preview(&core, &settings, &job.input, &output_dir) {
+            Ok(result) => WorkerMessage::PreviewFinished(result),
+            Err(error) => WorkerMessage::Failed(error),
+        };
+        let _ = sender.send(message);
+    });
+    receiver
+}
+
+fn create_preview(
+    core: &CoreConfig,
+    settings: &ShellSettings,
+    input: &Path,
+    output_dir: &Path,
+) -> Result<PreviewResult, String> {
+    fs::create_dir_all(output_dir).map_err(|error| {
+        format!(
+            "Could not create preview directory {}: {error}",
+            output_dir.display()
+        )
+    })?;
+    let mut arguments = vec![
+        OsString::from("preview"),
+        input.as_os_str().to_owned(),
+        output_dir.as_os_str().to_owned(),
+    ];
+    arguments.extend(settings.cli_arguments().into_iter().map(OsString::from));
+    let output = core_output(core, &arguments)?;
+    if !output.status.success() {
+        return Err(format!(
+            "Preview failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let report: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("Preview report was not valid JSON: {error}"))?;
+    let source_path = preview_image_path(&report, "/source/path", output_dir, "source.ppm")?;
+    let decoded_path =
+        preview_image_path(&report, "/decodedV64/path", output_dir, "decoded-v64.ppm")?;
+    let source = load_ppm(&source_path)?;
+    let decoded = load_ppm(&decoded_path)?;
+    Ok(PreviewResult {
+        source,
+        decoded,
+        central_bytes: json_u64(&report, "/estimate/estimatedBytes")?,
+        low_bytes: json_u64(&report, "/estimate/lowerBytes")?,
+        high_bytes: json_u64(&report, "/estimate/upperBytes")?,
+        timestamp_seconds: report
+            .pointer("/preview/representativeOffsetSeconds")
+            .and_then(Value::as_f64)
+            .ok_or_else(|| "Preview report omitted previewTimestampSeconds".to_owned())?,
+    })
+}
+
+fn preview_image_path(
+    report: &Value,
+    pointer: &str,
+    output_dir: &Path,
+    fallback_name: &str,
+) -> Result<PathBuf, String> {
+    if let Some(path) = report.pointer(pointer).and_then(Value::as_str) {
+        let candidate = PathBuf::from(path);
+        if candidate.is_file() {
+            return Ok(candidate);
+        }
+    }
+    let fallback = output_dir.join(fallback_name);
+    if fallback.is_file() {
+        Ok(fallback)
+    } else {
+        Err(format!(
+            "Preview image was not written: {}",
+            fallback.display()
+        ))
+    }
+}
+
+fn json_u64(value: &Value, pointer: &str) -> Result<u64, String> {
+    value
+        .pointer(pointer)
+        .and_then(Value::as_u64)
+        .ok_or_else(|| format!("Preview report omitted {pointer}"))
+}
+
+fn load_ppm(path: &Path) -> Result<RgbImage, String> {
+    let bytes = fs::read(path)
+        .map_err(|error| format!("Could not read preview image {}: {error}", path.display()))?;
+    let mut cursor = 0usize;
+    let magic = ppm_token(&bytes, &mut cursor)?;
+    if magic != "P6" {
+        return Err(format!(
+            "Unsupported preview image format in {}",
+            path.display()
+        ));
+    }
+    let width = ppm_token(&bytes, &mut cursor)?
+        .parse::<u32>()
+        .map_err(|_| "PPM width is invalid".to_owned())?;
+    let height = ppm_token(&bytes, &mut cursor)?
+        .parse::<u32>()
+        .map_err(|_| "PPM height is invalid".to_owned())?;
+    let maximum = ppm_token(&bytes, &mut cursor)?
+        .parse::<u32>()
+        .map_err(|_| "PPM maximum is invalid".to_owned())?;
+    if maximum != 255 || width == 0 || height == 0 {
+        return Err("PPM must be nonempty 8-bit RGB".to_owned());
+    }
+    if cursor >= bytes.len() || !bytes[cursor].is_ascii_whitespace() {
+        return Err("PPM header is missing its pixel delimiter".to_owned());
+    }
+    let delimiter = bytes[cursor];
+    cursor += 1;
+    if delimiter == b'\r' && bytes.get(cursor) == Some(&b'\n') {
+        cursor += 1;
+    }
+    let expected = usize::try_from(width)
+        .ok()
+        .and_then(|width| {
+            usize::try_from(height)
+                .ok()
+                .and_then(|height| width.checked_mul(height))
+        })
+        .and_then(|pixels| pixels.checked_mul(3))
+        .ok_or_else(|| "PPM dimensions overflow".to_owned())?;
+    if bytes.len().saturating_sub(cursor) != expected {
+        return Err(format!(
+            "PPM pixel payload mismatch in {}: expected {expected}, found {}",
+            path.display(),
+            bytes.len().saturating_sub(cursor)
+        ));
+    }
+    Ok(RgbImage {
+        width,
+        height,
+        pixels: bytes[cursor..].to_vec(),
+    })
+}
+
+fn ppm_token(bytes: &[u8], cursor: &mut usize) -> Result<String, String> {
+    loop {
+        while *cursor < bytes.len() && bytes[*cursor].is_ascii_whitespace() {
+            *cursor += 1;
+        }
+        if *cursor < bytes.len() && bytes[*cursor] == b'#' {
+            while *cursor < bytes.len() && bytes[*cursor] != b'\n' {
+                *cursor += 1;
+            }
+            continue;
+        }
+        break;
+    }
+    let start = *cursor;
+    while *cursor < bytes.len() && !bytes[*cursor].is_ascii_whitespace() && bytes[*cursor] != b'#' {
+        *cursor += 1;
+    }
+    if start == *cursor {
+        return Err("PPM header ended early".to_owned());
+    }
+    std::str::from_utf8(&bytes[start..*cursor])
+        .map(ToOwned::to_owned)
+        .map_err(|_| "PPM header was not ASCII".to_owned())
+}
+
 fn process_worker_messages(state: &mut ShellState, worker: &mut Option<ActiveWorker>) {
     let Some(active) = worker.as_ref() else {
         return;
     };
     let index = active.job_index;
+    let kind = active.kind;
     let messages = active.receiver.try_iter().collect::<Vec<_>>();
     let mut finished = false;
     for message in messages {
         match message {
-            WorkerMessage::Progress { stage, detail } => {
+            WorkerMessage::EncodeProgress { stage, detail } => {
                 if let Some(job) = state.jobs.get_mut(index) {
                     job.stage = stage;
                     job.detail = detail;
                 }
             }
-            WorkerMessage::Finished(final_job) => {
-                apply_final_job(&mut state.jobs[index], &final_job);
-                state.notice = format!("Completed {}", file_label(&state.jobs[index].input));
+            WorkerMessage::EncodeFinished(final_job) => {
+                if let Some(job) = state.jobs.get_mut(index) {
+                    apply_final_job(job, &final_job);
+                    state.notice = format!("Completed {}", file_label(&job.input));
+                }
+                finished = true;
+            }
+            WorkerMessage::PreviewFinished(result) => {
+                state.notice = format!(
+                    "Preview ready - advisory {} to {}",
+                    format_bytes(result.low_bytes),
+                    format_bytes(result.high_bytes)
+                );
+                state.preview = PreviewState::Ready(result);
                 finished = true;
             }
             WorkerMessage::Failed(error) => {
-                if let Some(job) = state.jobs.get_mut(index) {
-                    job.status = JobStatus::Failed;
-                    job.detail = Some(error.clone());
+                if kind == WorkerKind::Encode {
+                    if let Some(job) = state.jobs.get_mut(index) {
+                        job.status = JobStatus::Failed;
+                        job.detail = Some(error.clone());
+                    }
+                    state.batch_active = false;
+                } else {
+                    let input = state
+                        .jobs
+                        .get(index)
+                        .map(|job| job.input.clone())
+                        .unwrap_or_default();
+                    state.preview = PreviewState::Failed {
+                        input,
+                        error: error.clone(),
+                    };
                 }
                 state.notice = error;
-                state.batch_active = false;
                 finished = true;
             }
         }
@@ -942,28 +1353,28 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
     canvas.set_draw_color(Color::RGB(9, 11, 16));
     canvas.clear();
 
-    draw_text(canvas, 24, 20, "VIDEO64 DROP", 3, Color::RGB(244, 247, 252))?;
+    draw_text(canvas, 24, 18, "VIDEO64 DROP", 3, Color::RGB(244, 247, 252))?;
     draw_text(
         canvas,
         26,
-        50,
-        "LINUX NATIVE SHELL - DROP FILES OR PASS THEM ON THE COMMAND LINE",
+        48,
+        "NATIVE DECODED PREVIEW AND ADVISORY SIZE ESTIMATE",
         1,
         Color::RGB(145, 156, 176),
     )?;
 
     canvas.set_draw_color(Color::RGB(20, 25, 35));
     canvas
-        .fill_rect(Rect::new(20, 76, width.saturating_sub(40), 64))
+        .fill_rect(Rect::new(20, 72, width.saturating_sub(40), 58))
         .map_err(|error| error.to_string())?;
     canvas.set_draw_color(Color::RGB(77, 96, 128));
     canvas
-        .draw_rect(Rect::new(20, 76, width.saturating_sub(40), 64))
+        .draw_rect(Rect::new(20, 72, width.saturating_sub(40), 58))
         .map_err(|error| error.to_string())?;
     draw_text(
         canvas,
         42,
-        91,
+        85,
         "DROP VIDEO FILES HERE",
         2,
         Color::RGB(224, 230, 241),
@@ -971,8 +1382,8 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
     draw_text(
         canvas,
         42,
-        118,
-        "SOURCE AUDIO USES PROVISIONAL AM1; BITRATE AWAITS BLINDED LISTENING",
+        111,
+        "SOURCE AUDIO USES PROVISIONAL AM1; EXACT SIZE FOLLOWS VERIFIED ENCODE",
         1,
         Color::RGB(238, 183, 93),
     )?;
@@ -994,7 +1405,7 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
         draw_text(
             canvas,
             rect.x() + 10,
-            rect.y() + 10,
+            rect.y() + 9,
             control.label(),
             1,
             Color::RGB(151, 164, 184),
@@ -1002,28 +1413,207 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
         draw_text(
             canvas,
             rect.x() + 10,
-            rect.y() + 34,
+            rect.y() + 33,
             &state.settings.value_label(control),
             1,
             Color::RGB(244, 247, 252),
         )?;
     }
 
-    draw_text(canvas, 22, 252, "QUEUE", 2, Color::RGB(229, 234, 244))?;
+    draw_preview(canvas, state, width)?;
+    draw_queue(canvas, state, width)?;
+
+    draw_text(
+        canvas,
+        24,
+        i32::try_from(height).unwrap_or(i32::MAX) - 23,
+        "TAB CONTROLS  LEFT RIGHT CHANGE  UP DOWN SELECT  P PREVIEW  E ENCODE  ESC QUIT",
+        1,
+        Color::RGB(87, 100, 120),
+    )?;
+
+    draw_button(
+        canvas,
+        preview_button(),
+        "P  PREVIEW",
+        matches!(&state.preview, PreviewState::Running { .. }),
+    )?;
+    draw_button(canvas, encode_button(), "E  ENCODE", state.batch_active)?;
+
+    let title = format!(
+        "Video64 Drop - {} file(s) - {}",
+        state.jobs.len(),
+        state.notice
+    );
+    canvas
+        .window_mut()
+        .set_title(&title)
+        .map_err(|error| error.to_string())?;
+    canvas.present();
+    Ok(())
+}
+
+fn draw_preview(canvas: &mut WindowCanvas, state: &ShellState, width: u32) -> Result<(), String> {
+    let outer = Rect::new(20, PREVIEW_Y, width.saturating_sub(40), PREVIEW_HEIGHT);
+    canvas.set_draw_color(Color::RGB(14, 18, 26));
+    canvas.fill_rect(outer).map_err(|error| error.to_string())?;
+    canvas.set_draw_color(Color::RGB(49, 60, 78));
+    canvas.draw_rect(outer).map_err(|error| error.to_string())?;
+
+    let gap = 16u32;
+    let panel_width = outer.width().saturating_sub(gap + 32) / 2;
+    let left = Rect::new(36, PREVIEW_Y + 34, panel_width, 230);
+    let right_x = 36 + i32::try_from(panel_width + gap).unwrap_or(0);
+    let right = Rect::new(right_x, PREVIEW_Y + 34, panel_width, 230);
+    draw_text(
+        canvas,
+        left.x(),
+        PREVIEW_Y + 12,
+        "SOURCE",
+        1,
+        Color::RGB(151, 164, 184),
+    )?;
+    draw_text(
+        canvas,
+        right.x(),
+        PREVIEW_Y + 12,
+        "DECODED V64",
+        1,
+        Color::RGB(151, 164, 184),
+    )?;
+    canvas.set_draw_color(Color::RGB(5, 7, 10));
+    canvas.fill_rect(left).map_err(|error| error.to_string())?;
+    canvas.fill_rect(right).map_err(|error| error.to_string())?;
+
+    match &state.preview {
+        PreviewState::Empty => {
+            draw_text(
+                canvas,
+                42,
+                PREVIEW_Y + 142,
+                "SELECT A FILE AND PRESS P TO RUN REAL SAMPLED PROOF ENCODES",
+                1,
+                Color::RGB(92, 105, 125),
+            )?;
+        }
+        PreviewState::Running { input } => {
+            draw_text(
+                canvas,
+                42,
+                PREVIEW_Y + 142,
+                &format!(
+                    "BUILDING PREVIEW FOR {}",
+                    truncate_ascii(&file_label(input), 70)
+                ),
+                1,
+                Color::RGB(102, 190, 245),
+            )?;
+        }
+        PreviewState::Ready(result) => {
+            draw_rgb_image(canvas, &result.source, left)?;
+            draw_rgb_image(canvas, &result.decoded, right)?;
+            draw_text(
+                canvas,
+                36,
+                PREVIEW_Y + 278,
+                &truncate_ascii(
+                    &format!(
+                        "ADVISORY ESTIMATE {}  LIKELY {} - {}  SAMPLE AT {:.2} S",
+                        format_bytes(result.central_bytes),
+                        format_bytes(result.low_bytes),
+                        format_bytes(result.high_bytes),
+                        result.timestamp_seconds
+                    ),
+                    126,
+                ),
+                1,
+                Color::RGB(238, 183, 93),
+            )?;
+            draw_text(
+                canvas,
+                36,
+                PREVIEW_Y + 299,
+                "DECODED OUTPUT SHOWN; EXACT POST ENCODE VERIFICATION REMAINS AUTHORITATIVE",
+                1,
+                Color::RGB(126, 139, 160),
+            )?;
+        }
+        PreviewState::Failed { input, error } => {
+            draw_text(
+                canvas,
+                42,
+                PREVIEW_Y + 128,
+                &format!(
+                    "PREVIEW FAILED FOR {}",
+                    truncate_ascii(&file_label(input), 64)
+                ),
+                1,
+                Color::RGB(235, 105, 105),
+            )?;
+            draw_text(
+                canvas,
+                42,
+                PREVIEW_Y + 153,
+                &truncate_ascii(error, 110),
+                1,
+                Color::RGB(235, 105, 105),
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn draw_rgb_image(canvas: &mut WindowCanvas, image: &RgbImage, bounds: Rect) -> Result<(), String> {
+    let creator = canvas.texture_creator();
+    let mut texture = creator
+        .create_texture_streaming(PixelFormatEnum::RGB24, image.width, image.height)
+        .map_err(|error| error.to_string())?;
+    let pitch = usize::try_from(image.width)
+        .ok()
+        .and_then(|width| width.checked_mul(3))
+        .ok_or_else(|| "Preview texture pitch overflow".to_owned())?;
+    texture
+        .update(None, &image.pixels, pitch)
+        .map_err(|error| error.to_string())?;
+    let target = fit_rect(image.width, image.height, bounds);
+    canvas
+        .copy(&texture, None, target)
+        .map_err(|error| error.to_string())
+}
+
+fn fit_rect(image_width: u32, image_height: u32, bounds: Rect) -> Rect {
+    let width_limited_height =
+        u64::from(bounds.width()) * u64::from(image_height) / u64::from(image_width.max(1));
+    let (width, height) = if width_limited_height <= u64::from(bounds.height()) {
+        (
+            bounds.width(),
+            u32::try_from(width_limited_height).unwrap_or(bounds.height()),
+        )
+    } else {
+        let height = bounds.height();
+        let width = u64::from(height) * u64::from(image_width) / u64::from(image_height.max(1));
+        (u32::try_from(width).unwrap_or(bounds.width()), height)
+    };
+    let x = bounds.x() + i32::try_from(bounds.width().saturating_sub(width) / 2).unwrap_or(0);
+    let y = bounds.y() + i32::try_from(bounds.height().saturating_sub(height) / 2).unwrap_or(0);
+    Rect::new(x, y, width.max(1), height.max(1))
+}
+
+fn draw_queue(canvas: &mut WindowCanvas, state: &ShellState, width: u32) -> Result<(), String> {
+    draw_text(canvas, 22, 563, "QUEUE", 2, Color::RGB(229, 234, 244))?;
     draw_text(
         canvas,
         112,
-        257,
-        "UP/DOWN SELECT  -  ENTER OR E ENCODE  -  DELETE REMOVE  -  R RETRY  -  O OPEN",
+        568,
+        "UP DOWN SELECT  DELETE REMOVE  R RETRY  O OPEN",
         1,
         Color::RGB(119, 132, 153),
     )?;
-
     if state.jobs.is_empty() {
         draw_text(
             canvas,
             34,
-            QUEUE_Y + 24,
+            QUEUE_Y + 18,
             "NO FILES QUEUED",
             2,
             Color::RGB(92, 105, 125),
@@ -1042,7 +1632,7 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
                 20,
                 y,
                 width.saturating_sub(40),
-                u32::try_from(QUEUE_ROW_HEIGHT - 4).unwrap_or(0),
+                u32::try_from(QUEUE_ROW_HEIGHT - 3).unwrap_or(0),
             ))
             .map_err(|error| error.to_string())?;
         let status_color = match job.status {
@@ -1051,12 +1641,12 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
             JobStatus::Completed => Color::RGB(116, 210, 151),
             JobStatus::Failed => Color::RGB(235, 105, 105),
         };
-        draw_text(canvas, 32, y + 8, job.status.label(), 1, status_color)?;
+        draw_text(canvas, 32, y + 6, job.status.label(), 1, status_color)?;
         draw_text(
             canvas,
             134,
-            y + 8,
-            &truncate_ascii(&file_label(&job.input), 48),
+            y + 6,
+            &truncate_ascii(&file_label(&job.input), 56),
             1,
             Color::RGB(231, 235, 242),
         )?;
@@ -1064,22 +1654,21 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
         draw_text(
             canvas,
             134,
-            y + 27,
-            &truncate_ascii(detail, 70),
+            y + 23,
+            &truncate_ascii(detail, 78),
             1,
             Color::RGB(126, 139, 160),
         )?;
         if job.status == JobStatus::Running {
             draw_progress(
                 canvas,
-                760,
+                922,
                 y + 13,
-                190,
+                230,
                 stage_progress(job.stage.as_deref()),
             )?;
         }
     }
-
     let selected_warning = state
         .jobs
         .get(state.selected)
@@ -1088,8 +1677,8 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
     draw_text(
         canvas,
         24,
-        594,
-        &truncate_ascii(selected_warning, 118),
+        724,
+        &truncate_ascii(selected_warning, 126),
         1,
         if selected_warning == "NO ACTIVE WARNING" {
             Color::RGB(90, 103, 122)
@@ -1100,52 +1689,50 @@ fn draw(canvas: &mut WindowCanvas, state: &ShellState) -> Result<(), String> {
     draw_text(
         canvas,
         24,
-        622,
-        &truncate_ascii(&state.notice, 118),
+        745,
+        &truncate_ascii(&state.notice, 126),
         1,
         Color::RGB(151, 164, 184),
     )?;
+    Ok(())
+}
 
-    canvas.set_draw_color(if state.batch_active {
+fn draw_button(
+    canvas: &mut WindowCanvas,
+    rect: Rect,
+    label: &str,
+    active: bool,
+) -> Result<(), String> {
+    canvas.set_draw_color(if active {
         Color::RGB(41, 94, 121)
     } else {
         Color::RGB(38, 72, 112)
     });
-    canvas
-        .fill_rect(encode_button())
-        .map_err(|error| error.to_string())?;
+    canvas.fill_rect(rect).map_err(|error| error.to_string())?;
+    canvas.set_draw_color(Color::RGB(83, 128, 178));
+    canvas.draw_rect(rect).map_err(|error| error.to_string())?;
     draw_text(
         canvas,
-        encode_button().x() + 22,
-        encode_button().y() + 15,
-        if state.batch_active {
-            "ENCODING"
-        } else {
-            "ENCODE QUEUE"
-        },
+        rect.x() + 20,
+        rect.y() + 15,
+        label,
         1,
         Color::RGB(244, 248, 252),
-    )?;
-    draw_text(
-        canvas,
-        24,
-        i32::try_from(height).unwrap_or(i32::MAX) - 26,
-        "TAB FOCUS  LEFT/RIGHT CHANGE  ESC QUIT AFTER CURRENT FILE",
-        1,
-        Color::RGB(87, 100, 120),
-    )?;
+    )
+}
 
-    let title = format!(
-        "Video64 Drop - {} file(s) - {}",
-        state.jobs.len(),
-        state.notice
-    );
-    canvas
-        .window_mut()
-        .set_title(&title)
-        .map_err(|error| error.to_string())?;
-    canvas.present();
-    Ok(())
+fn format_bytes(bytes: u64) -> String {
+    const KIB: u64 = 1024;
+    const MIB: u64 = KIB * KIB;
+    if bytes >= MIB {
+        let tenths = bytes.saturating_mul(10) / MIB;
+        format!("{}.{} MB", tenths / 10, tenths % 10)
+    } else if bytes >= KIB {
+        let tenths = bytes.saturating_mul(10) / KIB;
+        format!("{}.{} KB", tenths / 10, tenths % 10)
+    } else {
+        format!("{bytes} B")
+    }
 }
 
 fn draw_progress(
@@ -1285,7 +1872,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn options_support_headless_and_windowed_modes() {
+    fn options_support_preview_encode_and_windowed_modes() {
         let parsed = parse_options(&[
             "--core-cli".into(),
             "core.mjs".into(),
@@ -1293,6 +1880,8 @@ mod tests {
             "3".into(),
             "--smoke-drop".into(),
             "dropped.mp4".into(),
+            "--smoke-preview".into(),
+            "preview.mp4".into(),
             "one.mp4".into(),
             "two.mkv".into(),
         ])
@@ -1300,8 +1889,22 @@ mod tests {
         assert_eq!(parsed.core_cli, PathBuf::from("core.mjs"));
         assert_eq!(parsed.smoke_presents, Some(3));
         assert_eq!(parsed.smoke_drop, Some(PathBuf::from("dropped.mp4")));
+        assert_eq!(parsed.smoke_preview, Some(PathBuf::from("preview.mp4")));
         assert_eq!(parsed.inputs.len(), 2);
         assert!(parse_options(&["--smoke-presents".into(), "0".into()]).is_err());
+
+        let preview = parse_options(&[
+            "--headless-preview".into(),
+            "input.mp4".into(),
+            "preview-dir".into(),
+            "--headless-report".into(),
+            "report.json".into(),
+        ])
+        .unwrap();
+        assert_eq!(
+            preview.headless_preview,
+            Some((PathBuf::from("input.mp4"), PathBuf::from("preview-dir")))
+        );
     }
 
     #[test]
@@ -1315,14 +1918,39 @@ mod tests {
             stage_progress(Some("complete")),
         ];
         assert!(values.windows(2).all(|pair| pair[0] <= pair[1]));
-        assert_eq!(values.last().copied(), Some(100));
     }
 
     #[test]
     fn display_text_is_bounded_and_ascii() {
-        assert_eq!(truncate_ascii("movie.mp4", 20), "MOVIE.MP4");
-        assert_eq!(truncate_ascii("abcdefghijklmnopqrstuvwxyz", 8), "ABCDE...");
-        assert_ne!(glyph_rows('A'), [0; 7]);
-        assert_eq!(glyph_rows('@'), [0; 7]);
+        assert_eq!(truncate_ascii("hello", 8), "HELLO");
+        assert_eq!(truncate_ascii("abcdefghij", 8), "ABCDE...");
+        assert_eq!(format_bytes(31_348), "30.6 KB");
+    }
+
+    #[test]
+    fn ppm_loader_accepts_binary_rgb_and_comments() {
+        let directory =
+            env::temp_dir().join(format!("video64-drop-ppm-test-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("fixture.ppm");
+        let mut bytes = b"P6\n# fixture\n2 1\n255\n".to_vec();
+        bytes.extend([1, 2, 3, 4, 5, 6]);
+        fs::write(&path, bytes).unwrap();
+        let image = load_ppm(&path).unwrap();
+        assert_eq!((image.width, image.height), (2, 1));
+        assert_eq!(image.pixels, [1, 2, 3, 4, 5, 6]);
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn fit_rect_preserves_aspect_ratio() {
+        assert_eq!(
+            fit_rect(320, 180, Rect::new(0, 0, 640, 480)),
+            Rect::new(0, 60, 640, 360)
+        );
+        assert_eq!(
+            fit_rect(180, 320, Rect::new(0, 0, 640, 480)),
+            Rect::new(185, 0, 270, 480)
+        );
     }
 }

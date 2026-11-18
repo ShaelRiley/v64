@@ -35,7 +35,7 @@ proportions.
 That prerelease is intentionally silent and predates native player profile 2,
 source-audio encoding, long-form source processing, and the current Video64 Drop
 preview and estimation work. Its release manifest and checksums remain
-unchanged and authoritative for those assets.
+unchanged and authoritative for those assets. For a newer Linux x86_64 desktop build, [Video64 Drop alpha.5](https://github.com/ShaelRiley/v64/releases/tag/v0.1.0-alpha.5) provides an archive with a bundled Node.js runtime and published checksums.
 
 ## Permanently gated codec and decoder state
 
